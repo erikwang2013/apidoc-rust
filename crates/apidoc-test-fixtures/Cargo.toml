@@ -5,5 +5,5 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-apidoc = { path = "../apidoc", version = "1.0.0" }
+apidoc = { path = "../apidoc", version = "0.1.0" }
 linkme = "0.3"

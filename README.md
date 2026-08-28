@@ -86,8 +86,8 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc = "1"          # 或 path = "crates/apidoc"
-apidoc-macros = "1"
+apidoc = "0.1"        # 或 path = "crates/apidoc"
+apidoc-macros = "0.1"
 linkme = "0.3"        # 宏展开直接引用 linkme 路径，消费方需直接依赖
 serde_json = "1"      # 输出 api.json 用
 ```

@@ -1,7 +1,8 @@
 name: release
 
-# 推送规则：push 到 main 后，读取 workspace 最新版本，增量补齐缺失的
-# tag 和 GitHub Release（每运行一次只创建尚未存在的版本）。
+# 推送规则：push 到 main 后，读取项目版本（根目录 VERSION 文件，非框架
+# crate 版本），增量补齐缺失的 tag 和 GitHub Release（每运行一次只创建
+# 尚未存在的版本）。
 on:
   push:
     branches: [main]
@@ -22,7 +23,7 @@ jobs:
       - name: 获取最新版本
         id: version
         run: |
-          VERSION=$(awk '/^\[workspace\.package\]/{f=1;next}/^\[/{f=0} f && /^version = /{gsub(/"/, "", $3); print $3; exit}' Cargo.toml)
+          VERSION=$(cat VERSION | tr -d ' \n')
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: 增量创建 tags 和 releases

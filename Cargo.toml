@@ -3,6 +3,6 @@ resolver = "2"
 members = ["crates/apidoc", "crates/apidoc-macros", "crates/apidoc-test-fixtures", "crates/apidoc-axum"]
 
 [workspace.package]
-version = "1.0.0"
+version = "0.1.0"
 edition = "2021"
 license = "MIT"
