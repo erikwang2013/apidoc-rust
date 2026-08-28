@@ -2,10 +2,14 @@
 //! 不做 UI 内嵌三方文档工具、不做服务端代理（规划已定）。
 
 use apidoc::{ApiDoc, ApidocConfig, DocRegistry};
-use axum::http::{header, HeaderMap, HeaderValue};
+use apidoc_mock::{generate_mock, mock_specs, MockEndpointSpec};
+use axum::extract::Query;
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse};
 use axum::routing::get;
 use axum::Router;
+use std::collections::HashMap;
+use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
 /// CORS 策略（为 M4 在线调试跨域直连目标接口做准备）。
@@ -55,6 +59,9 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
     // 构建期序列化一次：ApiDoc 无 Clone（核心约束），axum handler 要求 Clone，
     // 且 async 不能返回对自身捕获的借用 —— 预序列化 String 是唯一干净解。
     let api_json = serde_json::to_string(&doc).expect("ApiDoc must serialize");
+    // M4 mock：只需可 Clone 的子集，handler 捕获 Arc<Vec<MockEndpointSpec>>，
+    // 不碰 ApiDoc/DocEndpoint，api.json 输出零变化。
+    let mocks: Arc<Vec<MockEndpointSpec>> = Arc::new(mock_specs(&doc.endpoints));
     Router::new()
         .route("/apidoc", get(|| async { Html(include_str!("ui.html")) }))
         .route("/apidoc/api.json", get(move || {
@@ -63,6 +70,23 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
                 let mut headers = HeaderMap::new();
                 headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
                 (headers, body).into_response()
+            }
+        }))
+        .route("/apidoc/mock", get(move |Query(q): Query<HashMap<String, String>>| {
+            let mocks = mocks.clone();
+            async move {
+                let url = q.get("url").map(String::as_str).unwrap_or("");
+                let method = q.get("method").map(String::as_str).unwrap_or("");
+                let (status, body) = match mocks.iter().find(|s| s.url == url && s.method == method) {
+                    Some(spec) => (
+                        StatusCode::OK,
+                        serde_json::to_string(&generate_mock(spec)).expect("mock must serialize"),
+                    ),
+                    None => (StatusCode::NOT_FOUND, r#"{"error":"endpoint not found"}"#.to_string()),
+                };
+                let mut headers = HeaderMap::new();
+                headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
+                (status, headers, body).into_response()
             }
         }))
 }
