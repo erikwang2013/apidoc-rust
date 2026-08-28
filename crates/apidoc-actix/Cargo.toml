@@ -1,0 +1,14 @@
+[package]
+name = "apidoc-actix"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+apidoc = { path = "../apidoc", version = "0.1.0" }
+apidoc-mock = { path = "../apidoc-mock", version = "0.1.0" }
+# 使用 apidoc 注解的 crate 必须直接依赖 linkme（宏展开路径要求）
+linkme = "0.3"
+actix-web = { version = "4", features = ["macros"] }
+actix-cors = "0.7"
+serde_json = "1"

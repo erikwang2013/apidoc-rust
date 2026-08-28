@@ -1,6 +1,7 @@
 //! 薄 axum 适配器：挂载 /apidoc（UI 页）与 /apidoc/api.json（数据）。
 //! 不做 UI 内嵌三方文档工具、不做服务端代理（规划已定）。
 
+use apidoc::export;
 use apidoc::{ApiDoc, ApidocConfig, DocRegistry};
 use apidoc_mock::{generate_mock, mock_specs, MockEndpointSpec};
 use axum::extract::Query;
@@ -62,13 +63,33 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
     // M4 mock：只需可 Clone 的子集，handler 捕获 Arc<Vec<MockEndpointSpec>>，
     // 不碰 ApiDoc/DocEndpoint，api.json 输出零变化。
     let mocks: Arc<Vec<MockEndpointSpec>> = Arc::new(mock_specs(&doc.endpoints));
+    // M5 export：与 api.json 同模式，构建期预序列化三份 String。
+    let md = export::markdown::render(&doc);
+    let ts = export::typescript::render(&doc);
+    // ponytail: include_str! 跨 crate 目录，发布 crates.io 前需把 VERSION 内容内嵌进核心 crate
+    let sw = serde_json::to_string(&export::swagger::render(&doc, include_str!("../../../VERSION").trim()))
+        .expect("swagger must serialize");
     Router::new()
-        .route("/apidoc", get(|| async { Html(include_str!("ui.html")) }))
+        .route("/apidoc", get(|| async { Html(apidoc::UI_HTML) }))
         .route("/apidoc/api.json", get(move || {
             let body = api_json.clone();
             async move {
                 let mut headers = HeaderMap::new();
                 headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
+                (headers, body).into_response()
+            }
+        }))
+        .route("/apidoc/export", get(move |Query(q): Query<HashMap<String, String>>| {
+            let (md, ts, sw) = (md.clone(), ts.clone(), sw.clone());
+            async move {
+                let (ct, body) = match q.get("format").map(String::as_str) {
+                    Some("md") => ("text/markdown", md),
+                    Some("ts") => ("application/typescript", ts),
+                    Some("swagger") => ("application/json", sw),
+                    _ => return StatusCode::BAD_REQUEST.into_response(),
+                };
+                let mut headers = HeaderMap::new();
+                headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(ct));
                 (headers, body).into_response()
             }
         }))

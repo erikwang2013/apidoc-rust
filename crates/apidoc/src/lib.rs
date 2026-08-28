@@ -12,6 +12,12 @@
 pub use apidoc_macros::*;
 pub use linkme::distributed_slice;
 
+/// M5: markdown / typescript / swagger(OpenAPI3) 三种导出格式。
+pub mod export;
+
+/// 共享文档 UI（axum/actix 适配器 include_str! 自本 crate，发布打包安全）。
+pub const UI_HTML: &str = include_str!("ui.html");
+
 use serde::Serialize;
 
 /// Collects every `#[apidoc::*]` annotation from all linked crates.

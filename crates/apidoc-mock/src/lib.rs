@@ -316,10 +316,13 @@ mod tests {
     // mock_specs 正确复制字段
     #[test]
     fn mock_specs_copies_endpoint_subset() {
-        let mut ep = DocEndpoint::default();
-        ep.url = "/api/user/{id}".to_string();
-        ep.method = "POST".to_string();
-        ep.params = vec![param("name", "string", Some("alice"))];
+        let mut ep = DocEndpoint {
+            url: "/api/user/{id}".to_string(),
+            method: "POST".to_string(),
+            params: vec![param("name", "string", Some("alice"))],
+            ..Default::default()
+        };
+        ep.querys = vec![param("page", "int", None)];
         ep.querys = vec![param("page", "int", None)];
         ep.route_params = vec![param("id", "int", None)];
         let specs = mock_specs(&[ep]);

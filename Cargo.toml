@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/apidoc", "crates/apidoc-macros", "crates/apidoc-test-fixtures", "crates/apidoc-axum", "crates/apidoc-mock"]
+members = ["crates/apidoc", "crates/apidoc-macros", "crates/apidoc-test-fixtures", "crates/apidoc-axum", "crates/apidoc-mock", "crates/apidoc-actix"]
 
 [workspace.package]
 version = "0.1.0"

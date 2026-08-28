@@ -1,12 +1,14 @@
-//! M2 apidoc-axum 集成测试：路由可达性、api.json 结构、CORS 头、UI 数据流一致性。
+//! M2 apidoc-actix 集成测试：路由可达性、api.json 结构、CORS 头、UI 数据流一致性。
+//! 与 apidoc-axum 的 m2_routes.rs 行为对齐。
 
+use actix_web::http::header::{self, HeaderMap};
+use actix_web::http::StatusCode;
+// 别名导入：actix_web::test 同时是模块和属性宏，直接 `use actix_web::test` 会遮蔽内置 #[test]
+use actix_web::test as actix_test;
+use actix_web::App;
 use apidoc::{ApiDoc, ApidocConfig, DocRegistry};
-use apidoc_axum::{apidoc_routes, cors_layer, CorsConfig};
-use axum::body::{to_bytes, Body};
-use axum::http::{header, HeaderMap, Request, StatusCode};
-use axum::Router;
+use apidoc_actix::{apidoc_routes, cors_layer, CorsConfig};
 use serde_json::Value;
-use tower::ServiceExt;
 
 // 与 examples/demo.rs 同构：公共前缀 /api + 混合前缀 /health，覆盖分组启发式输入形态
 #[allow(dead_code)]
@@ -48,28 +50,28 @@ fn health() {}
 #[apidoc::r#ref("get_user_info")]
 fn m3_grouped() {}
 
-fn app() -> Router {
-    Router::new()
-        .merge(apidoc_routes(ApidocConfig {
-            title: "test api".into(),
-            description: Some("集成测试".into()),
-        }))
-        .layer(cors_layer(CorsConfig::default()))
-}
-
 async fn get(uri: &str, origin: Option<&str>) -> (StatusCode, HeaderMap, String) {
-    let mut req = Request::builder().uri(uri);
+    let app = actix_test::init_service(
+        App::new()
+            .service(apidoc_routes(ApidocConfig {
+                title: "test api".into(),
+                description: Some("集成测试".into()),
+            }))
+            .wrap(cors_layer(CorsConfig::default())),
+    )
+    .await;
+    let mut req = actix_test::TestRequest::get().uri(uri);
     if let Some(o) = origin {
-        req = req.header(header::ORIGIN, o);
+        req = req.insert_header((header::ORIGIN, o));
     }
-    let res = app().oneshot(req.body(Body::empty()).unwrap()).await.unwrap();
+    let res = actix_test::call_service(&app, req.to_request()).await;
     let status = res.status();
     let headers = res.headers().clone();
-    let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
-    (status, headers, String::from_utf8(body.to_vec()).unwrap())
+    let body = String::from_utf8(actix_test::read_body(res).await.to_vec()).unwrap();
+    (status, headers, body)
 }
 
-#[tokio::test]
+#[actix_web::test]
 async fn apidoc_route_returns_html_page() {
     let (status, headers, body) = get("/apidoc", None).await;
     assert_eq!(status, StatusCode::OK);
@@ -85,7 +87,7 @@ async fn apidoc_route_returns_html_page() {
     assert!(body.contains("<title>API Documentation</title>"), "HTML 缺少标题");
 }
 
-#[tokio::test]
+#[actix_web::test]
 async fn api_json_route_returns_valid_doc() {
     let (status, headers, body) = get("/apidoc/api.json", None).await;
     assert_eq!(status, StatusCode::OK);
@@ -107,7 +109,7 @@ async fn api_json_route_returns_valid_doc() {
 }
 
 // M5：/apidoc/export?format=md|ts|swagger 分发与 Content-Type
-#[tokio::test]
+#[actix_web::test]
 async fn export_route_dispatches_by_format_and_rejects_unknown() {
     for (format, ct, marker) in [
         ("md", "text/markdown", "# test api"),
@@ -130,7 +132,7 @@ async fn export_route_dispatches_by_format_and_rejects_unknown() {
     assert_eq!(status, StatusCode::BAD_REQUEST, "缺 format 应 400");
 }
 
-#[tokio::test]
+#[actix_web::test]
 async fn cors_header_present_on_origin_request() {
     let (status, headers, _) = get("/apidoc/api.json", Some("http://example.com")).await;
     assert_eq!(status, StatusCode::OK);
@@ -139,9 +141,58 @@ async fn cors_header_present_on_origin_request() {
         "*",
         "默认 CorsConfig 应放行任意 Origin"
     );
+    assert!(
+        headers.get("access-control-allow-credentials").is_none(),
+        "永不携带 allow-credentials"
+    );
     // 不带 Origin（curl/同源）也应正常返回
     let (status, _, _) = get("/apidoc", None).await;
     assert_eq!(status, StatusCode::OK);
+}
+
+// actix-cors 白名单模式：命中 Origin 反射原值且无凭据，未命中不输出 CORS 头
+#[actix_web::test]
+async fn cors_whitelist_matches_exactly_and_never_credentials() {
+    let app = actix_test::init_service(
+        App::new()
+            .service(apidoc_routes(ApidocConfig {
+                title: "t".into(),
+                description: None,
+            }))
+            .wrap(cors_layer(CorsConfig {
+                allow_origins: vec!["http://localhost:3000".into()],
+            })),
+    )
+    .await;
+    let res = actix_test::call_service(
+        &app,
+        actix_test::TestRequest::get()
+            .uri("/apidoc/api.json")
+            .insert_header((header::ORIGIN, "http://localhost:3000"))
+            .to_request(),
+    )
+    .await;
+    assert_eq!(
+        res.headers().get("access-control-allow-origin").unwrap(),
+        "http://localhost:3000",
+        "白名单命中应反射 Origin"
+    );
+    assert!(
+        res.headers().get("access-control-allow-credentials").is_none(),
+        "白名单模式也不得携带凭据"
+    );
+    let res = actix_test::call_service(
+        &app,
+        actix_test::TestRequest::get()
+            .uri("/apidoc/api.json")
+            .insert_header((header::ORIGIN, "http://evil.com"))
+            .to_request(),
+    )
+    .await;
+    assert!(
+        res.headers().get("access-control-allow-origin").is_none(),
+        "白名单未命中不应输出 CORS 头"
+    );
 }
 
 #[test]
