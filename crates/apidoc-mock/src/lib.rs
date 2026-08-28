@@ -2,10 +2,15 @@
 //! `mock = "fake:规则名"` 注解生成 mock JSON。独立 crate 承载，核心 apidoc
 //! 不拉 fake 依赖，api.json 输出零变化。
 
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use apidoc::{DocEndpoint, DocParam};
 use fake::locales::EN;
 use fake::Fake;
 use serde_json::{json, Map, Value};
+
+/// 未知 fake 规则只警告一次（每次 /apidoc/mock 请求都会走到这里，全量刷屏无意义）。
+static UNKNOWN_RULE_WARNED: AtomicBool = AtomicBool::new(false);
 
 /// DocEndpoint 中 mock 引擎需要的子集（DocEndpoint 本身不可 Clone）。
 /// url+method 用于路由精确匹配，三类参数用于生成 mock。
@@ -123,10 +128,15 @@ fn fake_value(rule: &str, p: &DocParam) -> Value {
         "uuid" => UUIDv4.fake(),
         "date" => Date(EN).fake(),
         other => {
-            eprintln!(
-                "apidoc-mock: unknown fake rule `fake:{other}` for param `{}`, falling back to type default",
-                p.name
-            );
+            if UNKNOWN_RULE_WARNED
+                .compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed)
+                .is_ok()
+            {
+                eprintln!(
+                    "apidoc-mock: unknown fake rule `fake:{other}` for param `{}`, falling back to type default",
+                    p.name
+                );
+            }
             return gen_by_ty(p);
         }
     };
@@ -250,6 +260,28 @@ mod tests {
         assert_eq!(items.len(), 2, "array 应生成 2 项");
         assert_eq!(items[0]["id"], "1");
         assert_eq!(items[1]["id"], "1");
+    }
+
+    // 嵌套数组：array 内的 array 逐层展开成 2 项（ui 表单 mockAt 降入 [0] 依赖此形状）
+    #[test]
+    fn nested_array_recurses_two_items_per_level() {
+        const C: DocParam = DocParam {
+            name: "c", ty: "int", required: false,
+            default: None, desc: None, mock: None, children: &[],
+        };
+        const B: DocParam = DocParam {
+            name: "b", ty: "array", required: false,
+            default: None, desc: None, mock: None, children: &[C],
+        };
+        static A: DocParam = DocParam {
+            name: "a", ty: "array", required: false,
+            default: None, desc: None, mock: None, children: &[B],
+        };
+        let v = generate_mock(&spec("/x", "GET", vec![A.clone()], vec![]));
+        let a = mock_of(&v, "params")["a"].as_array().unwrap();
+        assert_eq!(a.len(), 2, "外层 array 2 项");
+        assert_eq!(a[0]["b"].as_array().unwrap().len(), 2, "内层 array 2 项");
+        assert_eq!(a[0]["b"][0]["c"], "1");
     }
 
     // ty 默认映射

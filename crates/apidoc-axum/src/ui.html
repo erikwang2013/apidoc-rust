@@ -193,11 +193,16 @@ function debugRow(name, placeholder) {
 // 递归渲染参数输入行：children 按点分路径 parent.child 展开
 function paramRowsFor(container, params, kind, prefix) {
   const rows = [];
+  const seen = new Set();
   for (const p of params) {
     const path = prefix ? prefix + '.' + p.name : p.name;
+    // 同名参数合法（JSON mock 层 last-wins 语义不变），表单只保留首个输入
+    if (seen.has(path)) continue;
+    seen.add(path);
     const r = debugRow(path, p.desc || '');
     r.input.dataset.kind = kind;
     r.input.dataset.path = path;
+    r.input.dataset.ty = p.type;
     container.appendChild(r.row);
     rows.push(r);
     if (p.children && p.children.length) rows.push(...paramRowsFor(container, p.children, kind, path));
@@ -205,10 +210,12 @@ function paramRowsFor(container, params, kind, prefix) {
   return rows;
 }
 
-// 从 mock 响应按点分路径取值（嵌套对象叶子），取不到返回 undefined
+// 从 mock 响应按点分路径取值（嵌套对象叶子），取不到返回 undefined。
+// array 段先降入首个元素（mock 数组子行预填取 items[0]）。
 function mockAt(mock, kind, path) {
   let cur = mock[kind];
   for (const seg of path.split('.')) {
+    if (Array.isArray(cur)) cur = cur[0];
     if (cur && typeof cur === 'object' && seg in cur) cur = cur[seg];
     else return undefined;
   }
@@ -352,16 +359,22 @@ function debugForm(ep) {
     }
     if (qs.length) fullUrl += (fullUrl.includes('?') ? '&' : '?') + qs.join('&');
 
-    // 其余 method：params 按点分路径组装嵌套 JSON body
+    // 其余 method：params 按点分路径组装嵌套 JSON body。
+    // array 段（含嵌套）生成 [{}] 承载子行，其余段仍为 {}
     let body;
     if (!isGet) {
+      const arr = new Set(paramRows.filter(r => r.input.dataset.ty === 'array').map(r => r.name));
       const obj = {};
       for (const r of leafParamRows) {
         const v = r.input.value.trim();
         if (!v) continue;
         const segs = r.name.split('.');
         let cur = obj;
-        for (let i = 0; i < segs.length - 1; i++) cur = cur[segs[i]] || (cur[segs[i]] = {});
+        for (let i = 0; i < segs.length - 1; i++) {
+          const segPath = segs.slice(0, i + 1).join('.');
+          if (cur[segs[i]] === undefined) cur[segs[i]] = arr.has(segPath) ? [{}] : {};
+          cur = Array.isArray(cur[segs[i]]) ? cur[segs[i]][0] : cur[segs[i]];
+        }
         cur[segs[segs.length - 1]] = v;
       }
       if (Object.keys(obj).length) body = JSON.stringify(obj);
