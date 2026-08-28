@@ -1,0 +1,41 @@
+name: release
+
+# 推送规则：push 到 main 后，读取 workspace 最新版本，增量补齐缺失的
+# tag 和 GitHub Release（每运行一次只创建尚未存在的版本）。
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 完整历史，避免浅克隆导致 tag 比对失败
+          fetch-depth: 0
+
+      - name: 获取最新版本
+        id: version
+        run: |
+          VERSION=$(awk '/^\[workspace\.package\]/{f=1;next}/^\[/{f=0} f && /^version = /{gsub(/"/, "", $3); print $3; exit}' Cargo.toml)
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: 增量创建 tags 和 releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="v${VERSION}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "tag ${TAG} 已存在，跳过"
+            exit 0
+          fi
+          git tag "${TAG}"
+          git push origin "${TAG}"
+          gh release create "${TAG}" --title "${TAG}" --generate-notes
+          echo "已创建 ${TAG} tag + release"

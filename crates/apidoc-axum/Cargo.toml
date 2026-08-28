@@ -5,7 +5,7 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
-apidoc = { path = "../apidoc", version = "0.1.0" }
+apidoc = { path = "../apidoc", version = "1.0.0" }
 # 使用 apidoc 注解的 crate 必须直接依赖 linkme（宏展开路径要求）
 linkme = "0.3"
 axum = "0.8"

@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "apidoc"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "apidoc-macros",
  "apidoc-test-fixtures",
@@ -15,7 +15,7 @@ dependencies = [
 
 [[package]]
 name = "apidoc-axum"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "apidoc",
  "axum",
@@ -28,7 +28,7 @@ dependencies = [
 
 [[package]]
 name = "apidoc-macros"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -37,7 +37,7 @@ dependencies = [
 
 [[package]]
 name = "apidoc-test-fixtures"
-version = "0.1.0"
+version = "1.0.0"
 dependencies = [
  "apidoc",
  "linkme",

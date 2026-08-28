@@ -86,8 +86,8 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc = "0.1"        # 或 path = "crates/apidoc"
-apidoc-macros = "0.1"
+apidoc = "1"          # 或 path = "crates/apidoc"
+apidoc-macros = "1"
 linkme = "0.3"        # 宏展开直接引用 linkme 路径，消费方需直接依赖
 serde_json = "1"      # 输出 api.json 用
 ```
@@ -115,6 +115,55 @@ use apidoc::*;
     ]
 )]
 fn get_user_info() -> String {
+    unimplemented!()
+}
+```
+
+M3 起支持分组、作者、标签、请求头、路由参数、状态码、成功/失败示例、排序与引用等注解（全部可选，未标注的字段不出现在输出中）：
+
+```rust
+use apidoc::*;
+
+#[apidoc::title("获取用户信息")]
+#[apidoc::url("/api/user/info")]
+#[apidoc::method("GET")]
+#[apidoc::group("用户管理")]                              // 分组（UI 优先使用）
+#[apidoc::author("erik")]                                // 作者
+#[apidoc::tag("user", "v1")]                             // 标签，可重复挂载，追加
+#[apidoc::header(name = "X-Token", desc = "访问令牌")]    // 请求头
+#[apidoc::route_param(name = "user_id", ty = "int", required, desc = "用户ID")]
+#[apidoc::response_status("200", "404")]                 // 状态码，重复自动去重
+#[apidoc::success(code = "200", example = "{\"code\":0,\"data\":{}}")]
+#[apidoc::error(code = "500", example = "{\"code\":1,\"msg\":\"err\"}")]
+#[apidoc::not_debug]                                     // 标志位，M4 调试面板按环境过滤
+#[apidoc::md("### 备注\n调用前需登录")]                    // 补充说明（原样展示）
+#[apidoc::sort(10)]                                      // 组内排序权重，大者在前，可负
+fn get_user_info() -> String {
+    unimplemented!()
+}
+
+#[apidoc::title("用户列表")]
+#[apidoc::url("/api/user/list")]
+#[apidoc::method("GET")]
+#[apidoc::returned(
+    name = "list",
+    ty = "array",
+    children = [
+        { name = "id", ty = "int", required },
+        { name = "name", ty = "string", required },
+    ]
+)]
+fn get_user_list() -> String {
+    unimplemented!()
+}
+
+#[apidoc::title("用户详情(复用)")]
+#[apidoc::url("/api/user/detail")]
+#[apidoc::method("GET")]
+// ref 引用目标接口的返回结构（按函数名全局匹配），UI 展示"参考接口"。
+// `ref` 是 Rust 关键字，属性路径须写 raw identifier：#[apidoc::r#ref(...)]
+#[apidoc::r#ref("get_user_list")]
+fn get_user_detail() -> String {
     unimplemented!()
 }
 ```
@@ -181,7 +230,7 @@ cargo run --example demo -p apidoc
 |------|------|------|
 | M1 | workspace 骨架 + 数据模型 + 宏 MVP + linkme 注册 | ✅ 已完成 |
 | M2 | axum 适配器 + 内嵌文档 UI + 分组目录 | ✅ 已完成 |
-| M3 | 注解补齐（tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref） | 规划中 |
+| M3 | 注解补齐（tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref） | ✅ 已完成 |
 | M4 | 在线调试 + Mock 引擎 | 规划中 |
 | M5 | 导出 markdown / typescript / swagger.json | 规划中 |
 | M6 | 密码鉴权、多应用多版本、发布 | 规划中 |

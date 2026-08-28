@@ -37,6 +37,29 @@ pub enum DocFragment {
     Param(DocParam),
     Query(DocParam),
     Returned(DocParam),
+    // M3: single-value fragments (later mounts win), list fragments (append),
+    // flag fragments (OR), and the ref reference.
+    Tag(&'static str),
+    Group(&'static str),
+    Author(&'static str),
+    Header(DocHeader),
+    RouteParam(DocParam),
+    ResponseStatus(&'static str),
+    Success(DocExample),
+    Error(DocExample),
+    NotDebug,
+    Md(&'static str),
+    Sort(i32),
+    Ref(&'static str),
+}
+
+/// A documented example response body (shared by success / error).
+#[derive(Clone, Serialize)]
+pub struct DocExample {
+    /// HTTP status code, kept as a string to align with the PHP version.
+    pub code: &'static str,
+    /// Raw response body; stored verbatim, not validated as JSON.
+    pub example: &'static str,
 }
 
 /// A documented parameter (body param, query string field or return field).
@@ -72,6 +95,35 @@ pub struct DocEndpoint {
     pub params: Vec<DocParam>,
     pub querys: Vec<DocParam>,
     pub returned: Vec<DocParam>,
+    // M3 fields: all optional, all omitted from JSON when at their default
+    // value, so api.json output is unchanged for endpoints that use none of
+    // the new annotations.
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub group: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub tags: Vec<String>,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub author: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub route_params: Vec<DocParam>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub response_status: Vec<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub success: Vec<DocExample>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub error: Vec<DocExample>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub not_debug: bool,
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub md: String,
+    #[serde(skip_serializing_if = "is_zero")]
+    pub sort: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub r#ref: Option<String>,
+}
+
+fn is_zero(n: &i32) -> bool {
+    *n == 0
 }
 
 impl Default for DocEndpoint {
@@ -85,14 +137,26 @@ impl Default for DocEndpoint {
             params: Vec::new(),
             querys: Vec::new(),
             returned: Vec::new(),
+            group: String::new(),
+            tags: Vec::new(),
+            author: String::new(),
+            route_params: Vec::new(),
+            response_status: Vec::new(),
+            success: Vec::new(),
+            error: Vec::new(),
+            not_debug: false,
+            md: String::new(),
+            sort: 0,
+            r#ref: None,
         }
     }
 }
 
-/// Request header documentation. Not produced by any M1 macro; reserved.
-#[derive(Serialize)]
+/// Request header documentation, e.g. `#[apidoc::header(name = "X-Token")]`.
+#[derive(Clone, Serialize)]
 pub struct DocHeader {
     pub name: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub desc: Option<&'static str>,
 }
 
@@ -144,8 +208,77 @@ impl DocRegistry {
                 DocFragment::Param(p) => ep.params.push(p.clone()),
                 DocFragment::Query(q) => ep.querys.push(q.clone()),
                 DocFragment::Returned(r) => ep.returned.push(r.clone()),
+                // M3: single-value fields overwrite (later mount wins), lists
+                // append, response_status dedups, not_debug ORs, ref overwrites.
+                DocFragment::Tag(t) => ep.tags.push(t.to_string()),
+                DocFragment::Group(g) => ep.group = g.to_string(),
+                DocFragment::Author(a) => ep.author = a.to_string(),
+                DocFragment::Header(h) => ep.headers.push(h.clone()),
+                DocFragment::RouteParam(p) => ep.route_params.push(p.clone()),
+                DocFragment::ResponseStatus(s) => {
+                    if !ep.response_status.iter().any(|x| x == s) {
+                        ep.response_status.push(s.to_string());
+                    }
+                }
+                DocFragment::Success(e) => ep.success.push(e.clone()),
+                DocFragment::Error(e) => ep.error.push(e.clone()),
+                DocFragment::NotDebug => ep.not_debug = true,
+                DocFragment::Md(m) => ep.md = m.to_string(),
+                DocFragment::Sort(n) => ep.sort = *n,
+                DocFragment::Ref(r) => ep.r#ref = Some(r.to_string()),
+            }
+        }
+        // Second pass: resolve ref chains (copy the target's `returned` into
+        // the referencing endpoint). Runs after every endpoint exists so the
+        // target may be declared anywhere, and recursively so chains A→B→C
+        // resolve; cycles are cut by the visited set (warned, not copied).
+        for i in 0..endpoints.len() {
+            if endpoints[i].r#ref.is_some() {
+                resolve_ref(i, &mut Vec::new(), &ids, &mut endpoints);
             }
         }
         endpoints
     }
+}
+
+/// Copies the ref target's `returned` into `endpoints[idx].returned`.
+/// Returns false (no copy) when the target is missing or a cycle is hit.
+fn resolve_ref(
+    idx: usize,
+    visited: &mut Vec<usize>,
+    ids: &[&'static str],
+    endpoints: &mut [DocEndpoint],
+) -> bool {
+    if visited.contains(&idx) {
+        eprintln!("apidoc: ref cycle at `{}`, skipping", ids[idx]);
+        return false;
+    }
+    visited.push(idx);
+    let Some(target) = endpoints[idx].r#ref.as_deref() else {
+        return true;
+    };
+    let Some(j) = find_ref_target(target, ids) else {
+        eprintln!("apidoc: ref target `{target}` not found for `{}`", ids[idx]);
+        return false;
+    };
+    if !resolve_ref(j, visited, ids, endpoints) {
+        return false;
+    }
+    endpoints[idx].returned = endpoints[j].returned.clone();
+    true
+}
+
+/// Locates a ref target: exact id match first, then `::fn_name` suffix match
+/// (the PHP-style global reference by function name).
+fn find_ref_target(target: &str, ids: &[&'static str]) -> Option<usize> {
+    if let Some(j) = ids.iter().position(|id| *id == target) {
+        return Some(j);
+    }
+    let suffix = format!("::{target}");
+    let mut hits = ids.iter().enumerate().filter(|(_, id)| id.ends_with(&suffix));
+    let (j, _) = hits.next()?;
+    if hits.next().is_some() {
+        eprintln!("apidoc: ref `{target}` matches multiple endpoints, using `{}`", ids[j]);
+    }
+    Some(j)
 }

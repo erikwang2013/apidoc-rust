@@ -31,6 +31,23 @@ fn create_user() {}
 #[apidoc::method("GET")]
 fn health() {}
 
+// M3 fixture：ui.html 新增的 M3 字段引用（ep.group/sort/author/ref/...）
+// 需要真实数据支撑，白名单测试的 path_exists 才会命中。
+#[allow(dead_code)]
+#[apidoc::title("M3 分组接口")]
+#[apidoc::url("/api/m3/grouped")]
+#[apidoc::method("GET")]
+#[apidoc::group("M3组")]
+#[apidoc::sort(99)]
+#[apidoc::author("tester")]
+#[apidoc::tag("m3", "ui")]
+#[apidoc::response_status("200")]
+#[apidoc::success(code = "200", example = "{}")]
+#[apidoc::error(code = "500", example = "{}")]
+#[apidoc::md("补充说明")]
+#[apidoc::r#ref("get_user_info")]
+fn m3_grouped() {}
+
 fn app() -> Router {
     Router::new()
         .merge(apidoc_routes(ApidocConfig {
@@ -139,6 +156,18 @@ fn ui_html_fields_all_present_in_api_json() {
         ("p.children", "endpoints[].returned[].children"),
         ("p.mock", "endpoints[].params[].mock"),
         ("p.default", "endpoints[].querys[].default"),
+        // M3：ui.html 新增引用，数据由 m3_grouped fixture 提供
+        ("ep.group", "endpoints[].group"),
+        ("b.sort", "endpoints[].sort"),
+        ("ep.author", "endpoints[].author"),
+        ("ep.ref", "endpoints[].ref"),
+        ("ep.response_status", "endpoints[].response_status"),
+        ("ep.tags", "endpoints[].tags"),
+        ("ep.success", "endpoints[].success"),
+        ("ep.error", "endpoints[].error"),
+        ("ep.md", "endpoints[].md"),
+        ("ex.code", "endpoints[].success[].code"),
+        ("ex.example", "endpoints[].success[].example"),
     ] {
         assert!(html.contains(js_ref), "ui.html 缺少引用: {js_ref}");
         assert!(

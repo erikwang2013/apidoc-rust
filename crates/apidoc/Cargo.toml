@@ -7,8 +7,8 @@ license.workspace = true
 [dependencies]
 linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
-apidoc-macros = { path = "../apidoc-macros", version = "0.1.0" }
+apidoc-macros = { path = "../apidoc-macros", version = "1.0.0" }
 
 [dev-dependencies]
 serde_json = "1"
-apidoc-test-fixtures = { path = "../apidoc-test-fixtures", version = "0.1.0" }
+apidoc-test-fixtures = { path = "../apidoc-test-fixtures", version = "1.0.0" }

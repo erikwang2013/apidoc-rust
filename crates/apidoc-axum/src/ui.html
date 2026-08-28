@@ -64,15 +64,36 @@ function firstSeg(ep) {
   return ep.url.replace(/^\/+/, '').split('/').filter(Boolean)[0] || '';
 }
 
-// M2 分组启发式：所有 endpoint 首段相同（如全是 /api/...）时跳过公共首段用
-// 第二段分组（/api/user/info -> "user"）；否则用各自首段。M3 的 group 注解
-// 上线后此处应优先读取注解值。
+// M3 起分组优先读 group 注解（main 里 ep.group || groupOf(ep)）；未标注的
+// endpoint 仍走 M2 启发式：所有 endpoint 首段相同（如全是 /api/...）时跳过
+// 公共首段用第二段分组（/api/user/info -> "user"）；否则用各自首段。
 let allShare = false;
 function groupOf(ep) {
   const segs = ep.url.replace(/^\/+/, '').split('/').filter(Boolean);
   if (!segs.length) return '未分组';
   if (allShare && segs.length > 1) return segs[1];
   return segs[0];
+}
+
+// 灰色小徽标：response_status / 示例 code
+function statusBadge(s) {
+  const b = el('span', 'badge', s);
+  b.style.background = '#9ca3af';
+  return b;
+}
+
+// 成功/失败示例：code 徽标 + 响应体原文（textContent 注入，pre-wrap）
+function exampleSection(title, list) {
+  const section = el('section');
+  section.appendChild(el('h3', null, title));
+  for (const ex of list) {
+    section.appendChild(statusBadge(ex.code));
+    const pre = document.createElement('pre');
+    pre.style.whiteSpace = 'pre-wrap';
+    pre.textContent = ex.example;
+    section.appendChild(pre);
+  }
+  return section;
 }
 
 function paramTable(title, list) {
@@ -112,14 +133,34 @@ function render(ep) {
   const detail = document.getElementById('detail');
   detail.textContent = '';
   detail.appendChild(el('h2', null, ep.title));
+  if (ep.author) detail.appendChild(el('p', 'desc', '作者：' + ep.author));
+  if (ep.ref) detail.appendChild(el('p', 'desc', '参考接口：' + ep.ref));
   const line = el('div', 'endpoint-line');
   line.appendChild(badge(ep.method));
+  if (ep.response_status) for (const s of ep.response_status) line.appendChild(statusBadge(s));
   line.appendChild(el('code', null, ep.url));
   detail.appendChild(line);
   if (ep.desc) detail.appendChild(el('p', 'desc', ep.desc));
+  if (ep.tags && ep.tags.length) {
+    const tagline = el('div', 'endpoint-line');
+    for (const t of ep.tags) tagline.appendChild(el('code', null, t));
+    detail.appendChild(tagline);
+  }
   detail.appendChild(paramTable('请求参数', ep.params));
   detail.appendChild(paramTable('Query 参数', ep.querys));
   detail.appendChild(paramTable('返回字段', ep.returned));
+  if (ep.success && ep.success.length) detail.appendChild(exampleSection('成功示例', ep.success));
+  if (ep.error && ep.error.length) detail.appendChild(exampleSection('失败示例', ep.error));
+  if (ep.md) {
+    const s = el('section');
+    s.appendChild(el('h3', null, '补充说明'));
+    const pre = document.createElement('pre');
+    pre.style.whiteSpace = 'pre-wrap';
+    pre.textContent = ep.md;
+    s.appendChild(pre);
+    detail.appendChild(s);
+  }
+  // not_debug：M4 在线调试按环境过滤时消费，M3 不做任何处理
 }
 
 async function main() {
@@ -138,7 +179,7 @@ async function main() {
   allShare = eps.every(e => firstSeg(e) === firstSeg(eps[0]));
   const groups = {}; // 组名 -> endpoint 列表
   for (const ep of eps) {
-    const g = groupOf(ep);
+    const g = ep.group || groupOf(ep); // M3：group 注解优先，启发式兜底
     (groups[g] || (groups[g] = [])).push(ep);
   }
   const names = Object.keys(groups).sort((a, b) => a.localeCompare(b));
@@ -150,7 +191,9 @@ async function main() {
   };
   names.forEach((name, gi) => {
     nav.appendChild(el('h2', null, name));
-    groups[name].sort((a, b) => a.method.localeCompare(b.method) || a.url.localeCompare(b.url));
+    // M3：sort 注解权重优先（大者在前），未标注视为 0；相同权重时稳定排序
+    // 保留声明序（seq），再按 method/url 兜底
+    groups[name].sort((a, b) => (b.sort || 0) - (a.sort || 0) || a.method.localeCompare(b.method) || a.url.localeCompare(b.url));
     groups[name].forEach((ep, ei) => {
       const a = el('a');
       a.appendChild(badge(ep.method));
