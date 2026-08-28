@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 400" font-family="sans-serif">
+  <defs>
+    <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
+      <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
+    </pattern>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#555"/>
+    </marker>
+  </defs>
+  <rect width="940" height="400" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="400" fill="none" stroke="#333" stroke-width="2"/>
+
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Documentation Lifecycle</text>
+
+  <!-- Step 1 -->
+  <circle cx="85" cy="150" r="34" fill="#b58900"/>
+  <text x="85" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">1</text>
+  <text x="85" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Write Annotations</text>
+  <text x="85" y="235" text-anchor="middle" font-size="12" fill="#555">Attach to handler</text>
+  <text x="85" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">#[apidoc::*]</text>
+
+  <line x1="119" y1="150" x2="181" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Step 2 -->
+  <circle cx="215" cy="150" r="34" fill="#6c5ce7"/>
+  <text x="215" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">2</text>
+  <text x="215" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Macro Expansion</text>
+  <text x="215" y="235" text-anchor="middle" font-size="12" fill="#555">At compile time</text>
+  <text x="215" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">DocFragmentEntry</text>
+
+  <line x1="249" y1="150" x2="311" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Step 3 -->
+  <circle cx="345" cy="150" r="34" fill="#f39c12"/>
+  <text x="345" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">3</text>
+  <text x="345" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">linkme Registration</text>
+  <text x="345" y="235" text-anchor="middle" font-size="12" fill="#555">Static distributed slice</text>
+  <text x="345" y="252" text-anchor="middle" font-size="12" fill="#555">Zero runtime cost</text>
+
+  <line x1="379" y1="150" x2="441" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Step 4 -->
+  <circle cx="475" cy="150" r="34" fill="#2980b9"/>
+  <text x="475" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">4</text>
+  <text x="475" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">collect() Aggregation</text>
+  <text x="475" y="235" text-anchor="middle" font-size="12" fill="#555">Merge fragments by id</text>
+  <text x="475" y="252" text-anchor="middle" font-size="12" fill="#555">Restore order by seq</text>
+
+  <line x1="509" y1="150" x2="571" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Step 5 -->
+  <circle cx="605" cy="150" r="34" fill="#27ae60"/>
+  <text x="605" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
+  <text x="605" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
+  <text x="605" y="235" text-anchor="middle" font-size="12" fill="#555">Unified doc model</text>
+  <text x="605" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints</text>
+
+  <line x1="639" y1="150" x2="701" y2="150" stroke="#555" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+
+  <!-- Step 6 (planned) -->
+  <circle cx="735" cy="150" r="34" fill="none" stroke="#95a5a6" stroke-width="3" stroke-dasharray="6 4"/>
+  <text x="735" y="158" text-anchor="middle" font-size="26" fill="#95a5a6" font-weight="bold">6</text>
+  <text x="735" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#566573">Consume</text>
+  <text x="735" y="235" text-anchor="middle" font-size="12" fill="#555">UI browse / online debug</text>
+  <text x="735" y="252" text-anchor="middle" font-size="12" fill="#555">Export Markdown · TS · Swagger</text>
+
+  <!-- Legend -->
+  <rect x="240" y="320" width="24" height="12" fill="#27ae60"/>
+  <text x="272" y="331" font-size="13" fill="#333">Implemented (M1)</text>
+  <rect x="430" y="320" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="462" y="331" font-size="13" fill="#333">Planned</text>
+
+  <text x="700" y="331" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+</svg>

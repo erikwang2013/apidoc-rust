@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>API Documentation</title>
+<style>
+:root { --bg:#f6f7f9; --panel:#fff; --border:#e3e6ea; --text:#24292f; --muted:#6b7280; --accent:#2563eb; }
+* { box-sizing:border-box; }
+body { margin:0; font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
+header { background:var(--panel); border-bottom:1px solid var(--border); padding:12px 20px; }
+header h1 { margin:0; font-size:18px; }
+header p { margin:2px 0 0; color:var(--muted); font-size:13px; }
+#app { display:flex; align-items:flex-start; }
+#groups { width:280px; flex:none; background:var(--panel); border-right:1px solid var(--border); height:calc(100vh - 61px); overflow:auto; padding:12px 0; }
+#groups h2 { font-size:12px; color:var(--muted); margin:14px 16px 6px; text-transform:uppercase; letter-spacing:.05em; }
+#groups a { display:flex; gap:8px; align-items:center; padding:7px 16px; color:var(--text); text-decoration:none; border-left:3px solid transparent; }
+#groups a:hover { background:#f0f3f8; }
+#groups a.active { background:#eaf1fe; border-left-color:var(--accent); }
+.badge { flex:none; width:52px; text-align:center; font-size:11px; font-weight:700; color:#fff; border-radius:4px; padding:1px 0; }
+#detail { flex:1; padding:24px 32px; max-width:960px; }
+#detail h2 { margin:0 0 4px; font-size:20px; }
+.endpoint-line { display:flex; gap:10px; align-items:center; margin:8px 0 4px; }
+.endpoint-line .badge { width:auto; padding:2px 10px; }
+code { background:#eef1f5; border-radius:4px; padding:2px 6px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px; }
+#detail .desc { color:var(--muted); margin-bottom:16px; }
+section { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:16px 20px; margin-bottom:16px; }
+section h3 { margin:0 0 10px; font-size:15px; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th,td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--border); vertical-align:top; }
+th { color:var(--muted); font-weight:600; white-space:nowrap; }
+td.name { font-family:ui-monospace,Menlo,monospace; white-space:nowrap; }
+.empty { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">API Documentation</h1>
+  <p id="subtitle"></p>
+</header>
+<div id="app">
+  <nav id="groups"></nav>
+  <main id="detail"><p class="empty">加载中…</p></main>
+</div>
+<script>
+// 文档内容全部经 textContent 注入，api.json 里的字符串永不按 HTML 处理。
+const base = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
+const COLORS = { GET:'#16a34a', POST:'#2563eb', PUT:'#d97706', DELETE:'#dc2626', PATCH:'#7c3aed', HEAD:'#64748b', OPTIONS:'#64748b' };
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+
+function badge(method) {
+  const b = el('span', 'badge', method);
+  b.style.background = COLORS[method] || '#64748b';
+  return b;
+}
+
+function firstSeg(ep) {
+  return ep.url.replace(/^\/+/, '').split('/').filter(Boolean)[0] || '';
+}
+
+// M2 分组启发式：所有 endpoint 首段相同（如全是 /api/...）时跳过公共首段用
+// 第二段分组（/api/user/info -> "user"）；否则用各自首段。M3 的 group 注解
+// 上线后此处应优先读取注解值。
+let allShare = false;
+function groupOf(ep) {
+  const segs = ep.url.replace(/^\/+/, '').split('/').filter(Boolean);
+  if (!segs.length) return '未分组';
+  if (allShare && segs.length > 1) return segs[1];
+  return segs[0];
+}
+
+function paramTable(title, list) {
+  const section = el('section');
+  section.appendChild(el('h3', null, title));
+  if (!list || !list.length) {
+    section.appendChild(el('p', 'empty', '无'));
+    return section;
+  }
+  const table = el('table');
+  const head = el('tr');
+  for (const h of ['名称', '类型', '必填', '默认值', '描述', '示例']) head.appendChild(el('th', null, h));
+  table.appendChild(head);
+  const tbody = el('tbody');
+  const addRows = (params, depth) => {
+    for (const p of params) {
+      const tr = el('tr');
+      const name = el('td', 'name', p.name);
+      name.style.paddingLeft = depth * 18 + 'px';
+      tr.appendChild(name);
+      tr.appendChild(el('td', null, p.type));
+      tr.appendChild(el('td', null, p.required ? '是' : '否'));
+      tr.appendChild(el('td', null, p.default ?? ''));
+      tr.appendChild(el('td', null, p.desc ?? ''));
+      tr.appendChild(el('td', null, p.mock ?? ''));
+      tbody.appendChild(tr);
+      if (p.children && p.children.length) addRows(p.children, depth + 1);
+    }
+  };
+  addRows(list, 0);
+  table.appendChild(tbody);
+  section.appendChild(table);
+  return section;
+}
+
+function render(ep) {
+  const detail = document.getElementById('detail');
+  detail.textContent = '';
+  detail.appendChild(el('h2', null, ep.title));
+  const line = el('div', 'endpoint-line');
+  line.appendChild(badge(ep.method));
+  line.appendChild(el('code', null, ep.url));
+  detail.appendChild(line);
+  if (ep.desc) detail.appendChild(el('p', 'desc', ep.desc));
+  detail.appendChild(paramTable('请求参数', ep.params));
+  detail.appendChild(paramTable('Query 参数', ep.querys));
+  detail.appendChild(paramTable('返回字段', ep.returned));
+}
+
+async function main() {
+  const doc = await (await fetch(base + 'api.json')).json();
+  document.getElementById('title').textContent = doc.config.title || 'API Documentation';
+  document.getElementById('subtitle').textContent = doc.config.description || '';
+  const eps = doc.endpoints;
+  const nav = document.getElementById('groups');
+  const detail = document.getElementById('detail');
+  detail.textContent = '';
+  if (!eps.length) {
+    nav.textContent = '';
+    detail.appendChild(el('p', 'empty', '暂无接口文档'));
+    return;
+  }
+  allShare = eps.every(e => firstSeg(e) === firstSeg(eps[0]));
+  const groups = {}; // 组名 -> endpoint 列表
+  for (const ep of eps) {
+    const g = groupOf(ep);
+    (groups[g] || (groups[g] = [])).push(ep);
+  }
+  const names = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+  const pick = (gi, ei) => {
+    const links = nav.querySelectorAll('a');
+    for (const x of links) x.classList.remove('active');
+    links[ei].classList.add('active');
+    render(groups[names[gi]][ei]);
+  };
+  names.forEach((name, gi) => {
+    nav.appendChild(el('h2', null, name));
+    groups[name].sort((a, b) => a.method.localeCompare(b.method) || a.url.localeCompare(b.url));
+    groups[name].forEach((ep, ei) => {
+      const a = el('a');
+      a.appendChild(badge(ep.method));
+      a.appendChild(el('span', null, ep.title));
+      a.onclick = () => {
+        location.hash = '#g' + gi + '/e' + ei;
+        pick(gi, ei);
+      };
+      nav.appendChild(a);
+    });
+  });
+  const m = location.hash.match(/^#g(\d+)\/e(\d+)$/);
+  const gi = m ? Math.min(+m[1], names.length - 1) : 0;
+  const ei = m ? Math.min(+m[2], groups[names[gi]].length - 1) : 0;
+  pick(gi, ei);
+}
+main();
+</script>
+</body>
+</html>

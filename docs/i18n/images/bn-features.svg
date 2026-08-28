@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="sans-serif">
+  <defs>
+    <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
+      <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
+    </pattern>
+  </defs>
+  <rect width="940" height="560" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
+
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust প্রজেক্ট কার্যকারিতা</text>
+
+  <!-- 卡片 1 -->
+  <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M1</text>
+  <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">অ্যানোটেশন-ভিত্তিক ডকুমেন্টেশন</text>
+  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">সাতটি অ্যাট্রিবিউট ম্যাক্রো দিয়ে একেকটি অ্যানোটেশন, PHP attributes সেমান্টিকসের সাথে সামঞ্জস্যপূর্ণ</text>
+  <text x="60" y="170" font-size="13" fill="#333">প্যারামিটার required / default / desc / mock / children নেস্টিং সমর্থন করে</text>
+
+  <!-- 卡片 2 -->
+  <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M1</text>
+  <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">কম্পাইল-টাইম ভ্যালিডেশন</text>
+  <text x="500" y="130" font-size="13" fill="#333">url অবশ্যই / দিয়ে শুরু, method হোয়াইটলিস্ট, param name বাধ্যতামূলক</text>
+  <text x="500" y="150" font-size="13" fill="#333">অবৈধ অ্যানোটেশনে কম্পাইল-টাইম এরর (span সঠিক), ডকুমেন্টেশন ও কোড কখনো সিঙ্কের বাইরে যায় না</text>
+
+  <!-- 卡片 3 -->
+  <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M1</text>
+  <text x="60" y="256" font-size="17" font-weight="bold" fill="#1e8449">স্বয়ংক্রিয় সংগ্রহ</text>
+  <text x="60" y="280" font-size="13" fill="#333">linkme distributed_slice স্ট্যাটিক রেজিস্ট্রেশন, ম্যানুয়াল ইন্টারফেস তালিকার দরকার নেই</text>
+  <text x="60" y="300" font-size="13" fill="#333">DocRegistry::collect() id অনুযায়ী মার্জ করে, seq অনুযায়ী ডিক্লারেশন ক্রম পুনরুদ্ধার করে</text>
+  <text x="60" y="320" font-size="13" fill="#333">ক্রস-crate স্বয়ংক্রিয় সংগ্রহ, "কোড স্ক্যান করলেই সব ইন্টারফেস" এর সমতুল্য</text>
+
+  <!-- 卡片 4 -->
+  <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M1</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">api.json আউটপুট</text>
+  <text x="500" y="280" font-size="13" fill="#333">serde দিয়ে ইউনিফাইড ডকুমেন্ট ডেটা মডেল সিরিয়ালাইজেশন (config + endpoints)</text>
+  <text x="500" y="300" font-size="13" fill="#333">ফিল্ড PHP সেমান্টিকসের সাথে সামঞ্জস্যপূর্ণ: title/desc/url/method/params/querys/returned</text>
+  <text x="500" y="320" font-size="13" fill="#333">UI ডিসপ্লে ও এক্সপোর্ট ফিচার একই ডেটা সোর্স ব্যবহার করে</text>
+
+  <!-- 卡片 5 -->
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">পরিকল্পনাধীন</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">অনলাইন ডিবাগিং + Mock</text>
+  <text x="60" y="430" font-size="13" fill="#333">ব্রাউজার থেকে CORS-এ সরাসরি টার্গেট ইন্টারফেস ডিবাগ, সার্ভার-সাইড প্রক্সির দরকার নেই</text>
+  <text x="60" y="450" font-size="13" fill="#333">Mock রুল (@integer(1,100) ইত্যাদি) fake crate-এ ম্যাপ করে ডেটা জেনারেশন</text>
+  <text x="60" y="470" font-size="13" fill="#333">মাল্টি-অ্যাপ / মাল্টি-ভার্সন / অ্যাক্সেস পাসওয়ার্ড</text>
+
+  <!-- 卡片 6 -->
+  <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">পরিকল্পনাধীন</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">মাল্টি-ফ্রেমওয়ার্ক অ্যাডাপ্টেশন + এক্সপোর্ট</text>
+  <text x="500" y="430" font-size="13" fill="#333">apidoc-axum / apidoc-actix পাতলা অ্যাডাপ্টার, কোর অপরিবর্তিত</text>
+  <text x="500" y="450" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI3) এক্সপোর্ট</text>
+  <text x="500" y="470" font-size="13" fill="#333">ডকুমেন্ট ক্যাশ / ডিবাগ ইভেন্ট (v2: কোড জেনারেটর, শেয়ার লিংক)</text>
+
+  <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+</svg>

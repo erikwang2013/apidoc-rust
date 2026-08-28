@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="sans-serif">
+  <defs>
+    <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
+      <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
+    </pattern>
+  </defs>
+  <rect width="940" height="560" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
+
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Projektfunktionen von apidoc-rust</text>
+
+  <!-- Karte 1 -->
+  <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Umgesetzt M1</text>
+  <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">Annotationen als Dokumentation</text>
+  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">Sieben Attributmakros, einzeln annotiert, semantisch an PHP attributes ausgerichtet</text>
+  <text x="60" y="170" font-size="13" fill="#333">Parameter unterstützen required / default / desc / mock / children-Verschachtelung</text>
+
+  <!-- Karte 2 -->
+  <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Umgesetzt M1</text>
+  <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">Validierung zur Kompilierzeit</text>
+  <text x="500" y="130" font-size="13" fill="#333">url muss mit / beginnen, method-Whitelist, param name ist Pflicht</text>
+  <text x="500" y="150" font-size="13" fill="#333">Ungültige Annotationen führen zur Kompilierzeit zu Fehlern (präzise Span) — Dokumentation und Code geraten nie aus dem Gleichschritt</text>
+
+  <!-- Karte 3 -->
+  <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Umgesetzt M1</text>
+  <text x="60" y="256" font-size="17" font-weight="bold" fill="#1e8449">Automatische Sammlung</text>
+  <text x="60" y="280" font-size="13" fill="#333">Statische Registrierung via linkme distributed_slice, keine manuelle Interface-Liste nötig</text>
+  <text x="60" y="300" font-size="13" fill="#333">DocRegistry::collect() führt nach id zusammen, stellt die Deklarationsreihenfolge nach seq wieder her</text>
+  <text x="60" y="320" font-size="13" fill="#333">Automatische Sammlung über crates hinweg — „Code scannen genügt für alle Endpunkte"</text>
+
+  <!-- Karte 4 -->
+  <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Umgesetzt M1</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">api.json-Ausgabe</text>
+  <text x="500" y="280" font-size="13" fill="#333">serde serialisiert das einheitliche Dokumentationsdatenmodell (config + endpoints)</text>
+  <text x="500" y="300" font-size="13" fill="#333">Felder semantisch an PHP ausgerichtet: title/desc/url/method/params/querys/returned</text>
+  <text x="500" y="320" font-size="13" fill="#333">UI-Anzeige und Export-Funktionen nutzen dieselbe Datenquelle</text>
+
+  <!-- Karte 5 -->
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Geplant</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">Online-Debugging + Mock</text>
+  <text x="60" y="430" font-size="13" fill="#333">Browser verbindet sich per CORS direkt mit dem Zielendpunkt, kein Server-Proxy nötig</text>
+  <text x="60" y="450" font-size="13" fill="#333">Mock-Regeln (@integer(1,100) usw.) werden auf die fake-crate abgebildet, die Daten generiert</text>
+  <text x="60" y="470" font-size="13" fill="#333">Mehrere Anwendungen / mehrere Versionen / Zugriffspasswort</text>
+
+  <!-- Karte 6 -->
+  <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Geplant</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Multi-Framework-Adapter + Export</text>
+  <text x="500" y="430" font-size="13" fill="#333">Dünne Adapter apidoc-axum / apidoc-actix, Kern unverändert</text>
+  <text x="500" y="450" font-size="13" fill="#333">Export als Markdown / TypeScript / Swagger (OpenAPI3)</text>
+  <text x="500" y="470" font-size="13" fill="#333">Dokumentations-Cache / Debug-Events (v2: Code-Generator, Teilen-Links)</text>
+
+  <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+</svg>

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="sans-serif">
+  <defs>
+    <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
+      <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
+    </pattern>
+  </defs>
+  <rect width="940" height="560" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
+
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Funcionalidades del proyecto apidoc-rust</text>
+
+  <!-- Tarjeta 1 -->
+  <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M1</text>
+  <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">Documentación por anotaciones</text>
+  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">Siete macros de atributo, una por anotación, alineadas con la semántica de PHP attributes</text>
+  <text x="60" y="170" font-size="13" fill="#333">Los parámetros admiten anidación required / default / desc / mock / children</text>
+
+  <!-- Tarjeta 2 -->
+  <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M1</text>
+  <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">Validación en tiempo de compilación</text>
+  <text x="500" y="130" font-size="13" fill="#333">url debe comenzar con /, lista blanca de method, param name obligatorio</text>
+  <text x="500" y="150" font-size="13" fill="#333">Las anotaciones inválidas fallan en tiempo de compilación (span preciso); la documentación nunca se desincroniza del código</text>
+
+  <!-- Tarjeta 3 -->
+  <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M1</text>
+  <text x="60" y="256" font-size="17" font-weight="bold" fill="#1e8449">Recolección automática</text>
+  <text x="60" y="280" font-size="13" fill="#333">Registro estático con linkme distributed_slice, sin listado manual de interfaces</text>
+  <text x="60" y="300" font-size="13" fill="#333">DocRegistry::collect() fusiona por id y restaura el orden de declaración por seq</text>
+  <text x="60" y="320" font-size="13" fill="#333">Recolección automática entre crates: equivalente a «escanea el código y obtén todas las interfaces»</text>
+
+  <!-- Tarjeta 4 -->
+  <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M1</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Salida api.json</text>
+  <text x="500" y="280" font-size="13" fill="#333">serde serializa un modelo de datos de documentación unificado (config + endpoints)</text>
+  <text x="500" y="300" font-size="13" fill="#333">Campos alineados con la semántica de PHP: title/desc/url/method/params/querys/returned</text>
+  <text x="500" y="320" font-size="13" fill="#333">La UI y la exportación comparten la misma fuente de datos</text>
+
+  <!-- Tarjeta 5 -->
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Planificado</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">Depuración en línea + Mock</text>
+  <text x="60" y="430" font-size="13" fill="#333">Depuración conectando el navegador directamente a la interfaz de destino vía CORS, sin proxy de servidor</text>
+  <text x="60" y="450" font-size="13" fill="#333">Las reglas Mock (p. ej. @integer(1,100)) se asignan al crate fake para generar datos</text>
+  <text x="60" y="470" font-size="13" fill="#333">Múltiples aplicaciones / múltiples versiones / contraseña de acceso</text>
+
+  <!-- Tarjeta 6 -->
+  <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Planificado</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Adaptación a múltiples frameworks + exportación</text>
+  <text x="500" y="430" font-size="13" fill="#333">Adaptadores finos apidoc-axum / apidoc-actix, núcleo sin cambios</text>
+  <text x="500" y="450" font-size="13" fill="#333">Exportar Markdown / TypeScript / Swagger (OpenAPI3)</text>
+  <text x="500" y="470" font-size="13" fill="#333">Caché de documentación / eventos de depuración (v2: generador de código, enlaces para compartir)</text>
+
+  <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+</svg>

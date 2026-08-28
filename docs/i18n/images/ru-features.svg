@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="sans-serif">
+  <defs>
+    <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
+      <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
+    </pattern>
+  </defs>
+  <rect width="940" height="560" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
+
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Возможности проекта apidoc-rust</text>
+
+  <!-- Карточка 1 -->
+  <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Реализовано M1</text>
+  <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">Аннотации как документация</text>
+  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">Семь атрибутных макросов, семантика как в PHP attributes</text>
+  <text x="60" y="170" font-size="13" fill="#333">Вложенность: required / default / desc / mock / children</text>
+
+  <!-- Карточка 2 -->
+  <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Реализовано M1</text>
+  <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">Проверка в компайл-тайме</text>
+  <text x="500" y="130" font-size="13" fill="#333">url с /, method по белому списку, param name обязателен</text>
+  <text x="500" y="150" font-size="13" fill="#333">Ошибка компиляции с точным span — документ всегда актуален</text>
+
+  <!-- Карточка 3 -->
+  <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Реализовано M1</text>
+  <text x="60" y="256" font-size="17" font-weight="bold" fill="#1e8449">Автоматический сбор</text>
+  <text x="60" y="280" font-size="13" fill="#333">linkme distributed_slice: статическая регистрация, без списков</text>
+  <text x="60" y="300" font-size="13" fill="#333">DocRegistry::collect(): объединение по id, порядок по seq</text>
+  <text x="60" y="320" font-size="13" fill="#333">Автосбор между crates: «весь API — из кода»</text>
+
+  <!-- Карточка 4 -->
+  <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Реализовано M1</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Вывод api.json</text>
+  <text x="500" y="280" font-size="13" fill="#333">serde: единая модель данных (config + endpoints)</text>
+  <text x="500" y="300" font-size="13" fill="#333">Поля как в PHP: title/desc/url/method/params/querys/returned</text>
+  <text x="500" y="320" font-size="13" fill="#333">UI и экспорт используют один источник данных</text>
+
+  <!-- Карточка 5 -->
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">В планах</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">Онлайн-отладка + Mock</text>
+  <text x="60" y="430" font-size="13" fill="#333">Прямое подключение к API через CORS — без прокси</text>
+  <text x="60" y="450" font-size="13" fill="#333">Mock-правила (@integer(1,100) и т.п.) через crate fake</text>
+  <text x="60" y="470" font-size="13" fill="#333">Несколько приложений / версий / пароль</text>
+
+  <!-- Карточка 6 -->
+  <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">В планах</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Адаптация + экспорт</text>
+  <text x="500" y="430" font-size="13" fill="#333">apidoc-axum / apidoc-actix: тонкая обёртка, ядро без правок</text>
+  <text x="500" y="450" font-size="13" fill="#333">Экспорт Markdown / TypeScript / Swagger (OpenAPI3)</text>
+  <text x="500" y="470" font-size="13" fill="#333">Кэш документации / события отладки (v2: генератор кода, ссылки)</text>
+
+  <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+</svg>
