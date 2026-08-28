@@ -114,7 +114,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rs = "0.1"        # أو path = "crates/apidoc"
+apidoc-rust = "0.1"        # أو path = "crates/apidoc"
 
 
 serde_json = "1"      # لاستخدام إخراج api.json
@@ -250,7 +250,7 @@ GET /apidoc/export?format=swagger   # ملف وصف OpenAPI 3.0.0 (application/j
 
 ```toml
 [dependencies]
-apidoc-rs = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust

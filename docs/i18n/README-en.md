@@ -114,7 +114,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rs = "0.1"        # or path = "crates/apidoc"
+apidoc-rust = "0.1"        # or path = "crates/apidoc"
 
 
 serde_json = "1"      # for api.json output
@@ -250,7 +250,7 @@ When using actix-web, add `features = ["actix"]` (1:1 feature parity with the ax
 
 ```toml
 [dependencies]
-apidoc-rs = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust

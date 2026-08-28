@@ -114,7 +114,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rs = "0.1"        # または path = "crates/apidoc"
+apidoc-rust = "0.1"        # または path = "crates/apidoc"
 
 
 serde_json = "1"      # api.json 出力用
@@ -250,7 +250,7 @@ Web フレームワークに actix-web を使う場合は `features = ["actix"]`
 
 ```toml
 [dependencies]
-apidoc-rs = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust

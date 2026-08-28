@@ -114,7 +114,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rs = "0.1"        # atau path = "crates/apidoc"
+apidoc-rust = "0.1"        # atau path = "crates/apidoc"
 
 
 serde_json = "1"      # untuk output api.json
@@ -250,7 +250,7 @@ Saat kerangka web memakai actix-web, pasang `features = ["actix"]` (fungsionalit
 
 ```toml
 [dependencies]
-apidoc-rs = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust

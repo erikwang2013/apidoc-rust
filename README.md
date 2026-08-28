@@ -88,7 +88,7 @@ apidoc-rust/
 ├── Cargo.toml                 # workspace 配置（resolver 2）
 ├── VERSION                    # 项目版本（v1.3.0，与框架版本 0.1.0 分离）
 ├── crates/
-│   ├── apidoc/                # 单一发布包 apidoc-rs（lib 名 apidoc）
+│   ├── apidoc/                # 单一发布包 apidoc-rust（lib 名 apidoc）
 │   │   ├── src/lib.rs         # 数据模型 + DocRegistry 聚合 + api.json + UI_HTML
 │   │   ├── src/auth.rs        # M6a 密码鉴权（authcode token 签发/校验 + 路由守卫）
 │   │   ├── src/mock.rs        # M4 Mock 引擎（feature `mock`，axum/actix 隐含启用）
@@ -99,7 +99,7 @@ apidoc-rust/
 │   │   ├── tests/             # 集成测试（宏展开/聚合/序列化/跨 crate/适配器）
 │   │   ├── examples/demo.rs   # 示例：注解 + 输出 api.json
 │   │   └── examples/axum_demo.rs  # 示例：axum 接入（feature `axum`）
-│   ├── apidoc-macros/         # proc-macro：20 个属性宏（经 apidoc-rs re-export）
+│   ├── apidoc-macros/         # proc-macro：20 个属性宏（经 apidoc-rust re-export）
 │   │   └── src/lib.rs         # 宏定义 + 参数解析 + 编译期校验
 │   └── apidoc-test-fixtures/  # 跨 crate 注册测试夹具（仅 workspace，不发布）
 ├── .github/
@@ -115,11 +115,11 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rs = "0.1"     # 或 path = "crates/apidoc"
+apidoc-rust = "0.1"     # 或 path = "crates/apidoc"
 serde_json = "1"      # 输出 api.json 用
 ```
 
-> 单个发布包 `apidoc-rs`（lib 名 `apidoc`，宏经 re-export 无需单独依赖）：
+> 单个发布包 `apidoc-rust`（lib 名 `apidoc`，宏经 re-export 无需单独依赖）：
 > 纯核心零 feature；按 Web 框架二选一开 `features = ["axum"]` 或 `features = ["actix"]`（两者功能 1:1）；Mock 引擎由适配器 feature 隐含启用（`mock` 也可单独开启）。默认构建不拉任何框架依赖。
 
 ### 2. 编写注解
@@ -299,7 +299,7 @@ Web 框架用 actix-web 时开启 `features = ["actix"]`（与 axum 适配器功
 
 ```toml
 [dependencies]
-apidoc-rs = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust

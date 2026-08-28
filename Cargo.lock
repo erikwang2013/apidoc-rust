@@ -240,7 +240,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "apidoc-rs"
+name = "apidoc-rust"
 version = "0.1.0"
 dependencies = [
  "actix-cors",
@@ -262,7 +262,7 @@ dependencies = [
 name = "apidoc-test-fixtures"
 version = "0.1.0"
 dependencies = [
- "apidoc-rs",
+ "apidoc-rust",
  "linkme",
 ]
 

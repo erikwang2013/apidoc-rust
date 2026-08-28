@@ -114,7 +114,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rs = "0.1"        # o path = "crates/apidoc"
+apidoc-rust = "0.1"        # o path = "crates/apidoc"
 
 
 serde_json = "1"      # para generar api.json
@@ -250,7 +250,7 @@ Si el framework Web es actix-web, conecte `features = ["actix"]` (funcionalidad 
 
 ```toml
 [dependencies]
-apidoc-rs = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust

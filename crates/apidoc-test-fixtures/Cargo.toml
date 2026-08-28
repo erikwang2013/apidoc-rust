@@ -7,5 +7,5 @@ description.workspace = true
 repository.workspace = true
 
 [dependencies]
-apidoc-rs = { path = "../apidoc", version = "0.1.0" }
+apidoc-rust = { path = "../apidoc", version = "0.1.0" }
 linkme = "0.3"

@@ -114,7 +114,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rs = "0.1"        # या path = "crates/apidoc"
+apidoc-rust = "0.1"        # या path = "crates/apidoc"
 
 
 serde_json = "1"      # api.json आउटपुट के लिए
@@ -250,7 +250,7 @@ Web फ्रेमवर्क actix-web होने पर `features = ["acti
 
 ```toml
 [dependencies]
-apidoc-rs = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust

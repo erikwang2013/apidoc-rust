@@ -114,7 +114,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rs = "0.1"        # অথবা path = "crates/apidoc"
+apidoc-rust = "0.1"        # অথবা path = "crates/apidoc"
 
 
 serde_json = "1"      # api.json আউটপুটের জন্য
@@ -250,7 +250,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 বর্ণনা ফাই
 
 ```toml
 [dependencies]
-apidoc-rs = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust
