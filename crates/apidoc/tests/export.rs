@@ -62,9 +62,9 @@ fn doc() -> ApiDoc {
     ApiDoc {
         config: ApidocConfig {
             title: "测试文档".into(),
-            description: Some("导出测试".into()),
+            description: Some("导出测试".into()), auth: None, apps: Vec::new(),
         },
-        endpoints: DocRegistry::collect(),
+        apps: Vec::new(), endpoints: DocRegistry::collect(),
     }
 }
 
@@ -169,7 +169,7 @@ fn doc_param(name: &'static str, ty: &'static str, required: bool, desc: Option<
 
 #[test]
 fn boundary_empty_doc_renders_without_panic() {
-    let d = ApiDoc { config: ApidocConfig { title: "空文档".into(), description: None }, endpoints: vec![] };
+    let d = ApiDoc { config: ApidocConfig { title: "空文档".into(), description: None, auth: None, apps: Vec::new() }, apps: Vec::new(), endpoints: vec![] };
     assert!(apidoc::export::markdown::render(&d).contains("# 空文档"));
     assert!(apidoc::export::typescript::render(&d).is_empty());
     let v = apidoc::export::swagger::render(&d, "1.0.0");
@@ -187,7 +187,7 @@ fn boundary_swagger_roundtrip_and_mixed_placeholders() {
     };
     ep.route_params.push(doc_param("uid", "int", true, None));
     ep.route_params.push(doc_param("pid", "int", true, None));
-    let d = ApiDoc { config: ApidocConfig { title: "t".into(), description: None }, endpoints: vec![ep] };
+    let d = ApiDoc { config: ApidocConfig { title: "t".into(), description: None, auth: None, apps: Vec::new() }, apps: Vec::new(), endpoints: vec![ep] };
     let v = apidoc::export::swagger::render(&d, "1.0.0");
     // axum route 依赖 to_string 预序列化：round-trip 必须成功且是合法 JSON
     let s = serde_json::to_string(&v).unwrap();
@@ -209,8 +209,8 @@ fn swagger_error_code_outside_4xx_5xx_maps_to_500() {
     };
     ep.error.push(apidoc::DocExample { code: "200", example: "{}" });
     let doc = ApiDoc {
-        config: ApidocConfig { title: "t".into(), description: None },
-        endpoints: vec![ep],
+        config: ApidocConfig { title: "t".into(), description: None, auth: None, apps: Vec::new() },
+        apps: Vec::new(), endpoints: vec![ep],
     };
     let v = apidoc::export::swagger::render(&doc, "1.0.0");
     let op = &v["paths"]["/api/bad"]["post"];

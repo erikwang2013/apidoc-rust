@@ -1,18 +1,22 @@
 //! Attribute macros for apidoc: title / desc / method / url / param / query /
-//! returned (M1) and tag / group / author / header / route_param /
-//! response_status / success / error / not_debug / md / sort / ref (M3).
+//! returned (M1), tag / group / author / header / route_param /
+//! response_status / success / error / not_debug / md / sort / ref (M3),
+//! and app (M6b).
 //!
 //! Each macro keeps the annotated function unchanged and emits a statically
 //! registered `DocFragmentEntry` on the distributed slice `apidoc::DOC_FRAGMENTS`,
 //! so documentation fragments are collected at zero runtime cost.
 
+mod args;
+
+use args::{HeaderArgs, ParamArgs, SuccessArgs};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{format_ident, quote};
 use std::sync::atomic::{AtomicU32, Ordering};
-use syn::parse::{Parse, ParseStream};
+use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
-use syn::{braced, bracketed, parse_macro_input, Ident, Item, ItemFn, LitInt, LitStr, Token};
+use syn::{parse_macro_input, Ident, Item, ItemFn, LitInt, LitStr, Token};
 
 const HTTP_METHODS: &[&str] = &["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"];
 
@@ -165,6 +169,12 @@ pub fn r#ref(args: TokenStream, item: TokenStream) -> TokenStream {
     simple_fragment("ref", args, item)
 }
 
+/// M6b: 将接口挂到指定应用/版本 key 下（key 须在 ApidocConfig.apps 中配置）。
+#[proc_macro_attribute]
+pub fn app(args: TokenStream, item: TokenStream) -> TokenStream {
+    simple_fragment("app", args, item)
+}
+
 /// title / desc / method / url / group / author / md / ref: a single string
 /// literal plus validation.
 fn simple_fragment(kind: &str, args: TokenStream, item: TokenStream) -> TokenStream {
@@ -181,7 +191,7 @@ fn simple_fragment(kind: &str, args: TokenStream, item: TokenStream) -> TokenStr
                 HTTP_METHODS, value
             ),
         )),
-        "group" | "author" | "ref" if value.trim().is_empty() => Some(syn::Error::new(
+        "group" | "author" | "ref" | "app" if value.trim().is_empty() => Some(syn::Error::new(
             lit.span(),
             format!("apidoc::{kind} must not be empty"),
         )),
@@ -400,138 +410,3 @@ fn example_fragment(kind: &str, args: TokenStream, item: TokenStream) -> TokenSt
     emit_many(kind, item_fn, vec![frag])
 }
 
-/// Parsed `code` / `example` keyword arguments of success / error. Keeps the
-/// raw literals so validation errors point at the exact token, not the whole
-/// attribute.
-struct SuccessArgs {
-    code: Option<LitStr>,
-    example: Option<LitStr>,
-}
-
-impl Parse for SuccessArgs {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let mut out = SuccessArgs { code: None, example: None };
-        while !input.is_empty() {
-            let key: Ident = input.parse()?;
-            input.parse::<Token![=]>()?;
-            let value: LitStr = input.parse()?;
-            match key.to_string().as_str() {
-                "code" => out.code = Some(value),
-                "example" => out.example = Some(value),
-                other => {
-                    return Err(syn::Error::new(
-                        key.span(),
-                        format!("unknown argument `{other}`; expected code or example"),
-                    ));
-                }
-            }
-            if input.is_empty() {
-                break;
-            }
-            input.parse::<Token![,]>()?;
-        }
-        Ok(out)
-    }
-}
-
-/// Parsed `name` / `desc` keyword arguments of header. Dedicated parser so
-/// unknown keys (ty / required / mock / children) fail loudly instead of
-/// being silently dropped.
-struct HeaderArgs {
-    name: Option<String>,
-    desc: Option<String>,
-}
-
-impl Parse for HeaderArgs {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let mut out = HeaderArgs { name: None, desc: None };
-        while !input.is_empty() {
-            let key: Ident = input.parse()?;
-            input.parse::<Token![=]>()?;
-            let value: LitStr = input.parse()?;
-            match key.to_string().as_str() {
-                "name" => out.name = Some(value.value()),
-                "desc" => out.desc = Some(value.value()),
-                other => {
-                    return Err(syn::Error::new(
-                        key.span(),
-                        format!("unknown argument `{other}`; expected name or desc"),
-                    ));
-                }
-            }
-            if input.is_empty() {
-                break;
-            }
-            input.parse::<Token![,]>()?;
-        }
-        Ok(out)
-    }
-}
-
-/// Parsed keyword arguments of param / query / returned.
-struct ParamArgs {
-    name: Option<String>,
-    ty: Option<String>,
-    required: bool,
-    default: Option<String>,
-    desc: Option<String>,
-    mock: Option<String>,
-    children: Vec<ParamArgs>,
-}
-
-impl Parse for ParamArgs {
-    fn parse(input: ParseStream) -> syn::Result<Self> {
-        let mut out = ParamArgs {
-            name: None,
-            ty: None,
-            required: false,
-            default: None,
-            desc: None,
-            mock: None,
-            children: Vec::new(),
-        };
-        while !input.is_empty() {
-            let key: Ident = input.parse()?;
-            if key == "required" {
-                out.required = true;
-            } else if key == "children" {
-                input.parse::<Token![=]>()?;
-                let content;
-                bracketed!(content in input);
-                while !content.is_empty() {
-                    let inner;
-                    braced!(inner in content);
-                    out.children.push(inner.parse::<ParamArgs>()?);
-                    if content.is_empty() {
-                        break;
-                    }
-                    content.parse::<Token![,]>()?;
-                }
-            } else {
-                input.parse::<Token![=]>()?;
-                let value: LitStr = input.parse()?;
-                match key.to_string().as_str() {
-                    "name" => out.name = Some(value.value()),
-                    "ty" | "type" => out.ty = Some(value.value()),
-                    "default" => out.default = Some(value.value()),
-                    "desc" => out.desc = Some(value.value()),
-                    "mock" => out.mock = Some(value.value()),
-                    other => {
-                        return Err(syn::Error::new(
-                            key.span(),
-                            format!(
-                                "unknown argument `{}`; expected name, ty, required, default, desc, mock or children",
-                                other
-                            ),
-                        ));
-                    }
-                }
-            }
-            if input.is_empty() {
-                break;
-            }
-            input.parse::<Token![,]>()?;
-        }
-        Ok(out)
-    }
-}

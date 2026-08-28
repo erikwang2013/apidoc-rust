@@ -4,8 +4,9 @@
 
 use actix_cors::Cors;
 use actix_web::{web, HttpResponse, Scope};
+use apidoc::auth::{self, AuthConfig};
 use apidoc::export;
-use apidoc::{ApiDoc, ApidocConfig, DocRegistry};
+use apidoc::{AppConfig, ApidocConfig, DocRegistry};
 use apidoc_mock::{generate_mock, mock_specs, MockEndpointSpec};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -49,7 +50,7 @@ pub fn cors_layer(config: CorsConfig) -> Cors {
 /// 分组是纯 UI 侧启发式（见 ui.html），M3 的 group 注解上线后 UI 优先用注解。
 /// ui.html 共享自核心 crate（crates/apidoc/src/ui.html），与 axum 适配器同一份。
 pub fn apidoc_routes(config: ApidocConfig) -> Scope {
-    let doc = ApiDoc { config, endpoints: DocRegistry::collect() };
+    let doc = DocRegistry::collect_doc(config);
     // 构建期序列化一次：ApiDoc 无 Clone（核心约束），预序列化 String 是唯一干净解。
     let api_json = serde_json::to_string(&doc).expect("ApiDoc must serialize");
     // M4 mock：只需可 Clone 的子集，handler 捕获 Arc<Vec<MockEndpointSpec>>，
@@ -61,6 +62,12 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
     // ponytail: include_str! 跨 crate 目录，发布 crates.io 前需把 VERSION 内容内嵌进核心 crate
     let sw = serde_json::to_string(&export::swagger::render(&doc, include_str!("../../../VERSION").trim()))
         .expect("swagger must serialize");
+    // 鉴权配置与应用树按需捕获（password/secret_key 只在构建期内存中）
+    let auth_cfg: Option<Arc<AuthConfig>> = doc.config.auth.clone().map(Arc::new);
+    let app_cfgs: Arc<Vec<AppConfig>> = Arc::new(doc.config.apps.clone());
+    // auth_cfg / app_cfgs 被多个路由共享：外层块 clone 一份给当前路由的 move
+    // 闭包（避免 E0382）；闭包体内再 clone 成局部变量，async move 只捕获局部
+    // 变量（避免 FnOnce）。api_json/mocks/md/ts/sw 单路由独占，一层 clone 即可。
     web::scope("/apidoc")
         .route(
             "",
@@ -70,46 +77,119 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
                     .body(apidoc::UI_HTML)
             }),
         )
+        // GET /apidoc/auth?password=<md5>&appKey=...（appKey 应用密码优先）
+        .route(
+            "/auth",
+            web::get().to({
+                let auth_cfg = auth_cfg.clone();
+                let app_cfgs = app_cfgs.clone();
+                move |q: web::Query<HashMap<String, String>>| {
+                    let auth_cfg = auth_cfg.clone();
+                    let app_cfgs = app_cfgs.clone();
+                    async move {
+                        let (status, body) = auth::auth_result_response(auth::auth_issue(
+                            q.get("password").map(String::as_str).unwrap_or(""),
+                            q.get("appKey").map(String::as_str),
+                            auth_cfg.as_deref(),
+                            &app_cfgs,
+                        ));
+                        HttpResponse::build(actix_web::http::StatusCode::from_u16(status).unwrap())
+                            .content_type("application/json")
+                            .body(body)
+                    }
+                }
+            }),
+        )
         .route(
             "/api.json",
-            web::get().to(move || {
+            web::get().to({
+                let auth_cfg = auth_cfg.clone();
+                let app_cfgs = app_cfgs.clone();
                 let body = api_json.clone();
-                async move {
-                    HttpResponse::Ok().content_type("application/json").body(body)
+                move |q: web::Query<HashMap<String, String>>| {
+                    let auth_cfg = auth_cfg.clone();
+                    let app_cfgs = app_cfgs.clone();
+                    let body = body.clone();
+                    async move {
+                        if !auth_guard_ok(&q, auth_cfg.as_deref(), &app_cfgs) {
+                            return HttpResponse::Unauthorized()
+                                .content_type("application/json")
+                                .body(auth::DENIED_BODY);
+                        }
+                        HttpResponse::Ok().content_type("application/json").body(body)
+                    }
                 }
             }),
         )
         .route(
             "/export",
-            web::get().to(move |q: web::Query<HashMap<String, String>>| {
+            web::get().to({
+                let auth_cfg = auth_cfg.clone();
+                let app_cfgs = app_cfgs.clone();
                 let (md, ts, sw) = (md.clone(), ts.clone(), sw.clone());
-                async move {
-                    let (ct, body) = match q.get("format").map(String::as_str) {
-                        Some("md") => ("text/markdown", md),
-                        Some("ts") => ("application/typescript", ts),
-                        Some("swagger") => ("application/json", sw),
-                        _ => return HttpResponse::BadRequest().finish(),
-                    };
-                    HttpResponse::Ok().content_type(ct).body(body)
+                move |q: web::Query<HashMap<String, String>>| {
+                    let auth_cfg = auth_cfg.clone();
+                    let app_cfgs = app_cfgs.clone();
+                    let (md, ts, sw) = (md.clone(), ts.clone(), sw.clone());
+                    async move {
+                        if !auth_guard_ok(&q, auth_cfg.as_deref(), &app_cfgs) {
+                            return HttpResponse::Unauthorized()
+                                .content_type("application/json")
+                                .body(auth::DENIED_BODY);
+                        }
+                        let (ct, body) = match q.get("format").map(String::as_str) {
+                            Some("md") => ("text/markdown", md),
+                            Some("ts") => ("application/typescript", ts),
+                            Some("swagger") => ("application/json", sw),
+                            _ => return HttpResponse::BadRequest().finish(),
+                        };
+                        HttpResponse::Ok().content_type(ct).body(body)
+                    }
                 }
             }),
         )
         .route(
             "/mock",
-            web::get().to(move |q: web::Query<HashMap<String, String>>| {
+            web::get().to({
+                let auth_cfg = auth_cfg.clone();
+                let app_cfgs = app_cfgs.clone();
                 let mocks = mocks.clone();
-                async move {
-                    let url = q.get("url").map(String::as_str).unwrap_or("");
-                    let method = q.get("method").map(String::as_str).unwrap_or("");
-                    match mocks.iter().find(|s| s.url == url && s.method == method) {
-                        Some(spec) => HttpResponse::Ok().content_type("application/json").body(
-                            serde_json::to_string(&generate_mock(spec)).expect("mock must serialize"),
-                        ),
-                        None => HttpResponse::NotFound()
-                            .content_type("application/json")
-                            .body(r#"{"error":"endpoint not found"}"#),
+                move |q: web::Query<HashMap<String, String>>| {
+                    let auth_cfg = auth_cfg.clone();
+                    let app_cfgs = app_cfgs.clone();
+                    let mocks = mocks.clone();
+                    async move {
+                        if !auth_guard_ok(&q, auth_cfg.as_deref(), &app_cfgs) {
+                            return HttpResponse::Unauthorized()
+                                .content_type("application/json")
+                                .body(auth::DENIED_BODY);
+                        }
+                        let url = q.get("url").map(String::as_str).unwrap_or("");
+                        let method = q.get("method").map(String::as_str).unwrap_or("");
+                        match mocks.iter().find(|s| s.url == url && s.method == method) {
+                            Some(spec) => HttpResponse::Ok().content_type("application/json").body(
+                                serde_json::to_string(&generate_mock(spec)).expect("mock must serialize"),
+                            ),
+                            None => HttpResponse::NotFound()
+                                .content_type("application/json")
+                                .body(r#"{"error":"endpoint not found"}"#),
+                        }
                     }
                 }
             }),
         )
+}
+
+/// M6a：数据路由守卫（对齐 axum 行为），auth 未启用恒放行。
+fn auth_guard_ok(
+    q: &HashMap<String, String>,
+    auth_cfg: Option<&AuthConfig>,
+    app_cfgs: &[AppConfig],
+) -> bool {
+    auth::auth_guard_ok(
+        q.get("token").map(String::as_str).unwrap_or(""),
+        q.get("appKey").map(String::as_str),
+        auth_cfg,
+        app_cfgs,
+    )
 }

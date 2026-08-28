@@ -7,6 +7,8 @@ license.workspace = true
 [dependencies]
 linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
+# M6a 鉴权：对齐上游 apidoc-php 的 md5 组合 token（唯一允许的新增依赖）
+md5 = "0.7"
 # M5 导出（swagger::render 返回 Value）需要；原 dev-dependency 提升为正式依赖
 serde_json = "1"
 apidoc-macros = { path = "../apidoc-macros", version = "0.1.0" }

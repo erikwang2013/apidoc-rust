@@ -15,8 +15,17 @@ pub use linkme::distributed_slice;
 /// M5: markdown / typescript / swagger(OpenAPI3) 三种导出格式。
 pub mod export;
 
+/// M6a: 密码鉴权（authcode token，对齐上游 apidoc-php）。
+pub mod auth;
+
 /// 共享文档 UI（axum/actix 适配器 include_str! 自本 crate，发布打包安全）。
-pub const UI_HTML: &str = include_str!("ui.html");
+/// ui.html 为标记与样式、ui.js 为核心脚本、ui.debug.js 为在线调试面板，
+/// 编译期拼接为完整 HTML（同一 <script>，函数声明提升保证跨文件可见）。
+pub const UI_HTML: &str = concat!(
+    include_str!("ui.html"),
+    include_str!("ui.js"),
+    include_str!("ui.debug.js")
+);
 
 use serde::Serialize;
 
@@ -57,6 +66,8 @@ pub enum DocFragment {
     Md(&'static str),
     Sort(i32),
     Ref(&'static str),
+    // M6b: 挂到指定应用/版本 key 下（key 须在 ApidocConfig.apps 中配置，否则落默认应用）。
+    App(&'static str),
 }
 
 /// A documented example response body (shared by success / error).
@@ -90,7 +101,7 @@ fn slice_is_empty<T>(s: &[T]) -> bool {
 }
 
 /// One documented HTTP endpoint, built by merging fragments with the same id.
-#[derive(Serialize)]
+#[derive(Clone, Serialize)]
 pub struct DocEndpoint {
     pub title: String,
     pub desc: String,
@@ -126,6 +137,9 @@ pub struct DocEndpoint {
     pub sort: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub r#ref: Option<String>,
+    // 多应用归属（#[apidoc::app] 注解），仅 collect 用，不进任何序列化输出。
+    #[serde(skip)]
+    pub app_key: String,
 }
 
 fn is_zero(n: &i32) -> bool {
@@ -154,6 +168,7 @@ impl Default for DocEndpoint {
             md: String::new(),
             sort: 0,
             r#ref: None,
+            app_key: String::new(),
         }
     }
 }
@@ -166,12 +181,52 @@ pub struct DocHeader {
     pub desc: Option<&'static str>,
 }
 
+/// 应用/版本配置树：key 为注解引用的唯一标识，title 为展示名，items 递归嵌套
+/// 版本，password 为该应用的独立访问密码（优先级高于全局密码，永不序列化）。
+#[derive(Clone)]
+pub struct AppConfig {
+    pub key: String,
+    pub title: String,
+    pub items: Vec<AppConfig>,
+    pub password: Option<String>,
+}
+
+/// 按配置树在 ApidocConfig.apps 中递归查找应用配置。
+pub fn find_app<'a>(apps: &'a [AppConfig], key: &str) -> Option<&'a AppConfig> {
+    for app in apps {
+        if app.key == key {
+            return Some(app);
+        }
+        if let Some(found) = find_app(&app.items, key) {
+            return Some(found);
+        }
+    }
+    None
+}
+
 /// Project-level configuration, combined with endpoints into the final output.
 #[derive(Serialize)]
 pub struct ApidocConfig {
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    // 密码鉴权。None 时 api.json 输出与 M5 字节级一致（红线）。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth: Option<auth::AuthConfig>,
+    // 应用/版本配置树。仅服务端使用（校验注解 key、应用密码），不进任何输出。
+    #[serde(skip)]
+    pub apps: Vec<AppConfig>,
+}
+
+/// 一个应用/版本节点：注解挂载的 endpoints + 递归子版本。
+#[derive(Serialize)]
+pub struct AppDoc {
+    pub key: String,
+    pub title: String,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub items: Vec<AppDoc>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub endpoints: Vec<DocEndpoint>,
 }
 
 /// Final aggregated document (the shape of api.json).
@@ -179,13 +234,29 @@ pub struct ApidocConfig {
 pub struct ApiDoc {
     pub config: ApidocConfig,
     pub endpoints: Vec<DocEndpoint>,
+    // 应用/版本树。无 app 注解或未配置 apps 时省略，输出与 M5 字节级一致（红线）。
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub apps: Vec<AppDoc>,
 }
 
 /// Collects and merges all registered fragments into per-endpoint documents.
 pub struct DocRegistry;
 
 impl DocRegistry {
+    /// M1-M5 行为不变：仅返回合并后的端点列表。
     pub fn collect() -> Vec<DocEndpoint> {
+        Self::collect_inner()
+    }
+
+    /// 构建完整文档（端点 + 应用/版本树）。apps 按 ApidocConfig.apps 配置树
+    /// 挂载注解端点；app 注解引用未配置的 key 时 eprintln 警告并落默认应用（根层）。
+    pub fn collect_doc(config: ApidocConfig) -> ApiDoc {
+        let endpoints = Self::collect_inner();
+        let apps = build_apps(&config.apps, &endpoints);
+        ApiDoc { config, endpoints, apps }
+    }
+
+    fn collect_inner() -> Vec<DocEndpoint> {
         // Sort by seq first: linkme's iteration order is linker-defined, not
         // source order. Cross-crate ordering stays linker-arbitrary; seq ties
         // between crates keep linkme's stable order. ponytail: acceptable for
@@ -232,6 +303,7 @@ impl DocRegistry {
                 DocFragment::Md(m) => ep.md = m.to_string(),
                 DocFragment::Sort(n) => ep.sort = *n,
                 DocFragment::Ref(r) => ep.r#ref = Some(r.to_string()),
+                DocFragment::App(a) => ep.app_key = a.to_string(),
             }
         }
         // Second pass: resolve ref chains (copy the target's `returned` into
@@ -244,6 +316,26 @@ impl DocRegistry {
             }
         }
         endpoints
+    }
+}
+
+/// 按配置树构建 AppDoc 树；未配置的注解 key 警告并留在根层（默认应用）。
+fn build_apps(config_apps: &[AppConfig], endpoints: &[DocEndpoint]) -> Vec<AppDoc> {
+    for ep in endpoints.iter().filter(|e| !e.app_key.is_empty()) {
+        if find_app(config_apps, &ep.app_key).is_none() {
+            eprintln!("apidoc: app `{}` not configured in ApidocConfig.apps, endpoints fall back to the default app", ep.app_key);
+        }
+    }
+    config_apps.iter().map(|c| build_app_doc(c, endpoints)).collect()
+}
+
+fn build_app_doc(cfg: &AppConfig, endpoints: &[DocEndpoint]) -> AppDoc {
+    let eps: Vec<DocEndpoint> = endpoints.iter().filter(|e| e.app_key == cfg.key).cloned().collect();
+    AppDoc {
+        key: cfg.key.clone(),
+        title: cfg.title.clone(),
+        items: cfg.items.iter().map(|c| build_app_doc(c, endpoints)).collect(),
+        endpoints: eps,
     }
 }
 

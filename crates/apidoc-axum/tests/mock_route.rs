@@ -32,7 +32,7 @@ fn app() -> Router {
     Router::new()
         .merge(apidoc_routes(ApidocConfig {
             title: "mock test".into(),
-            description: None,
+            description: None, auth: None, apps: Vec::new(),
         }))
         .layer(cors_layer(CorsConfig::default()))
 }

@@ -18,9 +18,9 @@ fn endpoint_json_field_names_are_exact() {
     let doc = ApiDoc {
         config: ApidocConfig {
             title: "t".into(),
-            description: None,
+            description: None, auth: None, apps: Vec::new(),
         },
-        endpoints: DocRegistry::collect(),
+        apps: Vec::new(), endpoints: DocRegistry::collect(),
     };
     let v: Value = serde_json::to_value(&doc).unwrap();
 
@@ -73,8 +73,10 @@ fn config_description_serializes_when_present() {
         config: ApidocConfig {
             title: "t".into(),
             description: Some("d".into()),
+            auth: None,
+            apps: Vec::new(),
         },
-        endpoints: Vec::new(),
+        apps: Vec::new(), endpoints: Vec::new(),
     };
     let v = serde_json::to_value(doc).unwrap();
     assert_eq!(v["config"], json!({"title": "t", "description": "d"}));

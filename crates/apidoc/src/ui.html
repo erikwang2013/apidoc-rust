@@ -11,6 +11,8 @@ body { margin:0; font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; ba
 header { background:var(--panel); border-bottom:1px solid var(--border); padding:12px 20px; }
 header h1 { margin:0; font-size:18px; }
 header p { margin:2px 0 0; color:var(--muted); font-size:13px; }
+#sel-row { display:none; gap:8px; align-items:center; background:var(--panel); border-bottom:1px solid var(--border); padding:8px 20px; }
+#sel-row select { padding:3px 6px; border:1px solid var(--border); border-radius:4px; font-size:13px; }
 #app { display:flex; align-items:flex-start; }
 #groups { width:280px; flex:none; background:var(--panel); border-right:1px solid var(--border); height:calc(100vh - 61px); overflow:auto; padding:12px 0; }
 #groups h2 { font-size:12px; color:var(--muted); margin:14px 16px 6px; text-transform:uppercase; letter-spacing:.05em; }
@@ -31,7 +33,7 @@ th,td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--border);
 th { color:var(--muted); font-weight:600; white-space:nowrap; }
 td.name { font-family:ui-monospace,Menlo,monospace; white-space:nowrap; }
 .empty { color:var(--muted); }
-/* M4 在线调试 */
+/* 在线调试 */
 .debug-row { display:flex; gap:8px; align-items:center; margin:4px 0; }
 .debug-row label { width:230px; flex:none; font-family:ui-monospace,Menlo,monospace; font-size:13px; }
 .debug-row input { flex:1; min-width:0; padding:4px 8px; border:1px solid var(--border); border-radius:4px; font-size:13px; }
@@ -43,6 +45,11 @@ td.name { font-family:ui-monospace,Menlo,monospace; white-space:nowrap; }
 button { padding:4px 12px; border:1px solid var(--border); border-radius:4px; background:#fff; cursor:pointer; font-size:13px; }
 button:hover { background:#f0f3f8; }
 #debug-result pre { white-space:pre-wrap; background:#f8f9fb; border:1px solid var(--border); border-radius:6px; padding:10px 12px; font-family:ui-monospace,Menlo,monospace; font-size:13px; margin:8px 0 0; }
+/* M6a 密码遮罩：全屏覆盖层，非受控状态 display:none */
+#mask { display:none; position:fixed; inset:0; background:var(--bg); z-index:10; align-items:center; justify-content:center; }
+#mask-box { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:28px 32px; width:320px; text-align:center; }
+#mask-box h2 { margin:0 0 8px; font-size:16px; }
+#mask-box input { width:100%; padding:6px 8px; border:1px solid var(--border); border-radius:4px; margin:12px 0; font-size:14px; }
 </style>
 </head>
 <body>
@@ -50,449 +57,20 @@ button:hover { background:#f0f3f8; }
   <h1 id="title">API Documentation</h1>
   <p id="subtitle"></p>
 </header>
+<div id="sel-row">
+  <label>应用</label><select id="apps-sel"></select>
+  <label>版本</label><select id="ver-sel"></select>
+</div>
 <div id="app">
   <nav id="groups"></nav>
   <main id="detail"><p class="empty">加载中…</p></main>
 </div>
+<div id="mask">
+  <div id="mask-box">
+    <h2>访问受保护</h2>
+    <p id="mask-msg" class="empty"></p>
+    <input id="mask-pw" type="password" placeholder="请输入访问密码">
+    <button id="mask-btn">进入</button>
+  </div>
+</div>
 <script>
-// 文档内容全部经 textContent 注入，api.json 里的字符串永不按 HTML 处理。
-const base = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
-const COLORS = { GET:'#16a34a', POST:'#2563eb', PUT:'#d97706', DELETE:'#dc2626', PATCH:'#7c3aed', HEAD:'#64748b', OPTIONS:'#64748b' };
-
-function el(tag, cls, text) {
-  const e = document.createElement(tag);
-  if (cls) e.className = cls;
-  if (text !== undefined) e.textContent = text;
-  return e;
-}
-
-function badge(method) {
-  const b = el('span', 'badge', method);
-  b.style.background = COLORS[method] || '#64748b';
-  return b;
-}
-
-function firstSeg(ep) {
-  return ep.url.replace(/^\/+/, '').split('/').filter(Boolean)[0] || '';
-}
-
-// M3 起分组优先读 group 注解（main 里 ep.group || groupOf(ep)）；未标注的
-// endpoint 仍走 M2 启发式：所有 endpoint 首段相同（如全是 /api/...）时跳过
-// 公共首段用第二段分组（/api/user/info -> "user"）；否则用各自首段。
-let allShare = false;
-function groupOf(ep) {
-  const segs = ep.url.replace(/^\/+/, '').split('/').filter(Boolean);
-  if (!segs.length) return '未分组';
-  if (allShare && segs.length > 1) return segs[1];
-  return segs[0];
-}
-
-// 灰色小徽标：response_status / 示例 code
-function statusBadge(s) {
-  const b = el('span', 'badge', s);
-  b.style.background = '#9ca3af';
-  return b;
-}
-
-// 成功/失败示例：code 徽标 + 响应体原文（textContent 注入，pre-wrap）
-function exampleSection(title, list) {
-  const section = el('section');
-  section.appendChild(el('h3', null, title));
-  for (const ex of list) {
-    section.appendChild(statusBadge(ex.code));
-    const pre = document.createElement('pre');
-    pre.style.whiteSpace = 'pre-wrap';
-    pre.textContent = ex.example;
-    section.appendChild(pre);
-  }
-  return section;
-}
-
-function paramTable(title, list) {
-  const section = el('section');
-  section.appendChild(el('h3', null, title));
-  if (!list || !list.length) {
-    section.appendChild(el('p', 'empty', '无'));
-    return section;
-  }
-  const table = el('table');
-  const head = el('tr');
-  for (const h of ['名称', '类型', '必填', '默认值', '描述', '示例']) head.appendChild(el('th', null, h));
-  table.appendChild(head);
-  const tbody = el('tbody');
-  const addRows = (params, depth) => {
-    for (const p of params) {
-      const tr = el('tr');
-      const name = el('td', 'name', p.name);
-      name.style.paddingLeft = depth * 18 + 'px';
-      tr.appendChild(name);
-      tr.appendChild(el('td', null, p.type));
-      tr.appendChild(el('td', null, p.required ? '是' : '否'));
-      tr.appendChild(el('td', null, p.default ?? ''));
-      tr.appendChild(el('td', null, p.desc ?? ''));
-      tr.appendChild(el('td', null, p.mock ?? ''));
-      tbody.appendChild(tr);
-      if (p.children && p.children.length) addRows(p.children, depth + 1);
-    }
-  };
-  addRows(list, 0);
-  table.appendChild(tbody);
-  section.appendChild(table);
-  return section;
-}
-
-function render(ep) {
-  const detail = document.getElementById('detail');
-  detail.textContent = '';
-  detail.appendChild(el('h2', null, ep.title));
-  if (ep.author) detail.appendChild(el('p', 'desc', '作者：' + ep.author));
-  if (ep.ref) detail.appendChild(el('p', 'desc', '参考接口：' + ep.ref));
-  const line = el('div', 'endpoint-line');
-  line.appendChild(badge(ep.method));
-  if (ep.response_status) for (const s of ep.response_status) line.appendChild(statusBadge(s));
-  line.appendChild(el('code', null, ep.url));
-  detail.appendChild(line);
-  if (ep.desc) detail.appendChild(el('p', 'desc', ep.desc));
-  if (ep.tags && ep.tags.length) {
-    const tagline = el('div', 'endpoint-line');
-    for (const t of ep.tags) tagline.appendChild(el('code', null, t));
-    detail.appendChild(tagline);
-  }
-  detail.appendChild(paramTable('请求参数', ep.params));
-  detail.appendChild(paramTable('Query 参数', ep.querys));
-  detail.appendChild(paramTable('返回字段', ep.returned));
-  if (ep.success && ep.success.length) detail.appendChild(exampleSection('成功示例', ep.success));
-  if (ep.error && ep.error.length) detail.appendChild(exampleSection('失败示例', ep.error));
-  if (ep.md) {
-    const s = el('section');
-    s.appendChild(el('h3', null, '补充说明'));
-    const pre = document.createElement('pre');
-    pre.style.whiteSpace = 'pre-wrap';
-    pre.textContent = ep.md;
-    s.appendChild(pre);
-    detail.appendChild(s);
-  }
-  // M4 在线调试：调试数据从 /apidoc/mock 按需取，api.json 零变化
-  detail.appendChild(debugPanel(ep));
-}
-
-// ---------- M4 在线调试 ----------
-// 目标服务跨域直连：Base URL + 表单组装 URL/query/body，fetch 直发。
-// 所有值（响应体、mock 值、header 值）一律 textContent / input.value 注入。
-
-// 表单中一个参数/头部行：name（点分路径）+ 输入框
-function debugRow(name, placeholder) {
-  const row = el('div', 'debug-row');
-  row.appendChild(el('label', null, name));
-  const input = document.createElement('input');
-  if (placeholder) input.placeholder = placeholder;
-  row.appendChild(input);
-  return { row, name, input };
-}
-
-// 递归渲染参数输入行：children 按点分路径 parent.child 展开
-function paramRowsFor(container, params, kind, prefix) {
-  const rows = [];
-  const seen = new Set();
-  for (const p of params) {
-    const path = prefix ? prefix + '.' + p.name : p.name;
-    // 同名参数合法（JSON mock 层 last-wins 语义不变），表单只保留首个输入
-    if (seen.has(path)) continue;
-    seen.add(path);
-    const r = debugRow(path, p.desc || '');
-    r.input.dataset.kind = kind;
-    r.input.dataset.path = path;
-    r.input.dataset.ty = p.type;
-    container.appendChild(r.row);
-    rows.push(r);
-    if (p.children && p.children.length) rows.push(...paramRowsFor(container, p.children, kind, path));
-  }
-  return rows;
-}
-
-// 从 mock 响应按点分路径取值（嵌套对象叶子），取不到返回 undefined。
-// array 段先降入首个元素（mock 数组子行预填取 items[0]）。
-function mockAt(mock, kind, path) {
-  let cur = mock[kind];
-  for (const seg of path.split('.')) {
-    if (Array.isArray(cur)) cur = cur[0];
-    if (cur && typeof cur === 'object' && seg in cur) cur = cur[seg];
-    else return undefined;
-  }
-  return cur;
-}
-
-// 一个输入框的 mock 预填（失败静默留空）
-function prefillFromMock(mock, kind, path, input) {
-  const v = mockAt(mock, kind, path);
-  if (v !== undefined) input.value = typeof v === 'string' ? v : JSON.stringify(v);
-}
-
-function debugForm(ep) {
-  const form = el('div');
-
-  // Base URL：预填 location.origin，跨域直连目标服务时改为目标地址
-  const baseRow = el('div', 'debug-row');
-  baseRow.appendChild(el('label', null, 'Base URL'));
-  const baseUrl = document.createElement('input');
-  baseUrl.value = location.origin;
-  baseRow.appendChild(baseUrl);
-  form.appendChild(baseRow);
-
-  // 参数输入区：route_params / querys / params 三类
-  const routeRows = [];
-  const queryRows = [];
-  const paramRows = [];
-  if (ep.route_params && ep.route_params.length) {
-    const box = el('div', 'debug-row');
-    box.appendChild(el('label', null, 'route_params'));
-    const inner = el('div');
-    inner.style.flex = '1';
-    routeRows.push(...paramRowsFor(inner, ep.route_params, 'route_params', ''));
-    box.appendChild(inner);
-    form.appendChild(box);
-  }
-  if (ep.querys && ep.querys.length) {
-    const box = el('div', 'debug-row');
-    box.appendChild(el('label', null, 'querys'));
-    const inner = el('div');
-    inner.style.flex = '1';
-    queryRows.push(...paramRowsFor(inner, ep.querys, 'querys', ''));
-    box.appendChild(inner);
-    form.appendChild(box);
-  }
-  if (ep.params && ep.params.length) {
-    const box = el('div', 'debug-row');
-    box.appendChild(el('label', null, 'params'));
-    const inner = el('div');
-    inner.style.flex = '1';
-    paramRows.push(...paramRowsFor(inner, ep.params, 'params', ''));
-    box.appendChild(inner);
-    form.appendChild(box);
-  }
-
-  // headers：文档化 header 逐条渲染（desc 作 placeholder），可追加自定义 header
-  const headerRows = []; // { name, input }
-  const headersBox = el('div');
-  for (const h of (ep.headers || [])) {
-    const r = debugRow(h.name, h.desc || '');
-    headerRows.push(r);
-    headersBox.appendChild(r.row);
-  }
-  const adder = el('div', 'debug-row');
-  const hName = document.createElement('input');
-  hName.placeholder = 'Header 名';
-  const hVal = document.createElement('input');
-  hVal.placeholder = '值';
-  const addBtn = el('button', null, '添加');
-  addBtn.onclick = () => {
-    const name = hName.value.trim();
-    if (!name) return;
-    const r = debugRow(name, '');
-    r.input.value = hVal.value;
-    headerRows.push(r);
-    headersBox.insertBefore(r.row, adder);
-    hName.value = '';
-    hVal.value = '';
-  };
-  adder.appendChild(el('label', null, '自定义 header'));
-  adder.appendChild(hName);
-  adder.appendChild(hVal);
-  adder.appendChild(addBtn);
-  headersBox.appendChild(adder);
-  // 自定义 header 添加区始终可见（可空加自定义 header）
-  {
-    const box = el('div', 'debug-row');
-    box.appendChild(el('label', null, 'headers'));
-    const inner = el('div');
-    inner.style.flex = '1';
-    inner.appendChild(headersBox);
-    box.appendChild(inner);
-    form.appendChild(box);
-  }
-
-  // 提交：组装 URL/query/body 后 fetch 直发
-  const resultBox = el('div');
-  resultBox.id = 'debug-result';
-  const sendBtn = el('button', null, '发送请求');
-  const actionRow = el('div', 'debug-actions');
-  actionRow.appendChild(sendBtn);
-  form.appendChild(actionRow);
-  form.appendChild(resultBox);
-
-  // 非叶子行（名字是其他行前缀）不预填、不参与组装：值由子行逐项提供，
-  // 否则父行 JSON 字符串会遮蔽子行、body 变成转义字符串而非嵌套对象
-  const leafRows = rows => rows.filter(r => !rows.some(o => o !== r && o.name.startsWith(r.name + '.')));
-  const leafRouteRows = leafRows(routeRows);
-  const leafQueryRows = leafRows(queryRows);
-  const leafParamRows = leafRows(paramRows);
-
-  // mock 预填：一次请求取三类 mock，逐个输入框填值（失败静默留空）
-  fetch(base + 'mock?url=' + encodeURIComponent(ep.url) + '&method=' + ep.method)
-    .then(r => (r.ok ? r.json() : null))
-    .then(mock => {
-      if (!mock) return;
-      for (const r of leafRouteRows) prefillFromMock(mock, 'route_params', r.name, r.input);
-      for (const r of leafQueryRows) prefillFromMock(mock, 'querys', r.name, r.input);
-      for (const r of leafParamRows) prefillFromMock(mock, 'params', r.name, r.input);
-    })
-    .catch(() => {});
-
-  sendBtn.onclick = async () => {
-    const val = r => (r.input.value.trim() ? encodeURIComponent(r.input.value.trim()) : null);
-
-    // route_params：替换 url 中 {name} / :name 占位符（空值保留原占位符）
-    let fullUrl = (baseUrl.value || location.origin) + ep.url;
-    fullUrl = fullUrl.replace(/\{([^}]+)\}|:([A-Za-z0-9_]+)/g, (m, braced, coloned) => {
-      const key = braced || coloned;
-      const row = routeRows.find(r => r.name === key);
-      const v = row && val(row);
-      return v || m;
-    });
-
-    // querys + GET/HEAD 的 params 并入 query string
-    const qs = [];
-    for (const r of leafQueryRows) { const v = val(r); if (v) qs.push(encodeURIComponent(r.name) + '=' + v); }
-    const isGet = ep.method === 'GET' || ep.method === 'HEAD';
-    if (isGet) {
-      for (const r of leafParamRows) { const v = val(r); if (v) qs.push(encodeURIComponent(r.name) + '=' + v); }
-    }
-    if (qs.length) fullUrl += (fullUrl.includes('?') ? '&' : '?') + qs.join('&');
-
-    // 其余 method：params 按点分路径组装嵌套 JSON body。
-    // array 段（含嵌套）生成 [{}] 承载子行，其余段仍为 {}
-    let body;
-    if (!isGet) {
-      const arr = new Set(paramRows.filter(r => r.input.dataset.ty === 'array').map(r => r.name));
-      const obj = {};
-      for (const r of leafParamRows) {
-        const v = r.input.value.trim();
-        if (!v) continue;
-        const segs = r.name.split('.');
-        let cur = obj;
-        for (let i = 0; i < segs.length - 1; i++) {
-          const segPath = segs.slice(0, i + 1).join('.');
-          if (cur[segs[i]] === undefined) cur[segs[i]] = arr.has(segPath) ? [{}] : {};
-          cur = Array.isArray(cur[segs[i]]) ? cur[segs[i]][0] : cur[segs[i]];
-        }
-        cur[segs[segs.length - 1]] = v;
-      }
-      if (Object.keys(obj).length) body = JSON.stringify(obj);
-    }
-
-    // headers：非空值才发送；JSON body 自动补 Content-Type
-    const headers = {};
-    for (const h of headerRows) {
-      const v = h.input.value.trim();
-      if (v) headers[h.name] = v;
-    }
-    if (body) headers['Content-Type'] = 'application/json';
-
-    const out = el('div');
-    const t0 = performance.now();
-    try {
-      const res = await fetch(fullUrl, { method: ep.method, headers, body });
-      const text = await res.text();
-      const ms = Math.round(performance.now() - t0);
-      out.appendChild(el('p', null, res.status + ' ' + res.statusText + '（' + ms + 'ms）'));
-      const pre = document.createElement('pre');
-      try {
-        pre.textContent = JSON.stringify(JSON.parse(text), null, 2);
-      } catch (e) {
-        pre.textContent = text;
-      }
-      out.appendChild(pre);
-    } catch (e) {
-      // CORS 与网络失败无法区分，一条提示覆盖两种
-      console.error(e);
-      const warn = el('div');
-      warn.style.background = '#fef3c7';
-      warn.style.border = '1px solid #f59e0b';
-      warn.style.borderRadius = '6px';
-      warn.style.padding = '10px 12px';
-      warn.style.color = '#92400e';
-      warn.textContent = '请求失败：目标服务未开启 CORS、或网络不可达。请确认目标接口所在服务调用了 apidoc_axum::cors_layer 且对当前 Origin 放行（含预检 OPTIONS），并检查 Base URL 是否正确。浏览器控制台有详细错误。';
-      out.appendChild(warn);
-    }
-    resultBox.textContent = '';
-    resultBox.appendChild(out);
-  };
-
-  return form;
-}
-
-function debugPanel(ep) {
-  const section = el('section');
-  const titleRow = el('div', 'debug-title');
-  titleRow.appendChild(el('h3', null, '在线调试'));
-  const show = document.createElement('input');
-  show.type = 'checkbox';
-  const showLabel = el('label', null, '显示 not_debug 接口（本地调试）');
-  showLabel.prepend(show);
-  titleRow.appendChild(showLabel);
-  // not_debug 且未勾选：只渲染提示 + 复选框，不渲染表单
-  const rebuild = () => {
-    section.textContent = '';
-    section.appendChild(titleRow);
-    if (ep.not_debug && !show.checked) {
-      section.appendChild(el('p', 'empty', '该接口标记为 not_debug，默认不展示调试表单；勾选上方复选框可强制显示。'));
-    } else {
-      section.appendChild(debugForm(ep));
-    }
-  };
-  show.onchange = rebuild;
-  rebuild();
-  return section;
-}
-
-async function main() {
-  const doc = await (await fetch(base + 'api.json')).json();
-  document.getElementById('title').textContent = doc.config.title || 'API Documentation';
-  document.getElementById('subtitle').textContent = doc.config.description || '';
-  const eps = doc.endpoints;
-  const nav = document.getElementById('groups');
-  const detail = document.getElementById('detail');
-  detail.textContent = '';
-  if (!eps.length) {
-    nav.textContent = '';
-    detail.appendChild(el('p', 'empty', '暂无接口文档'));
-    return;
-  }
-  allShare = eps.every(e => firstSeg(e) === firstSeg(eps[0]));
-  const groups = {}; // 组名 -> endpoint 列表
-  for (const ep of eps) {
-    const g = ep.group || groupOf(ep); // M3：group 注解优先，启发式兜底
-    (groups[g] || (groups[g] = [])).push(ep);
-  }
-  const names = Object.keys(groups).sort((a, b) => a.localeCompare(b));
-  const pick = (gi, ei) => {
-    const links = nav.querySelectorAll('a');
-    for (const x of links) x.classList.remove('active');
-    links[ei].classList.add('active');
-    render(groups[names[gi]][ei]);
-  };
-  names.forEach((name, gi) => {
-    nav.appendChild(el('h2', null, name));
-    // M3：sort 注解权重优先（大者在前），未标注视为 0；相同权重时稳定排序
-    // 保留声明序（seq），再按 method/url 兜底
-    groups[name].sort((a, b) => (b.sort || 0) - (a.sort || 0) || a.method.localeCompare(b.method) || a.url.localeCompare(b.url));
-    groups[name].forEach((ep, ei) => {
-      const a = el('a');
-      a.appendChild(badge(ep.method));
-      a.appendChild(el('span', null, ep.title));
-      a.onclick = () => {
-        location.hash = '#g' + gi + '/e' + ei;
-        pick(gi, ei);
-      };
-      nav.appendChild(a);
-    });
-  });
-  const m = location.hash.match(/^#g(\d+)\/e(\d+)$/);
-  const gi = m ? Math.min(+m[1], names.length - 1) : 0;
-  const ei = m ? Math.min(+m[2], groups[names[gi]].length - 1) : 0;
-  pick(gi, ei);
-}
-main();
-</script>
-</body>
-</html>

@@ -80,9 +80,9 @@ fn main() {
     let doc = ApiDoc {
         config: ApidocConfig {
             title: "demo api".to_string(),
-            description: None,
+            description: None, auth: None, apps: Vec::new(),
         },
-        endpoints,
+        apps: Vec::new(), endpoints,
     };
     println!("{}", serde_json::to_string_pretty(&doc).unwrap());
 }

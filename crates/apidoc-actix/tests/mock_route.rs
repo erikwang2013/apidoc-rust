@@ -33,7 +33,7 @@ async fn get(uri: &str) -> (StatusCode, String) {
         App::new()
             .service(apidoc_routes(ApidocConfig {
                 title: "mock test".into(),
-                description: None,
+                description: None, auth: None, apps: Vec::new(),
             }))
             .wrap(cors_layer(CorsConfig::default())),
     )

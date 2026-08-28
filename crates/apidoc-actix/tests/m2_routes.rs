@@ -6,7 +6,7 @@ use actix_web::http::StatusCode;
 // 别名导入：actix_web::test 同时是模块和属性宏，直接 `use actix_web::test` 会遮蔽内置 #[test]
 use actix_web::test as actix_test;
 use actix_web::App;
-use apidoc::{ApiDoc, ApidocConfig, DocRegistry};
+use apidoc::{ApidocConfig, DocRegistry};
 use apidoc_actix::{apidoc_routes, cors_layer, CorsConfig};
 use serde_json::Value;
 
@@ -33,6 +33,14 @@ fn create_user() {}
 #[apidoc::method("GET")]
 fn health() {}
 
+// M6b fixture：挂到应用 key "api" 下，支撑 apps 树在 api.json 中可见
+#[allow(dead_code)]
+#[apidoc::app("api")]
+#[apidoc::title("应用接口")]
+#[apidoc::url("/api/app/ep")]
+#[apidoc::method("GET")]
+fn app_ep() {}
+
 // M3 fixture：ui.html 新增的 M3 字段引用（ep.group/sort/author/ref/...）
 // 需要真实数据支撑，白名单测试的 path_exists 才会命中。
 #[allow(dead_code)]
@@ -56,6 +64,8 @@ async fn get(uri: &str, origin: Option<&str>) -> (StatusCode, HeaderMap, String)
             .service(apidoc_routes(ApidocConfig {
                 title: "test api".into(),
                 description: Some("集成测试".into()),
+                auth: None,
+                apps: Vec::new(),
             }))
             .wrap(cors_layer(CorsConfig::default())),
     )
@@ -158,6 +168,8 @@ async fn cors_whitelist_matches_exactly_and_never_credentials() {
             .service(apidoc_routes(ApidocConfig {
                 title: "t".into(),
                 description: None,
+                auth: None,
+                apps: Vec::new(),
             }))
             .wrap(cors_layer(CorsConfig {
                 allow_origins: vec!["http://localhost:3000".into()],
@@ -197,27 +209,46 @@ async fn cors_whitelist_matches_exactly_and_never_credentials() {
 
 #[test]
 fn ui_html_has_grouping_markers() {
-    // 分组启发式在 ui.html 的 JS 内（Rust 侧无可测函数），验证分组代码存在
+    // 分组启发式在 ui.js 的 JS 内（Rust 侧无可测函数），验证分组代码存在
+    let js = concat!(include_str!("../../apidoc/src/ui.js"), include_str!("../../apidoc/src/ui.debug.js"));
+    assert!(js.contains("function groupOf"), "缺少 groupOf");
+    assert!(js.contains("allShare"), "缺少公共前缀判断");
+    assert!(js.contains("location.hash"), "缺少 hash 恢复选中");
+    assert!(js.contains("#g' + gi + '/e' + ei"), "缺少分组/端点 hash 标记");
+    assert!(js.contains("textContent"), "缺少 textContent 安全注入");
+    // M6a：密码遮罩与 md5 提交；M6b：应用/版本选择器
+    assert!(js.contains("function md5"), "缺少前端 md5");
+    assert!(js.contains("apidoc_token"), "缺少 token 存取");
+    assert!(js.contains("apps-sel"), "缺少应用选择器");
+    assert!(!js.contains("innerHTML"), "禁用 innerHTML");
     let html = include_str!("../../apidoc/src/ui.html");
-    assert!(html.contains("function groupOf"), "缺少 groupOf");
-    assert!(html.contains("allShare"), "缺少公共前缀判断");
-    assert!(html.contains("location.hash"), "缺少 hash 恢复选中");
-    assert!(html.contains("#g' + gi + '/e' + ei"), "缺少分组/端点 hash 标记");
-    assert!(html.contains("textContent"), "缺少 textContent 安全注入");
+    assert!(html.contains("<title>API Documentation</title>"), "HTML 缺少标题");
 }
 
 #[test]
 fn ui_html_fields_all_present_in_api_json() {
     // 交叉一致性：ui.html 的 JS 引用的每个数据路径都能在 api.json 中找到对应键
-    let doc = ApiDoc {
-        config: ApidocConfig {
-            title: "t".into(),
-            description: Some("d".into()),
-        },
-        endpoints: DocRegistry::collect(),
-    };
+    let doc = DocRegistry::collect_doc(ApidocConfig {
+        title: "t".into(),
+        description: Some("d".into()),
+        // M6a/M6b：auth.enable 与 apps 树进 api.json（password/secret_key 永不）
+        auth: Some(apidoc::auth::AuthConfig {
+            enable: true,
+            password: "secret".into(),
+            secret_key: "k".into(),
+            expire: 0,
+        }),
+        apps: vec![apidoc::AppConfig {
+            key: "api".into(),
+            title: "API".into(),
+            items: vec![apidoc::AppConfig { key: "v2".into(), title: "V2".into(), items: vec![], password: None }],
+            password: None,
+        }],
+    });
     let v: Value = serde_json::to_value(&doc).unwrap();
-    let html = include_str!("../../apidoc/src/ui.html");
+    // 红线：password / secret_key 永不进任何输出
+    assert!(!v.to_string().contains("secret"), "密码/密钥泄漏进 api.json");
+    let html = include_str!("../../apidoc/src/ui.js");
     for (js_ref, json_path) in [
         ("doc.config.title", "config.title"),
         ("doc.config.description", "config.description"),
@@ -243,6 +274,12 @@ fn ui_html_fields_all_present_in_api_json() {
         ("ep.md", "endpoints[].md"),
         ("ex.code", "endpoints[].success[].code"),
         ("ex.example", "endpoints[].success[].example"),
+        // M6：多应用/版本树（JS 引用即白名单；auth.enable 在核心测试断言）
+        ("doc.apps", "apps"),
+        ("app.title", "apps[].title"),
+        ("node.items", "apps[].items"),
+        ("node.key", "apps[].key"),
+        ("node.endpoints", "apps[].endpoints"),
     ] {
         assert!(html.contains(js_ref), "ui.html 缺少引用: {js_ref}");
         assert!(
