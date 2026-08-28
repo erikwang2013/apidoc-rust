@@ -1,8 +1,15 @@
 [package]
-name = "apidoc"
+# crates.io 上 "apidoc" 已被外部项目占用，包名用 apidoc-rs；lib 名保持 apidoc
+# （宏生成的 apidoc:: 路径与消费方 use apidoc:: 均不受影响）
+name = "apidoc-rs"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description.workspace = true
+repository.workspace = true
+
+[lib]
+name = "apidoc"
 
 [dependencies]
 linkme = "0.3"

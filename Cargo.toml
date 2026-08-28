@@ -6,3 +6,5 @@ members = ["crates/apidoc", "crates/apidoc-macros", "crates/apidoc-test-fixtures
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+description = "Rust annotation-driven API documentation framework (apidoc-php port): zero-cost doc collection, web UI, export & mock"
+repository = "https://github.com/erikwang2013/apidoc-rust"

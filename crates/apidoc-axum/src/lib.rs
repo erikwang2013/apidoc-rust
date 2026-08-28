@@ -62,8 +62,8 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
     // M5 export：与 api.json 同模式，构建期预序列化三份 String。
     let md = export::markdown::render(&doc);
     let ts = export::typescript::render(&doc);
-    // ponytail: include_str! 跨 crate 目录，发布 crates.io 前需把 VERSION 内容内嵌进核心 crate
-    let sw = serde_json::to_string(&export::swagger::render(&doc, include_str!("../../../VERSION").trim()))
+    // VERSION 为包内文件（crates/apidoc-axum/VERSION），发布打包安全；发版时与根目录 VERSION 同步
+    let sw = serde_json::to_string(&export::swagger::render(&doc, include_str!("../VERSION").trim()))
         .expect("swagger must serialize");
     // 鉴权配置与应用树按需捕获（password/secret_key 只在构建期内存中）
     let auth_cfg: Option<Arc<AuthConfig>> = doc.config.auth.clone().map(Arc::new);
