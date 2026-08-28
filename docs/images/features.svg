@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 680" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="560" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="680" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="680" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 项目功能（M1–M4 已完成）</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 项目功能（M1–M5 已完成）</text>
 
   <!-- 卡片 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -41,10 +41,10 @@
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M2</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">axum 适配器 + 文档 UI</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">axum / actix 适配器 + 文档 UI</text>
   <text x="500" y="280" font-size="13" fill="#333">apidoc-axum：/apidoc（UI）· /apidoc/api.json · /apidoc/mock</text>
-  <text x="500" y="300" font-size="13" fill="#333">内嵌文档 UI 调试面板（Html 静态页，零外部依赖）</text>
-  <text x="500" y="320" font-size="13" fill="#333">CORS 层支持：浏览器可跨域直连目标接口</text>
+  <text x="500" y="300" font-size="13" fill="#333">apidoc-actix：薄封装，4 路由含 /apidoc/export（M5）</text>
+  <text x="500" y="320" font-size="13" fill="#333">内嵌文档 UI 调试面板（Html 静态页，零外部依赖）</text>
 
   <!-- 卡片 5 -->
   <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -56,13 +56,22 @@
   <text x="60" y="470" font-size="13" fill="#333">15 条规则：姓名/邮箱/电话/IP/URL/UUID/日期/数字/浮点/布尔/文本…</text>
 
   <!-- 卡片 6 -->
-  <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">规划中</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">导出 + 多应用 + actix</text>
-  <text x="500" y="430" font-size="13" fill="#333">M5 导出：Markdown / TypeScript / Swagger(OpenAPI3)</text>
-  <text x="500" y="450" font-size="13" fill="#333">M6 多应用 / 多版本 / 访问密码</text>
-  <text x="500" y="470" font-size="13" fill="#333">apidoc-actix 适配器（薄封装，核心零改动）</text>
+  <rect x="480" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M5</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">三格式导出（M5）</text>
+  <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger（OpenAPI 3.0）</text>
+  <text x="500" y="450" font-size="13" fill="#333">info.version 取自 VERSION 文件（构建期预序列化）</text>
+  <text x="500" y="470" font-size="13" fill="#333">UI / api.json / 导出共用同一数据模型</text>
 
-  <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <!-- 卡片 7 -->
+  <rect x="40" y="520" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="300" y="510" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">规划中</text>
+  <text x="60" y="556" font-size="17" font-weight="bold" fill="#566573">M6 多应用多版本 + v2 规划</text>
+  <text x="60" y="580" font-size="13" fill="#333">M6：多应用 / 多版本 / 访问密码</text>
+  <text x="60" y="600" font-size="13" fill="#333">v2：规划中（尚未定稿）</text>
+  <text x="60" y="620" font-size="13" fill="#333">适配器：axum / actix 均已覆盖</text>
+
+  <text x="470" y="660" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

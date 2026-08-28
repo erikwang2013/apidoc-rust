@@ -10,7 +10,7 @@
   <rect width="940" height="400" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="400" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 文档生命周期（M1–M4 已完成）</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 文档生命周期（M1–M5 已完成）</text>
 
   <!-- 步骤 1 -->
   <circle cx="85" cy="150" r="34" fill="#b58900"/>
@@ -20,67 +20,77 @@
   <text x="85" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">#[apidoc::*]</text>
   <text x="85" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="119" y1="150" x2="181" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="125" y1="150" x2="160" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- 步骤 2 -->
-  <circle cx="215" cy="150" r="34" fill="#6c5ce7"/>
-  <text x="215" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">2</text>
-  <text x="215" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">宏展开</text>
-  <text x="215" y="235" text-anchor="middle" font-size="12" fill="#555">编译期生成</text>
-  <text x="215" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">DocFragmentEntry</text>
-  <text x="215" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="200" cy="150" r="34" fill="#6c5ce7"/>
+  <text x="200" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">2</text>
+  <text x="200" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">宏展开</text>
+  <text x="200" y="235" text-anchor="middle" font-size="12" fill="#555">编译期生成</text>
+  <text x="200" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">DocFragmentEntry</text>
+  <text x="200" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="249" y1="150" x2="311" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="240" y1="150" x2="275" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- 步骤 3 -->
-  <circle cx="345" cy="150" r="34" fill="#f39c12"/>
-  <text x="345" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">3</text>
-  <text x="345" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">linkme 注册</text>
-  <text x="345" y="235" text-anchor="middle" font-size="12" fill="#555">静态分布式切片</text>
-  <text x="345" y="252" text-anchor="middle" font-size="12" fill="#555">零运行成本</text>
-  <text x="345" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="315" cy="150" r="34" fill="#f39c12"/>
+  <text x="315" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">3</text>
+  <text x="315" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">linkme 注册</text>
+  <text x="315" y="235" text-anchor="middle" font-size="12" fill="#555">静态分布式切片</text>
+  <text x="315" y="252" text-anchor="middle" font-size="12" fill="#555">零运行成本</text>
+  <text x="315" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="379" y1="150" x2="441" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="355" y1="150" x2="390" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- 步骤 4 -->
-  <circle cx="475" cy="150" r="34" fill="#2980b9"/>
-  <text x="475" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">4</text>
-  <text x="475" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">collect() 聚合</text>
-  <text x="475" y="235" text-anchor="middle" font-size="12" fill="#555">按 id 合并片段</text>
-  <text x="475" y="252" text-anchor="middle" font-size="12" fill="#555">按 seq 恢复声明序</text>
-  <text x="475" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="430" cy="150" r="34" fill="#2980b9"/>
+  <text x="430" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">4</text>
+  <text x="430" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">collect() 聚合</text>
+  <text x="430" y="235" text-anchor="middle" font-size="12" fill="#555">按 id 合并片段</text>
+  <text x="430" y="252" text-anchor="middle" font-size="12" fill="#555">按 seq 恢复声明序</text>
+  <text x="430" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="509" y1="150" x2="571" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="470" y1="150" x2="505" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- 步骤 5 -->
-  <circle cx="605" cy="150" r="34" fill="#27ae60"/>
-  <text x="605" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
-  <text x="605" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
-  <text x="605" y="235" text-anchor="middle" font-size="12" fill="#555">统一文档数据模型</text>
-  <text x="605" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints</text>
-  <text x="605" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="545" cy="150" r="34" fill="#27ae60"/>
+  <text x="545" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
+  <text x="545" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
+  <text x="545" y="235" text-anchor="middle" font-size="12" fill="#555">统一文档数据模型</text>
+  <text x="545" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints</text>
+  <text x="545" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="639" y1="150" x2="701" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="585" y1="150" x2="620" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- 步骤 6 已实现 -->
-  <circle cx="735" cy="150" r="34" fill="#16a085"/>
-  <text x="735" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
-  <text x="735" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI 调试面板</text>
-  <text x="735" y="235" text-anchor="middle" font-size="12" fill="#555">目录浏览 / 在线调试</text>
-  <text x="735" y="252" text-anchor="middle" font-size="12" fill="#555">Mock 预填 / CORS 直连</text>
-  <text x="735" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+  <circle cx="660" cy="150" r="34" fill="#16a085"/>
+  <text x="660" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
+  <text x="660" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI 调试面板</text>
+  <text x="660" y="235" text-anchor="middle" font-size="12" fill="#555">目录浏览 / 在线调试</text>
+  <text x="660" y="252" text-anchor="middle" font-size="12" fill="#555">Mock 预填 / CORS 直连</text>
+  <text x="660" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
 
-  <line x1="769" y1="150" x2="831" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="700" y1="150" x2="735" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- 步骤 7 已实现 -->
-  <circle cx="865" cy="150" r="34" fill="#e67e22"/>
-  <text x="865" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
-  <text x="865" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">调试数据流</text>
-  <text x="865" y="235" text-anchor="middle" font-size="12" fill="#555">CORS 直连目标接口</text>
-  <text x="865" y="252" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock → mock</text>
-  <text x="865" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
+  <circle cx="775" cy="150" r="34" fill="#e67e22"/>
+  <text x="775" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
+  <text x="775" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">调试数据流</text>
+  <text x="775" y="235" text-anchor="middle" font-size="12" fill="#555">CORS 直连目标接口</text>
+  <text x="775" y="252" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock → mock</text>
+  <text x="775" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
+
+  <line x1="815" y1="150" x2="850" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- 步骤 8 已实现 -->
+  <circle cx="890" cy="150" r="34" fill="#8e44ad"/>
+  <text x="890" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">8</text>
+  <text x="890" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">三格式导出</text>
+  <text x="890" y="235" text-anchor="middle" font-size="12" fill="#555">md / ts / swagger</text>
+  <text x="890" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">OpenAPI 3.0</text>
+  <text x="890" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M5</text>
 
   <!-- 图例 -->
-  <text x="470" y="331" text-anchor="middle" font-size="13" fill="#333">阶段标注：M1 注解 / 收集 / 聚合 / 输出 · M2 适配器与 UI · M4 调试面板 / Mock / CORS 直连（全部已实现，无规划项）</text>
+  <text x="470" y="331" text-anchor="middle" font-size="13" fill="#333">阶段标注：M1 注解 / 收集 / 聚合 / 输出 · M2 适配器与 UI · M4 调试面板 / Mock / CORS 直连 · M5 三格式导出（全部已实现，无规划项）</text>
   <text x="700" y="355" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

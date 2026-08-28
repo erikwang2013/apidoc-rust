@@ -51,11 +51,17 @@ apidoc-rust는 Rust로 구현된 **범용 플러그형 API 인터페이스 문�
 - **mock 인터페이스**: axum 어댑터에 `GET /apidoc/mock?url=&method=` 추가, url + method 정확 일치, 불일치 시 404 반환; 디버깅 패널은 기본적으로 `not_debug` 엔드포인트를 숨기고, 「not_debug 인터페이스 표시」를 체크해야만 표시
 - **CORS 직접 연결**: 온라인 디버깅은 브라우저가 대상 인터페이스에 직접 연결하며, 어댑터의 `cors_layer`가 허용 처리(서버 측 리버스 프록시는 v2에 예정)
 
+### 구현됨 (M5)
+
+- **3가지 형식 내보내기**(`crates/apidoc/src/export/`): markdown / typescript / swagger(OpenAPI 3.0.0), 코어 crate가 `export::markdown::render` / `export::typescript::render` / `export::swagger::render` 제공
+- **내보내기 라우트**: 어댑터에 `GET /apidoc/export?format=md|ts|swagger` 추가, 알 수 없는 format은 400 반환; Content-Type은 각각 `text/markdown` / `application/typescript` / `application/json`
+- **markdown**: 그룹 목차 + 파라미터 테이블 + 응답 블록; **typescript**: group별 네임스페이스로 `{Name}Params` / `{Name}Result` 타입 생성, 그룹 없는 인터페이스는 `defaultGroup`에 포함(`default`는 TS 예약어); **swagger**: `info.version`은 루트 `VERSION` 파일 내용 사용
+- **actix-web 어댑터**(`crates/apidoc-actix`): axum 어댑터와 기능 1:1 — `apidoc_routes(ApidocConfig) -> Scope`로 /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export 마운트, `cors_layer(CorsConfig)`로 크로스 오리진 허용
+- **UI 공유**: 문서 UI(`src/ui.html`)를 코어 crate로 이동해 `pub const UI_HTML`로 내보내며, 두 어댑터가 동일한 파일 참조(배포 패키징 안전)
+
 ### 계획 중
 
 - 다중 앱 / 다중 버전 / 접근 비밀번호
-- Markdown / TypeScript / Swagger(OpenAPI3) 내보내기(M5)
-- 다중 프레임워크 어댑터(apidoc-axum 완료, apidoc-actix 미구현)
 - v2: 코드 생성기, 데이터 테이블 필드 참조, 공유 링크, 디버깅 이벤트
 
 ## 아키텍처
@@ -75,17 +81,20 @@ apidoc-rust는 Rust로 구현된 **범용 플러그형 API 인터페이스 문�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 설정(resolver 2)
-├── VERSION                    # 프로젝트 버전(v1.0.0, 프레임워크 버전 0.1.0과 분리)
+├── VERSION                    # 프로젝트 버전(v1.1.0, 프레임워크 버전 0.1.0과 분리)
 ├── crates/
 │   ├── apidoc/                # 런타임 코어(프레임워크 무관)
-│   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json
+│   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML
+│   │   ├── src/export/        # M5 내보내기: markdown / typescript / swagger
+│   │   ├── src/ui.html        # 공유 문서 UI(코어 crate에서 내보내며, 두 어댑터가 참조)
 │   │   ├── tests/             # 통합 테스트(매크로 확장/집계/직렬화/크로스 crate)
 │   │   └── examples/demo.rs   # 예제: 주석 + api.json 출력
 │   ├── apidoc-macros/         # proc-macro: 19개 속성 매크로
 │   │   └── src/lib.rs         # 매크로 정의 + 파라미터 파싱 + 컴파일 타임 검증
 │   ├── apidoc-mock/           # Mock 엔진(fake 규칙으로 mock 데이터 생성)
 │   ├── apidoc-test-fixtures/  # 크로스 crate 등록 테스트 픽스처
-│   └── apidoc-axum/           # axum 어댑터(문서 라우트 + cors_layer + /apidoc/mock)
+│   ├── apidoc-axum/           # axum 어댑터(문서 라우트 + cors_layer + mock + export)
+│   └── apidoc-actix/          # actix-web 어댑터(axum과 기능 1:1)
 ├── .github/
 │   └── workflows/release.yml  # 릴리스 워크플로(VERSION 읽기, 태그+릴리스 증분 생성)
 └── docs/
@@ -105,7 +114,7 @@ linkme = "0.3"        # 매크로 확장이 linkme 경로를 직접 참조하므
 serde_json = "1"      # api.json 출력용
 ```
 
-> `apidoc-mock`(Mock 엔진)은 프레임워크 내부 의존성으로 어댑터가 자동으로 가져오므로, 일반적인 소비 측은 직접 사용할 필요가 없습니다.
+> Web 프레임워크에 따라 어댑터를 선택: axum은 `apidoc-axum`, actix-web은 `apidoc-actix`(둘 다 기능 1:1). `apidoc-mock`(Mock 엔진)은 프레임워크 내부 의존성으로 어댑터가 자동으로 가져오므로, 일반적인 소비 측은 직접 사용할 필요가 없습니다.
 
 ### 2. 주석 작성
 
@@ -217,6 +226,51 @@ fn create_user() -> String {
 
 내장 fake 규칙 15개: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`; 알 수 없는 규칙명은 기본값으로 폴백됩니다. mock 없는 자동 생성 규칙: int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`; array는 고정 2항목.
 
+### 6. 온라인 내보내기(M5)
+
+어댑터에 내장된 3가지 형식 내보내기 인터페이스, 연결 후 바로 사용(알 수 없는 `format`은 400 반환):
+
+```bash
+GET /apidoc/export?format=md        # 그룹 목차 + 파라미터 테이블 + 응답 블록(text/markdown)
+GET /apidoc/export?format=ts        # group별 네임스페이스로 {Name}Params / {Name}Result 타입 생성(application/typescript)
+GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 설명 파일(application/json)
+```
+
+- **markdown**: 프로젝트 Wiki / 릴리스 노트에 붙여넣기 적합, 그룹별 목차 출력, 각 인터페이스에 파라미터 테이블과 응답 블록 포함;
+- **typescript**: 프론트엔드가 바로 타입 정의로 붙여넣기 가능; 그룹 없는 인터페이스는 `defaultGroup` 네임스페이스에 포함(`default`는 TS 예약어라 식별자로 사용 불가);
+- **swagger**: `info.version`은 루트 `VERSION` 파일 내용 사용(현재 1.1.0), Swagger UI나 코드 생성기에 바로 가져오기 가능.
+
+### 7. actix-web 어댑터
+
+Web 프레임워크로 actix-web을 사용할 때 `apidoc-actix` 연결(axum 어댑터와 기능 1:1):
+
+```toml
+[dependencies]
+apidoc-actix = "0.1"     # 또는 path = "crates/apidoc-actix"
+```
+
+```rust
+use actix_web::{App, HttpServer};
+use apidoc_actix::{apidoc_routes, cors_layer, ApidocConfig, CorsConfig};
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .service(apidoc_routes(ApidocConfig {
+                title: "내 API".to_string(),
+                description: None,
+            }))
+            .wrap(cors_layer(CorsConfig::default()))   // M4 온라인 디버깅 크로스 오리진 허용
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
+}
+```
+
+마운트 후 `/apidoc`(문서 UI), `/apidoc/api.json`(데이터), `/apidoc/mock`(Mock), `/apidoc/export`(내보내기)에 접근할 수 있습니다. CORS 빈 설정은 리터럴 `*`를 허용(자격 증명 미포함), `allow_origins` 화이트리스트를 설정하면 정확 일치로 Origin을 반사하며, 두 모드 모두 자격 증명을 열지 않습니다.
+
 ## 개발 계획
 
 | 단계 | 내용 | 상태 |
@@ -225,7 +279,8 @@ fn create_user() -> String {
 | M2 | axum 어댑터 + 내장 문서 UI + 그룹 목차 | ✅ 완료 |
 | M3 | 주석 보강(tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ 완료 |
 | M4 | 온라인 디버깅 + Mock 엔진 | ✅ 완료 |
-| M5 | markdown / typescript / swagger.json 내보내기 | 계획 중 |
+| M5 | markdown / typescript / swagger.json 내보내기(OpenAPI3) | ✅ 완료 |
+| —  | actix-web 어댑터(axum과 기능 1:1) | ✅ 완료 |
 | M6 | 비밀번호 인증, 다중 앱·다중 버전, 릴리스 | 계획 중 |
 
 ## 다국어 문서

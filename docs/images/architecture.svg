@@ -7,7 +7,7 @@
   <rect width="940" height="600" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="600" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 总体架构（M4 已完成）</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 总体架构（M5 已完成）</text>
 
   <!-- 用户代码层 -->
   <rect x="120" y="62" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
@@ -35,17 +35,17 @@
   <text x="761" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
   <text x="140" y="308" font-size="17" font-weight="bold" fill="#1a5276">运行期核心 · apidoc（框架无关）</text>
   <text x="140" y="330" font-size="13" fill="#333">DocRegistry::collect() 按 id 合并片段、按 seq 恢复声明顺序 → ApiDoc 数据模型</text>
-  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json（serde 序列化，UI 与导出共用）</text>
+  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json（serde 序列化，UI 与导出共用）→ 导出：md / ts / swagger(OpenAPI3)</text>
 
   <!-- 适配器层 已完成 -->
   <rect x="120" y="350" width="700" height="62" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="656" y="355" width="76" height="22" rx="11" fill="#27ae60"/>
-  <text x="694" y="370" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2 + M4</text>
-  <text x="140" y="376" font-size="16" font-weight="bold" fill="#1e8449">适配器层（已完成）· apidoc-axum：路由挂载 + CORS，核心零改动</text>
-  <text x="140" y="398" font-size="13" fill="#333">/apidoc（UI 调试面板）· /apidoc/api.json（文档数据）· /apidoc/mock（Mock 引擎）</text>
-  <!-- actix 规划中 -->
-  <rect x="656" y="384" width="148" height="24" rx="6" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="730" y="400" text-anchor="middle" font-size="12" fill="#566573">apidoc-actix（规划中）</text>
+  <rect x="724" y="355" width="96" height="22" rx="11" fill="#27ae60"/>
+  <text x="772" y="370" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2 + M4 + M5</text>
+  <text x="140" y="376" font-size="16" font-weight="bold" fill="#1e8449">适配器层（已完成）· apidoc-axum + apidoc-actix：路由挂载 + CORS</text>
+  <text x="140" y="398" font-size="13" fill="#333">/apidoc（UI）· /apidoc/api.json · /apidoc/mock · /apidoc/export</text>
+  <!-- actix 已完成 -->
+  <rect x="656" y="384" width="148" height="24" rx="6" fill="#27ae60" stroke="#27ae60" stroke-width="2"/>
+  <text x="730" y="400" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">apidoc-actix（已完成）</text>
 
   <!-- 展示层 已完成 -->
   <rect x="120" y="424" width="700" height="50" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -63,12 +63,12 @@
 
   <!-- workspace -->
   <rect x="120" y="542" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
-  <text x="470" y="560" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace：apidoc（核心）· apidoc-macros（宏）· apidoc-axum（适配）· apidoc-mock（Mock·fake）· apidoc-test-fixtures（测试夹具）</text>
+  <text x="470" y="560" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace：apidoc（核心）· macros（宏）· axum（适配）· actix（适配）· mock（Mock）· test-fixtures（测试夹具）</text>
 
   <!-- 图例 -->
   <rect x="120" y="578" width="24" height="12" fill="#27ae60"/>
-  <text x="152" y="589" font-size="13" fill="#333">已实现（M1–M4）</text>
+  <text x="152" y="589" font-size="13" fill="#333">已实现（M1–M5）</text>
   <rect x="310" y="578" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="342" y="589" font-size="13" fill="#333">规划中（M5 导出 / M6 多应用多版本 / actix）</text>
+  <text x="342" y="589" font-size="13" fill="#333">规划中（M6 多应用多版本 / v2 规划项）</text>
   <text x="700" y="589" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

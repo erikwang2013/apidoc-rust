@@ -51,11 +51,17 @@ apidoc-rust هو **مولّد وثائق API عام وقابل للتوسع عب
 - **واجهة mock**: محول axum يضيف `GET /apidoc/mock?url=&method=`، بمطابقة دقيقة لـ url + method، ويعيد 404 عند عدم التطابق؛ لوحة التصحيح تخفي افتراضيًا نقاط النهاية `not_debug`، ولا تظهرها إلا بعد تحديد «إظهار واجهات not_debug»
 - **اتصال CORS مباشر**: التصحيح أونلاين يربط المتصفح مباشرة بالواجهة الهدف، و`cors_layer` من المحول يتولى السماح (الوكيل العكسي من جهة الخادم يُترك لـ v2)
 
+### تم تنفيذه (M5)
+
+- **التصدير بثلاث صيغ** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0)، النواة توفر `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
+- **مسار التصدير**: المحول يضيف `GET /apidoc/export?format=md|ts|swagger`، والصيغة غير المعروفة تعيد 400؛ وContent-Type تكون `text/markdown` / `application/typescript` / `application/json` على التوالي
+- **markdown**: فهرس مجمّع + جدول معاملات + كتلة استجابة؛ **typescript**: توليد أنواع `{Name}Params` / `{Name}Result` ضمن نطاق group، والواجهات غير المجمّعة تقع في `defaultGroup` (`default` كلمة محجوزة في TS)؛ **swagger**: `info.version` مأخوذ من محتوى ملف `VERSION` في جذر المشروع
+- **محول actix-web** (`crates/apidoc-actix`): وظائف متطابقة 1:1 مع محول axum — `apidoc_routes(ApidocConfig) -> Scope` يركّب /apidoc و/apidoc/api.json و/apidoc/mock و/apidoc/export، و`cors_layer(CorsConfig)` يسمح بالطلبات عبر النطاقات
+- **مشاركة الواجهة**: واجهة الوثائق (`src/ui.html`) نُقلت للأعلى إلى النواة، وتُصدَّر باسم `pub const UI_HTML`، والمحولان يشيران إلى النسخة نفسها (آمن عند نشر الحزمة)
+
 ### قيد التخطيط
 
 - تطبيقات متعددة / إصدارات متعددة / كلمة مرور للوصول
-- تصدير Markdown / TypeScript / Swagger (OpenAPI3) (M5)
-- دعم أطر عمل متعددة (اكتمل apidoc-axum، ولم يُنجز apidoc-actix بعد)
 - v2: مولّد كود، مراجع لحقول جداول البيانات، روابط مشاركة، أحداث تصحيح
 
 ## البنية
@@ -75,17 +81,20 @@ apidoc-rust هو **مولّد وثائق API عام وقابل للتوسع عب
 ```
 apidoc-rust/
 ├── Cargo.toml                 # إعداد workspace (resolver 2)
-├── VERSION                    # إصدار المشروع (v1.0.0، منفصل عن إصدار الإطار 0.1.0)
+├── VERSION                    # إصدار المشروع (v1.1.0، منفصل عن إصدار الإطار 0.1.0)
 ├── crates/
 │   ├── apidoc/                # النواة في زمن التشغيل (مستقلة عن الإطار)
-│   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json
+│   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json + UI_HTML
+│   │   ├── src/export/        # تصدير M5: markdown / typescript / swagger
+│   │   ├── src/ui.html        # واجهة الوثائق المشتركة (تصدّرها النواة، ويشير إليها المحولان)
 │   │   ├── tests/             # اختبارات التكامل (توسيع الماكرو / التجميع / التسلسل / عبر crates)
 │   │   └── examples/demo.rs   # مثال: تعليقات توضيحية + إخراج api.json
 │   ├── apidoc-macros/         # proc-macro: 19 ماكروات سمات
 │   │   └── src/lib.rs         # تعريفات الماكرو + تحليل المعاملات + التحقق في زمن الترجمة
 │   ├── apidoc-mock/           # محرك Mock (توليد بيانات mock وفق قواعد fake)
 │   ├── apidoc-test-fixtures/  # نماذج اختبار التسجيل عبر crates
-│   └── apidoc-axum/           # محول axum (مسارات الوثائق + cors_layer + /apidoc/mock)
+│   ├── apidoc-axum/           # محول axum (مسارات الوثائق + cors_layer + mock + export)
+│   └── apidoc-actix/          # محول actix-web (وظائف متطابقة 1:1 مع axum)
 ├── .github/
 │   └── workflows/release.yml  # سير عمل النشر (يقرأ VERSION، وإنشاء tag+release تدريجي)
 └── docs/
@@ -105,7 +114,7 @@ linkme = "0.3"        # توسيع الماكرو يشير مباشرة إلى �
 serde_json = "1"      # لاستخدام إخراج api.json
 ```
 
-> `apidoc-mock` (محرك Mock) تبعية داخلية للإطار، تُضاف تلقائيًا عبر المحول، ولا يحتاج المستهلك عمومًا إلى استخدامه مباشرة.
+> المحولات تُختار واحدًا حسب إطار العمل: axum يستخدم `apidoc-axum`، وactix-web يستخدم `apidoc-actix` (وظائف الاثنين 1:1). `apidoc-mock` (محرك Mock) تبعية داخلية للإطار، تُضاف تلقائيًا عبر المحول، ولا يحتاج المستهلك عمومًا إلى استخدامه مباشرة.
 
 ### 2. كتابة التعليقات التوضيحية
 
@@ -217,6 +226,51 @@ fn create_user() -> String {
 
 15 قاعدة fake مدمجة: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`؛ الأسماء غير المعروفة تعود إلى قيمة افتراضية. قواعد التوليد التلقائي بدون mock: int←`"1"`، float←`"0.5"`، bool←`"true"`، object←`"{}"`، string←`"string"`؛ وarray ثابت على عنصرين.
 
+### 6. التصدير أونلاين (M5)
+
+المحول يوفر واجهات تصدير بالصيغ الثلاث مدمجة، جاهزة فور التركيب (الصيغة غير المعروفة `format` تعيد 400):
+
+```bash
+GET /apidoc/export?format=md        # فهرس مجمّع + جدول معاملات + كتلة استجابة (text/markdown)
+GET /apidoc/export?format=ts        # توليد أنواع {Name}Params / {Name}Result ضمن نطاق group (application/typescript)
+GET /apidoc/export?format=swagger   # ملف وصف OpenAPI 3.0.0 (application/json)
+```
+
+- **markdown**: مناسب للصقه في Wiki المشروع / ملاحظات الإصدار، يخرج فهرسًا مجمّعًا حسب المجموعة، وكل واجهة مع جدول معاملات وكتلة استجابة؛
+- **typescript**: الواجهة الأمامية يمكنها لصقه مباشرة كتعريفات أنواع؛ الواجهات غير المجمّعة تقع في نطاق `defaultGroup` (`default` كلمة محجوزة في TS، لا يمكن استخدامها كمعرّف)؛
+- **swagger**: `info.version` مأخوذ من محتوى ملف `VERSION` في جذر المشروع (حاليًا 1.1.0)، ويمكن استيراده مباشرة إلى Swagger UI أو مولّدات الكود.
+
+### 7. محول actix-web
+
+عند استخدام actix-web كإطار عمل للويب، اربط `apidoc-actix` (وظائف متطابقة 1:1 مع محول axum):
+
+```toml
+[dependencies]
+apidoc-actix = "0.1"     # أو path = "crates/apidoc-actix"
+```
+
+```rust
+use actix_web::{App, HttpServer};
+use apidoc_actix::{apidoc_routes, cors_layer, ApidocConfig, CorsConfig};
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .service(apidoc_routes(ApidocConfig {
+                title: "API الخاص بي".to_string(),
+                description: None,
+            }))
+            .wrap(cors_layer(CorsConfig::default()))   // M4 التصحيح أونلاين عبر النطاقات
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
+}
+```
+
+بعد التركيب يمكن الوصول إلى `/apidoc` (واجهة الوثائق) و`/apidoc/api.json` (البيانات) و`/apidoc/mock` (Mock) و`/apidoc/export` (التصدير). إعداد CORS الفارغ يسمح حرفيًا `*` (دون حمل اعتمادات)، وعند إعداد القائمة البيضاء `allow_origins` فيطابق تلقائيًا Origin المُعاد توجيهه بدقة، وكلا الوضعين لا يفتحان الاعتمادات.
+
 ## خطة التطوير
 
 | المرحلة | المحتوى | الحالة |
@@ -225,7 +279,8 @@ fn create_user() -> String {
 | M2 | محول axum + واجهة وثائق مدمجة + فهرس مجمّع | ✅ مكتمل |
 | M3 | استكمال التعليقات التوضيحية (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ مكتمل |
 | M4 | تصحيح أونلاين + محرك Mock | ✅ مكتمل |
-| M5 | تصدير markdown / typescript / swagger.json | قيد التخطيط |
+| M5 | تصدير markdown / typescript / swagger.json (OpenAPI3) | ✅ مكتمل |
+| —  | محول actix-web (وظائف متطابقة 1:1 مع axum) | ✅ مكتمل |
 | M6 | مصادقة بكلمة مرور، تطبيقات وإصدارات متعددة، إصدار عام | قيد التخطيط |
 
 ## وثائق متعددة اللغات

@@ -51,11 +51,17 @@ apidoc-rust adalah **pembuat dokumentasi API plugin-umum** yang diimplementasika
 - **Antarmuka mock**: adaptor axum menambah `GET /apidoc/mock?url=&method=`, pencocokan presisi url + method, tidak cocok mengembalikan 404; panel debugging menyembunyikan endpoint `not_debug` secara default, baru tampil setelah mencentang «Tampilkan antarmuka not_debug»
 - **Koneksi langsung CORS**: debugging online dijalankan browser langsung ke antarmuka target, `cors_layer` dari adaptor yang mengizinkan (proksi balik sisi server disisakan untuk v2)
 
+### Sudah Diimplementasikan (M5)
+
+- **Ekspor tiga format** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), crate inti menyediakan `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
+- **Rute ekspor**: adaptor menambah `GET /apidoc/export?format=md|ts|swagger`, format tidak dikenal mengembalikan 400; Content-Type masing-masing `text/markdown` / `application/typescript` / `application/json`
+- **markdown**: direktori berkelompok + tabel parameter + blok respons; **typescript**: menghasilkan tipe `{Name}Params` / `{Name}Result` per namespace group, antarmuka tanpa group masuk ke `defaultGroup` (`default` kata cadangan TS); **swagger**: `info.version` diambil dari isi file `VERSION` di root
+- **Adaptor actix-web** (`crates/apidoc-actix`): fungsionalitas 1:1 dengan adaptor axum — `apidoc_routes(ApidocConfig) -> Scope` memasang /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` mengizinkan lintas-domain
+- **Berbagi UI**: UI dokumentasi (`src/ui.html`) dipindahkan ke atas ke crate inti, diekspor sebagai `pub const UI_HTML`, kedua adaptor merujuk salinan yang sama (aman saat packaging rilis)
+
 ### Dalam Rencana
 
 - Multi-aplikasi / multi-versi / kata sandi akses
-- Ekspor Markdown / TypeScript / Swagger (OpenAPI3) (M5)
-- Adaptasi multi-kerangka kerja (apidoc-axum selesai, apidoc-actix belum dikerjakan)
 - v2: generator kode, referensi field tabel data, tautan berbagi, peristiwa debugging
 
 ## Arsitektur
@@ -75,17 +81,20 @@ apidoc-rust adalah **pembuat dokumentasi API plugin-umum** yang diimplementasika
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Konfigurasi workspace (resolver 2)
-├── VERSION                    # Versi proyek (v1.0.0, terpisah dari versi kerangka 0.1.0)
+├── VERSION                    # Versi proyek (v1.1.0, terpisah dari versi kerangka 0.1.0)
 ├── crates/
 │   ├── apidoc/                # Inti runtime (independen kerangka kerja)
-│   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json
+│   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json + UI_HTML
+│   │   ├── src/export/        # Ekspor M5: markdown / typescript / swagger
+│   │   ├── src/ui.html        # UI dokumentasi bersama (diekspor crate inti, dirujuk kedua adaptor)
 │   │   ├── tests/             # Tes integrasi (ekspansi makro/agregasi/serialisasi/antar-crate)
 │   │   └── examples/demo.rs   # Contoh: anotasi + output api.json
 │   ├── apidoc-macros/         # proc-macro: 19 makro atribut
 │   │   └── src/lib.rs         # Definisi makro + parsing parameter + validasi waktu kompilasi
 │   ├── apidoc-mock/           # Mesin Mock (pembuatan data mock dengan aturan fake)
 │   ├── apidoc-test-fixtures/  # Fixture pengujian registrasi antar-crate
-│   └── apidoc-axum/           # Adaptor axum (rute dokumentasi + cors_layer + /apidoc/mock)
+│   ├── apidoc-axum/           # Adaptor axum (rute dokumentasi + cors_layer + mock + export)
+│   └── apidoc-actix/          # Adaptor actix-web (fungsionalitas 1:1 dengan axum)
 ├── .github/
 │   └── workflows/release.yml  # Workflow rilis (membaca VERSION, membuat tag+release inkremental)
 └── docs/
@@ -105,7 +114,7 @@ linkme = "0.3"        # ekspansi makro merujuk langsung ke path linkme, konsumen
 serde_json = "1"      # untuk output api.json
 ```
 
-> `apidoc-mock` (mesin Mock) adalah dependensi internal kerangka kerja, ditambahkan otomatis melalui adaptor, umumnya konsumen tidak perlu menggunakannya langsung.
+> Adaptor dipilih salah satu sesuai kerangka web: axum memakai `apidoc-axum`, actix-web memakai `apidoc-actix` (keduanya fungsionalitas 1:1). `apidoc-mock` (mesin Mock) adalah dependensi internal kerangka kerja, ditambahkan otomatis melalui adaptor, umumnya konsumen tidak perlu menggunakannya langsung.
 
 ### 2. Menulis Anotasi
 
@@ -217,6 +226,51 @@ fn create_user() -> String {
 
 15 aturan fake bawaan: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`; nama tidak dikenal kembali ke nilai default. Aturan pembuatan otomatis tanpa mock: int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`; array tetap 2 item.
 
+### 6. Ekspor Online (M5)
+
+Adaptor memiliki antarmuka ekspor tiga format bawaan, langsung bisa dipakai setelah dipasang (format `format` tidak dikenal mengembalikan 400):
+
+```bash
+GET /apidoc/export?format=md        # direktori berkelompok + tabel parameter + blok respons (text/markdown)
+GET /apidoc/export?format=ts        # menghasilkan tipe {Name}Params / {Name}Result per namespace group (application/typescript)
+GET /apidoc/export?format=swagger   # file deskripsi OpenAPI 3.0.0 (application/json)
+```
+
+- **markdown**: cocok ditempel ke Wiki proyek / catatan rilis, mengeluarkan direktori per grup, setiap antarmuka dengan tabel parameter dan blok respons;
+- **typescript**: frontend bisa langsung ditempel sebagai definisi tipe; antarmuka tanpa group masuk ke namespace `defaultGroup` (`default` kata cadangan TS, tidak bisa dijadikan pengenal);
+- **swagger**: `info.version` diambil dari isi file `VERSION` di root (saat ini 1.1.0), bisa langsung diimpor ke Swagger UI atau generator kode.
+
+### 7. Adaptor actix-web
+
+Saat kerangka web memakai actix-web, pasang `apidoc-actix` (fungsionalitas 1:1 dengan adaptor axum):
+
+```toml
+[dependencies]
+apidoc-actix = "0.1"     # atau path = "crates/apidoc-actix"
+```
+
+```rust
+use actix_web::{App, HttpServer};
+use apidoc_actix::{apidoc_routes, cors_layer, ApidocConfig, CorsConfig};
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .service(apidoc_routes(ApidocConfig {
+                title: "API Saya".to_string(),
+                description: None,
+            }))
+            .wrap(cors_layer(CorsConfig::default()))   // M4 izin lintas-domain debug online
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
+}
+```
+
+Setelah dipasang bisa mengakses `/apidoc` (UI dokumentasi), `/apidoc/api.json` (data), `/apidoc/mock` (Mock), `/apidoc/export` (ekspor). Konfigurasi CORS kosong mengizinkan literal `*` (tanpa membawa kredensial), jika mengonfigurasi whitelist `allow_origins` maka mencocokkan Origin yang dipantulkan secara presisi, kedua mode tidak membuka kredensial.
+
 ## Rencana Pengembangan
 
 | Tahap | Konten | Status |
@@ -225,7 +279,8 @@ fn create_user() -> String {
 | M2 | Adaptor axum + UI dokumentasi tertanam + direktori berkelompok | ✅ Selesai |
 | M3 | Melengkapi anotasi (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ Selesai |
 | M4 | Debugging online + mesin Mock | ✅ Selesai |
-| M5 | Ekspor markdown / typescript / swagger.json | Dalam rencana |
+| M5 | Ekspor markdown / typescript / swagger.json (OpenAPI3) | ✅ Selesai |
+| —  | Adaptor actix-web (fungsionalitas 1:1 dengan axum) | ✅ Selesai |
 | M6 | Otentikasi kata sandi, multi-aplikasi multi-versi, rilis | Dalam rencana |
 
 ## Dokumentasi Multibahasa

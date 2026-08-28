@@ -51,11 +51,17 @@ apidoc-rust es un **generador de documentación de API universal y basado en plu
 - **Interfaz mock**: el adaptador axum añade `GET /apidoc/mock?url=&method=`, coincidencia exacta de url + method, devuelve 404 si no coincide; el panel de depuración oculta por defecto los endpoints `not_debug`, que solo se muestran al marcar «Mostrar interfaces not_debug»
 - **Conexión CORS directa**: la depuración en línea conecta el navegador directamente a la interfaz de destino; el `cors_layer` del adaptador permite el paso (proxy inverso del servidor reservado para v2)
 
+### Implementado (M5)
+
+- **Exportación en tres formatos** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), el crate central proporciona `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
+- **Rutas de exportación**: los adaptadores añaden `GET /apidoc/export?format=md|ts|swagger`, formato desconocido → 400; Content-Type: `text/markdown` / `application/typescript` / `application/json`
+- **markdown**: índice por grupos + tabla de parámetros + bloque de respuesta; **typescript**: genera los tipos `{Name}Params` / `{Name}Result` por namespace de grupo, las interfaces sin grupo caen en `defaultGroup` (`default` es palabra reservada de TS); **swagger**: `info.version` toma el contenido del archivo `VERSION` de la raíz
+- **Adaptador actix-web** (`crates/apidoc-actix`): funcionalidad 1:1 con el adaptador axum — `apidoc_routes(ApidocConfig) -> Scope` monta /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` permite CORS
+- **UI compartida**: la UI de documentación (`src/ui.html`) sube al crate central, exportada como `pub const UI_HTML`, ambos adaptadores referencian la misma copia (seguro para el empaquetado de publicación)
+
 ### Planificado
 
 - Múltiples aplicaciones / múltiples versiones / contraseña de acceso
-- Exportación a Markdown / TypeScript / Swagger (OpenAPI3) (M5)
-- Adaptación a múltiples frameworks (apidoc-axum terminado, apidoc-actix pendiente)
 - v2: generador de código, referencias a campos de tablas de datos, enlaces para compartir, eventos de depuración
 
 ## Arquitectura
@@ -75,17 +81,20 @@ apidoc-rust es un **generador de documentación de API universal y basado en plu
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuración del workspace (resolver 2)
-├── VERSION                    # versión del proyecto (v1.0.0, separada de la versión del framework 0.1.0)
+├── VERSION                    # versión del proyecto (v1.1.0, separada de la versión del framework 0.1.0)
 ├── crates/
 │   ├── apidoc/                # núcleo en tiempo de ejecución (independiente del framework)
-│   │   ├── src/lib.rs         # modelo de datos + agregación DocRegistry + api.json
+│   │   ├── src/lib.rs         # modelo de datos + agregación DocRegistry + api.json + UI_HTML
+│   │   ├── src/export/        # exportación M5: markdown / typescript / swagger
+│   │   ├── src/ui.html        # UI de documentación compartida (exportada por el crate central, referenciada por ambos adaptadores)
 │   │   ├── tests/             # pruebas de integración (expansión de macros / agregación / serialización / entre crates)
 │   │   └── examples/demo.rs   # ejemplo: anotaciones + salida api.json
 │   ├── apidoc-macros/         # proc-macro: 19 macros de atributo
 │   │   └── src/lib.rs         # definición de macros + análisis de parámetros + validación en tiempo de compilación
 │   ├── apidoc-mock/           # motor Mock (generación de datos Mock por reglas fake)
 │   ├── apidoc-test-fixtures/  # accesorios de prueba para registro entre crates
-│   └── apidoc-axum/           # adaptador axum (rutas de documentación + cors_layer + /apidoc/mock)
+│   ├── apidoc-axum/           # adaptador axum (rutas de documentación + cors_layer + mock + export)
+│   └── apidoc-actix/          # adaptador actix-web (funcionalidad 1:1 con axum)
 ├── .github/
 │   └── workflows/release.yml  # workflow de publicación (lee VERSION, crea tag + release de forma incremental)
 └── docs/
@@ -104,6 +113,8 @@ apidoc-macros = "0.1"
 linkme = "0.3"        # la expansión de macros referencia la ruta de linkme directamente; el consumidor debe depender de ella
 serde_json = "1"      # para generar api.json
 ```
+
+> Adaptador según el framework Web: `apidoc-axum` para axum, `apidoc-actix` para actix-web (ambos con funcionalidad 1:1). `apidoc-mock` (motor Mock) es dependencia interna del framework, la importa automáticamente el adaptador; el consumidor normalmente no necesita usarlo directamente.
 
 ### 2. Escribir anotaciones
 
@@ -215,6 +226,51 @@ fn create_user() -> String {
 
 15 reglas fake integradas: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`; los nombres de regla desconocidos vuelven al valor por defecto. Generación automática sin mock: int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`; los array fijan 2 elementos.
 
+### 6. Exportación en línea (M5)
+
+Los adaptadores integran rutas de exportación en tres formatos, listas al conectar (formato desconocido → 400):
+
+```bash
+GET /apidoc/export?format=md        # índice por grupos + tabla de parámetros + bloques de respuesta (text/markdown)
+GET /apidoc/export?format=ts        # genera los tipos {Name}Params / {Name}Result por namespace de grupo (application/typescript)
+GET /apidoc/export?format=swagger   # archivo descriptivo OpenAPI 3.0.0 (application/json)
+```
+
+- **markdown**: ideal para pegar en el Wiki del proyecto / notas de versión, índice por grupos, cada interfaz con tabla de parámetros y bloque de respuesta;
+- **typescript**: el front puede pegar directamente las definiciones de tipos; las interfaces sin grupo caen en el namespace `defaultGroup` (`default` es palabra reservada de TS, no puede usarse como identificador);
+- **swagger**: `info.version` toma el contenido del archivo `VERSION` de la raíz (actualmente 1.1.0), importable directamente en Swagger UI o en un generador de código.
+
+### 7. Adaptador actix-web
+
+Si el framework Web es actix-web, conecte `apidoc-actix` (funcionalidad 1:1 con el adaptador axum):
+
+```toml
+[dependencies]
+apidoc-actix = "0.1"     # o path = "crates/apidoc-actix"
+```
+
+```rust
+use actix_web::{App, HttpServer};
+use apidoc_actix::{apidoc_routes, cors_layer, ApidocConfig, CorsConfig};
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .service(apidoc_routes(ApidocConfig {
+                title: "我的 API".to_string(),
+                description: None,
+            }))
+            .wrap(cors_layer(CorsConfig::default()))   // permite CORS para la depuración en línea (M4)
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
+}
+```
+
+Una vez montados, son accesibles `/apidoc` (UI de documentación), `/apidoc/api.json` (datos), `/apidoc/mock` (Mock) y `/apidoc/export` (exportación). La configuración CORS vacía permite literalmente `*` (sin cookies); con lista blanca `allow_origins`, hace coincidencia exacta reflejando el Origin; ningún modo envía cookies.
+
 ## Plan de desarrollo
 
 | Fase | Contenido | Estado |
@@ -223,7 +279,8 @@ fn create_user() -> String {
 | M2 | adaptador axum + UI de documentación integrada + directorio por grupos | ✅ Completado |
 | M3 | completar anotaciones (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ Completado |
 | M4 | depuración en línea + motor Mock | ✅ Completado |
-| M5 | exportar markdown / typescript / swagger.json | Planificado |
+| M5 | exportar markdown / typescript / swagger.json (OpenAPI3) | ✅ Completado |
+| —  | adaptador actix-web (funcionalidad 1:1 con axum) | ✅ Completado |
 | M6 | autenticación con contraseña, múltiples aplicaciones y versiones, publicación | Planificado |
 
 ## Documentación multilingüe
