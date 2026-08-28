@@ -7,48 +7,68 @@
   <rect width="940" height="600" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="600" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust সামগ্রিক আর্কিটেকচার</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust সামগ্রিক আর্কিটেকচার (M4 সম্পন্ন)</text>
 
-  <!-- 用户代码层 -->
-  <rect x="120" y="62" width="700" height="72" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
-  <text x="140" y="90" font-size="17" font-weight="bold" fill="#5f4b00">ইউজার কোড লেয়ার</text>
-  <text x="140" y="114" font-size="13" fill="#333" font-family="monospace">#[apidoc::title(...)]  #[apidoc::method("GET")]  #[apidoc::param(name="id", ty="int", required)] ...</text>
-  <text x="470" y="146" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <!-- ইউজার কোড লেয়ার -->
+  <rect x="120" y="62" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <text x="140" y="88" font-size="17" font-weight="bold" fill="#5f4b00">ইউজার কোড লেয়ার</text>
+  <text x="140" y="112" font-size="13" fill="#333" font-family="monospace">#[apidoc::title(...)]  #[apidoc::method("GET")]  #[apidoc::param(name="id", ty="int", required)] ...</text>
 
-  <!-- 编译期 -->
-  <rect x="120" y="156" width="700" height="66" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
-  <text x="140" y="184" font-size="17" font-weight="bold" fill="#3d2f9e">কম্পাইল-টাইম · apidoc-macros (proc-macro)</text>
-  <text x="140" y="207" font-size="13" fill="#333">৭টি অ্যাট্রিবিউট ম্যাক্রো: title / desc / method / url / param / query / returned (কম্পাইল-টাইম প্যারামিটার ভ্যালিডেশনসহ)</text>
-  <text x="470" y="234" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <!-- কম্পাইল-টাইম -->
+  <rect x="120" y="138" width="700" height="72" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
+  <rect x="730" y="144" width="76" height="22" rx="11" fill="#6c5ce7"/>
+  <text x="768" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1 + M3</text>
+  <text x="140" y="164" font-size="17" font-weight="bold" fill="#3d2f9e">কম্পাইল-টাইম · apidoc-macros (proc-macro)</text>
+  <text x="140" y="188" font-size="12" fill="#333">১৯টি অ্যাট্রিবিউট ম্যাক্রো: M1-এর ৭টি মৌলিক (title/desc/method/url/param/query/returned) + M3-এর ১২টি এক্সটেনশন (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref)</text>
+  <text x="140" y="204" font-size="12" fill="#555">সবগুলোতে কম্পাইল-টাইম প্যারামিটার ভ্যালিডেশন (url / দিয়ে শুরু, method হোয়াইটলিস্ট, param name বাধ্যতামূলক), অবৈধ অ্যানোটেশন সরাসরি কম্পাইল এরর</text>
 
-  <!-- 注册 -->
-  <rect x="250" y="244" width="440" height="52" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
-  <text x="470" y="268" text-anchor="middle" font-size="15" font-weight="bold" fill="#7d5200">linkme distributed_slice স্ট্যাটিক রেজিস্ট্রেশন</text>
-  <text x="470" y="287" text-anchor="middle" font-size="12" fill="#555">কম্পাইল-টাইমে DocFragmentEntry জেনারেশন, শূন্য রানটাইম খরচে সংগ্রহ</text>
-  <text x="470" y="308" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <!-- রেজিস্ট্রেশন -->
+  <rect x="250" y="222" width="440" height="46" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
+  <rect x="610" y="227" width="62" height="20" rx="10" fill="#f39c12"/>
+  <text x="641" y="241" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <text x="470" y="246" text-anchor="middle" font-size="15" font-weight="bold" fill="#7d5200">linkme distributed_slice স্ট্যাটিক রেজিস্ট্রেশন</text>
+  <text x="470" y="263" text-anchor="middle" font-size="12" fill="#555">কম্পাইল-টাইমে DocFragmentEntry জেনারেশন, শূন্য রানটাইম খরচে সংগ্রহ, ক্রস-crate স্বয়ংক্রিয় সমষ্টিকরণ</text>
 
-  <!-- 运行期核心 -->
-  <rect x="120" y="318" width="700" height="72" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
-  <text x="140" y="346" font-size="17" font-weight="bold" fill="#1a5276">রানটাইম কোর · apidoc (ফ্রেমওয়ার্ক-নিরপেক্ষ)</text>
-  <text x="140" y="370" font-size="13" fill="#333">DocRegistry::collect() id অনুযায়ী ফ্র্যাগমেন্ট মার্জ করে, seq অনুযায়ী ডিক্লারেশন ক্রম পুনরুদ্ধার করে → ApiDoc ডেটা মডেল</text>
-  <text x="140" y="386" font-size="13" fill="#555" font-family="monospace">→ api.json (serde সিরিয়ালাইজেশন, UI ও এক্সপোর্টে ভাগাভাগি)</text>
-  <text x="470" y="402" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <!-- রানটাইম কোর -->
+  <rect x="120" y="280" width="700" height="58" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
+  <rect x="730" y="285" width="62" height="20" rx="10" fill="#2980b9"/>
+  <text x="761" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <text x="140" y="308" font-size="17" font-weight="bold" fill="#1a5276">রানটাইম কোর · apidoc (ফ্রেমওয়ার্ক-নিরপেক্ষ)</text>
+  <text x="140" y="330" font-size="13" fill="#333">DocRegistry::collect() id অনুযায়ী ফ্র্যাগমেন্ট মার্জ করে, seq অনুযায়ী ডিক্লারেশন ক্রম পুনরুদ্ধার করে → ApiDoc ডেটা মডেল</text>
+  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serde সিরিয়ালাইজেশন, UI ও এক্সপোর্টে ভাগাভাগি)</text>
 
-  <!-- 适配器层 规划中 -->
-  <rect x="120" y="412" width="700" height="62" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="140" y="440" font-size="16" font-weight="bold" fill="#566573">অ্যাডাপ্টার লেয়ার (পরিকল্পনাধীন) · পাতলা র্যাপার, কোর অপরিবর্তিত</text>
-  <text x="140" y="462" font-size="13" fill="#333">apidoc-axum / apidoc-actix: রাউট মাউন্টিং, CORS হেডার</text>
-  <text x="470" y="486" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <!-- অ্যাডাপ্টার লেয়ার: সম্পন্ন -->
+  <rect x="120" y="350" width="700" height="62" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="656" y="355" width="76" height="22" rx="11" fill="#27ae60"/>
+  <text x="694" y="370" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2 + M4</text>
+  <text x="140" y="376" font-size="16" font-weight="bold" fill="#1e8449">অ্যাডাপ্টার লেয়ার (সম্পন্ন) · apidoc-axum: রাউট মাউন্টিং + CORS, কোর অপরিবর্তিত</text>
+  <text x="140" y="398" font-size="13" fill="#333">/apidoc (UI ডিবাগ প্যানেল) · /apidoc/api.json (ডকুমেন্ট ডেটা) · /apidoc/mock (Mock ইঞ্জিন)</text>
+  <!-- actix পরিকল্পনাধীন -->
+  <rect x="656" y="384" width="148" height="24" rx="6" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="730" y="400" text-anchor="middle" font-size="12" fill="#566573">apidoc-actix (পরিকল্পনাধীন)</text>
 
-  <!-- 展示层 规划中 -->
-  <rect x="120" y="496" width="700" height="66" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="140" y="524" font-size="16" font-weight="bold" fill="#566573">প্রেজেন্টেশন লেয়ার (পরিকল্পনাধীন) · ডকুমেন্ট UI</text>
-  <text x="140" y="547" font-size="13" fill="#333">ডিরেক্টরি ব্রাউজিং / অনলাইন ডিবাগিং (CORS ডাইরেক্ট) / Mock ডেটা / Markdown · TypeScript · Swagger এক্সপোর্ট</text>
+  <!-- প্রেজেন্টেশন লেয়ার: সম্পন্ন -->
+  <rect x="120" y="424" width="700" height="50" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="730" y="429" width="62" height="20" rx="10" fill="#27ae60"/>
+  <text x="761" y="443" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
+  <text x="140" y="449" font-size="16" font-weight="bold" fill="#1e8449">প্রেজেন্টেশন লেয়ার (সম্পন্ন) · ডকুমেন্ট UI ডিবাগ প্যানেল (এমবেডেড Html, বাহ্যিক নির্ভরতা শূন্য)</text>
+  <text x="140" y="467" font-size="13" fill="#333">ডিরেক্টরি ব্রাউজিং / অনলাইন ডিবাগিং (CORS ডাইরেক্ট) / Mock প্রি-ফিল</text>
 
-  <!-- 图例 -->
-  <rect x="120" y="572" width="24" height="12" fill="#2980b9"/>
-  <text x="152" y="583" font-size="13" fill="#333">বাস্তবায়িত (M1)</text>
-  <rect x="300" y="572" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="332" y="583" font-size="13" fill="#333">পরিকল্পনাধীন</text>
-  <text x="700" y="583" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <!-- ডেটা ফ্লো -->
+  <rect x="120" y="486" width="700" height="44" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <rect x="730" y="491" width="62" height="20" rx="10" fill="#b58900"/>
+  <text x="761" y="505" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
+  <text x="140" y="508" font-size="13" fill="#333" font-family="monospace">ব্রাউজার → /apidoc (ডিবাগ প্যানেল) → CORS ডাইরেক্ট → টার্গেট ইন্টারফেস (বাস্তব রিকোয়েস্ট)</text>
+  <text x="140" y="524" font-size="13" fill="#333" font-family="monospace">ব্রাউজার → /apidoc/mock → Mock ডেটা (fake crate · ১৫টি রুল)</text>
+
+  <!-- workspace -->
+  <rect x="120" y="542" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
+  <text x="470" y="560" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (কোর) · apidoc-macros (ম্যাক্রো) · apidoc-axum (অ্যাডাপ্টার) · apidoc-mock (Mock·fake) · apidoc-test-fixtures (টেস্ট ফিক্সচার)</text>
+
+  <!-- লেজেন্ড -->
+  <rect x="120" y="578" width="24" height="12" fill="#27ae60"/>
+  <text x="152" y="589" font-size="13" fill="#333">বাস্তবায়িত (M1–M4)</text>
+  <rect x="310" y="578" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="342" y="589" font-size="13" fill="#333">পরিকল্পনাধীন (M5 এক্সপোর্ট / M6 মাল্টি-অ্যাপ মাল্টি-ভার্সন / actix)</text>
+  <text x="700" y="589" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

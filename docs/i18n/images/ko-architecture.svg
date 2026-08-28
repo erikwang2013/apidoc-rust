@@ -7,48 +7,68 @@
   <rect width="940" height="600" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="600" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 전체 아키텍처</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 전체 아키텍처 (M4 완료)</text>
 
   <!-- 사용자 코드 계층 -->
-  <rect x="120" y="62" width="700" height="72" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
-  <text x="140" y="90" font-size="17" font-weight="bold" fill="#5f4b00">사용자 코드 계층</text>
-  <text x="140" y="114" font-size="13" fill="#333" font-family="monospace">#[apidoc::title(...)]  #[apidoc::method("GET")]  #[apidoc::param(name="id", ty="int", required)] ...</text>
-  <text x="470" y="146" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <rect x="120" y="62" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <text x="140" y="88" font-size="17" font-weight="bold" fill="#5f4b00">사용자 코드 계층</text>
+  <text x="140" y="112" font-size="13" fill="#333" font-family="monospace">#[apidoc::title(...)]  #[apidoc::method("GET")]  #[apidoc::param(name="id", ty="int", required)] ...</text>
 
   <!-- 컴파일 타임 -->
-  <rect x="120" y="156" width="700" height="66" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
-  <text x="140" y="184" font-size="17" font-weight="bold" fill="#3d2f9e">컴파일 타임 · apidoc-macros(proc-macro)</text>
-  <text x="140" y="207" font-size="13" fill="#333">속성 매크로 7개: title / desc / method / url / param / query / returned(컴파일 타임 파라미터 검증 포함)</text>
-  <text x="470" y="234" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <rect x="120" y="138" width="700" height="72" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
+  <rect x="730" y="144" width="76" height="22" rx="11" fill="#6c5ce7"/>
+  <text x="768" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1 + M3</text>
+  <text x="140" y="164" font-size="17" font-weight="bold" fill="#3d2f9e">컴파일 타임 · apidoc-macros(proc-macro)</text>
+  <text x="140" y="188" font-size="12" fill="#333">속성 매크로 19개: M1 기본 7개(title/desc/method/url/param/query/returned) + M3 확장 12개(tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref)</text>
+  <text x="140" y="204" font-size="12" fill="#555">모두 컴파일 타임 파라미터 검증 포함(url은 /로 시작, method 화이트리스트, param name 필수), 잘못된 주석은 컴파일 오류</text>
 
   <!-- 등록 -->
-  <rect x="250" y="244" width="440" height="52" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
-  <text x="470" y="268" text-anchor="middle" font-size="15" font-weight="bold" fill="#7d5200">linkme distributed_slice 정적 등록</text>
-  <text x="470" y="287" text-anchor="middle" font-size="12" fill="#555">컴파일 타임에 DocFragmentEntry 생성, 런타임 비용 0으로 수집</text>
-  <text x="470" y="308" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <rect x="250" y="222" width="440" height="46" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
+  <rect x="610" y="227" width="62" height="20" rx="10" fill="#f39c12"/>
+  <text x="641" y="241" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <text x="470" y="246" text-anchor="middle" font-size="15" font-weight="bold" fill="#7d5200">linkme distributed_slice 정적 등록</text>
+  <text x="470" y="263" text-anchor="middle" font-size="12" fill="#555">컴파일 타임에 DocFragmentEntry 생성, 제로 비용 수집, 크로스 crate 자동 집계</text>
 
   <!-- 런타임 코어 -->
-  <rect x="120" y="318" width="700" height="72" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
-  <text x="140" y="346" font-size="17" font-weight="bold" fill="#1a5276">런타임 코어 · apidoc(프레임워크 무관)</text>
-  <text x="140" y="370" font-size="13" fill="#333">DocRegistry::collect()로 id별 조각 병합, seq로 선언 순서 복원 → ApiDoc 데이터 모델</text>
-  <text x="140" y="386" font-size="13" fill="#555" font-family="monospace">→ api.json(serde 직렬화, UI와 내보내기 공용)</text>
-  <text x="470" y="402" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <rect x="120" y="280" width="700" height="58" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
+  <rect x="730" y="285" width="62" height="20" rx="10" fill="#2980b9"/>
+  <text x="761" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <text x="140" y="308" font-size="17" font-weight="bold" fill="#1a5276">런타임 코어 · apidoc(프레임워크 무관)</text>
+  <text x="140" y="330" font-size="13" fill="#333">DocRegistry::collect()로 id별 조각 병합, seq로 선언 순서 복원 → ApiDoc 데이터 모델</text>
+  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json(serde 직렬화, UI와 내보내기 공용)</text>
 
-  <!-- 어댑터 계층, 계획 중 -->
-  <rect x="120" y="412" width="700" height="62" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="140" y="440" font-size="16" font-weight="bold" fill="#566573">어댑터 계층(계획 중) · 얇은 래퍼, 코어 무변경</text>
-  <text x="140" y="462" font-size="13" fill="#333">apidoc-axum / apidoc-actix: 라우트 마운트, CORS 헤더</text>
-  <text x="470" y="486" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <!-- 어댑터 계층 완료 -->
+  <rect x="120" y="350" width="700" height="62" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="656" y="355" width="76" height="22" rx="11" fill="#27ae60"/>
+  <text x="694" y="370" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2 + M4</text>
+  <text x="140" y="376" font-size="16" font-weight="bold" fill="#1e8449">어댑터 계층(완료) · apidoc-axum: 라우트 마운트 + CORS, 코어 무변경</text>
+  <text x="140" y="398" font-size="13" fill="#333">/apidoc(UI 디버깅 패널) · /apidoc/api.json(문서 데이터) · /apidoc/mock(Mock 엔진)</text>
+  <!-- actix 계획 중 -->
+  <rect x="656" y="384" width="148" height="24" rx="6" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="730" y="400" text-anchor="middle" font-size="12" fill="#566573">apidoc-actix(계획 중)</text>
 
-  <!-- 프레젠테이션 계층, 계획 중 -->
-  <rect x="120" y="496" width="700" height="66" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="140" y="524" font-size="16" font-weight="bold" fill="#566573">프레젠테이션 계층(계획 중) · 문서 UI</text>
-  <text x="140" y="547" font-size="13" fill="#333">목차 탐색 / 온라인 디버깅(CORS 직접 연결) / Mock 데이터 / 내보내기 Markdown · TypeScript · Swagger</text>
+  <!-- 표시 계층 완료 -->
+  <rect x="120" y="424" width="700" height="50" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="730" y="429" width="62" height="20" rx="10" fill="#27ae60"/>
+  <text x="761" y="443" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
+  <text x="140" y="449" font-size="16" font-weight="bold" fill="#1e8449">표시 계층(완료) · 문서 UI 디버깅 패널(내장 Html, 외부 의존성 0)</text>
+  <text x="140" y="467" font-size="13" fill="#333">목차 탐색 / 온라인 디버깅(CORS 직접 연결) / Mock 프리필</text>
+
+  <!-- 데이터 흐름 -->
+  <rect x="120" y="486" width="700" height="44" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <rect x="730" y="491" width="62" height="20" rx="10" fill="#b58900"/>
+  <text x="761" y="505" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
+  <text x="140" y="508" font-size="13" fill="#333" font-family="monospace">브라우저 → /apidoc(디버깅 패널) → CORS 직접 연결 → 대상 인터페이스(실제 요청)</text>
+  <text x="140" y="524" font-size="13" fill="#333" font-family="monospace">브라우저 → /apidoc/mock → Mock 데이터(fake crate · 15개 규칙)</text>
+
+  <!-- workspace -->
+  <rect x="120" y="542" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
+  <text x="470" y="560" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc(코어) · apidoc-macros(매크로) · apidoc-axum(어댑터) · apidoc-mock(Mock·fake) · apidoc-test-fixtures(테스트 픽스처)</text>
 
   <!-- 범례 -->
-  <rect x="120" y="572" width="24" height="12" fill="#2980b9"/>
-  <text x="152" y="583" font-size="13" fill="#333">구현됨(M1)</text>
-  <rect x="300" y="572" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="332" y="583" font-size="13" fill="#333">계획 중</text>
-  <text x="700" y="583" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <rect x="120" y="578" width="24" height="12" fill="#27ae60"/>
+  <text x="152" y="589" font-size="13" fill="#333">구현됨(M1–M4)</text>
+  <rect x="310" y="578" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="342" y="589" font-size="13" fill="#333">계획 중(M5 내보내기 / M6 다중 앱·다중 버전 / actix)</text>
+  <text x="700" y="589" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

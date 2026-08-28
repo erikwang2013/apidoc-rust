@@ -35,19 +35,27 @@ apidoc-rust ist ein in Rust implementierter **universeller Plugin-API-Dokumentat
 
 ## Funktionen
 
-### Umgesetzt (M1)
+### Umgesetzt (M1-M3)
 
 - **Annotationen als Dokumentation**: sieben Attributmakros `title` / `desc` / `method` / `url` / `param` / `query` / `returned`, jeweils als Annotation (entspricht der PHP-attributes-Schreibweise); Parameter unterstützen `required` / `default` / `desc` / `mock` / `children`-Verschachtelung
 - **Validierung zur Kompilierzeit**: url muss mit `/` beginnen, method-Whitelist, param name ist Pflicht usw.; ungültige Annotationen führen zur Kompilierzeit zu Fehlern (präzise Span)
 - **Automatische Sammlung**: statische Registrierung über linkme `distributed_slice`, keine manuelle Interface-Liste nötig; `DocRegistry::collect()` führt nach id zusammen und stellt die Deklarationsreihenfolge nach seq wieder her, automatische Sammlung über crates hinweg
 - **api.json-Ausgabe**: serde serialisiert das einheitliche Dokumentationsdatenmodell (config + endpoints), Felder semantisch an PHP ausgerichtet
+- **axum-Adapter + eingebettete Dokumentations-UI**: Route einhängen genügt für die Dokumentationsseite, mit gruppiertem Verzeichnis (M2)
+- **Annotationen vervollständigt**: 12 neue Annotationen `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` (M3)
+
+### Umgesetzt (M4)
+
+- **Online-Debugging**: Die Dokumentationsseite enthält ein eingebettetes „Online-Debugging"-Panel — Base URL wird mit `location.origin` vorbefüllt für die direkte Cross-Origin-Verbindung zum Zielservice, Parameterformular wird nach Mock-Regeln vorbefüllt, `{name}` / `:name`-Platzhalter im Routenpfad werden ersetzt, GET/HEAD-Parameter wandern in die Query, andere Methoden werden als JSON-Body zusammengesetzt, Anfrage-Header bearbeitbar + eigene Header, Antwortanzeige (Status / Dauer / pretty JSON), gelber Hinweis bei CORS-Fehler
+- **Mock-Engine** (`crates/apidoc-mock`, abhängig von der fake-crate, 15 Regeln: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). Regelpriorität: `mock="fake:xxx"` läuft über die fake-Regeltabelle (unbekannte Namen fallen auf Standardwerte zurück) → andere nicht-leere mock-Werte werden unverändert ausgegeben (z. B. `mock="1"`, `mock="erik"`) → ohne mock automatisch nach `ty` erzeugt (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); children werden rekursiv verschachtelt, arrays haben fest 2 Einträge
+- **Mock-Endpunkt**: Der axum-Adapter erhält `GET /apidoc/mock?url=&method=` — exakte Übereinstimmung von url + method, sonst 404; das Debug-Panel blendet `not_debug`-Endpunkte standardmäßig aus, sie erscheinen erst nach dem Anhaken von „not_debug-Schnittstellen anzeigen"
+- **Direkte CORS-Verbindung**: Online-Debugging verbindet der Browser direkt mit dem Zielendpunkt; der `cors_layer` des Adapters erlaubt dies (serverseitiger Reverse-Proxy bleibt v2)
 
 ### Geplant
 
-- Online-Debugging (Browser stellt per CORS direkt eine Verbindung zum Zielendpunkt her), Mock-Daten (Generierung nach fake-Regeln)
 - Mehrere Anwendungen / mehrere Versionen / Zugriffspasswort
-- Export als Markdown / TypeScript / Swagger (OpenAPI3)
-- Multi-Framework-Adapter (apidoc-axum / apidoc-actix)
+- Export als Markdown / TypeScript / Swagger (OpenAPI3) (M5)
+- Multi-Framework-Adapter (apidoc-axum fertig, apidoc-actix noch nicht)
 - v2: Code-Generator, Referenzen auf Datenbankfelder, Teilen-Links, Debug-Events
 
 ## Architektur
@@ -67,14 +75,19 @@ apidoc-rust ist ein in Rust implementierter **universeller Plugin-API-Dokumentat
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Workspace-Konfiguration (resolver 2)
+├── VERSION                    # Projektversion (v1.0.0, getrennt von der Framework-Version 0.1.0)
 ├── crates/
 │   ├── apidoc/                # Laufzeitkern (frameworkunabhängig)
 │   │   ├── src/lib.rs         # Datenmodell + DocRegistry-Aggregation + api.json
 │   │   ├── tests/             # Integrationstests (Makroexpansion/Aggregation/Serialisierung/über crates hinweg)
 │   │   └── examples/demo.rs   # Beispiel: Annotationen + Ausgabe von api.json
-│   ├── apidoc-macros/         # proc-macro: 7 Attributmakros
+│   ├── apidoc-macros/         # proc-macro: 19 Attributmakros
 │   │   └── src/lib.rs         # Makrodefinitionen + Parameterparsing + Validierung zur Kompilierzeit
-│   └── apidoc-test-fixtures/  # Test-Fixtures für die Registrierung über crates hinweg
+│   ├── apidoc-mock/           # Mock-Engine (erzeugt Mock-Daten nach fake-Regeln)
+│   ├── apidoc-test-fixtures/  # Test-Fixtures für die Registrierung über crates hinweg
+│   └── apidoc-axum/           # axum-Adapter (Dokumentationsrouten + cors_layer + /apidoc/mock)
+├── .github/
+│   └── workflows/release.yml  # Release-Workflow (liest VERSION, erstellt inkrementell tag+release)
 └── docs/
     ├── images/                # Architektur-/Funktions-/Lebenszyklusdiagramme (SVG)
     └── i18n/                  # Mehrsprachige Dokumentation (12 Sprachen)
@@ -91,6 +104,8 @@ apidoc-macros = "0.1"
 linkme = "0.3"        # Die Makroexpansion referenziert linkme-Pfade direkt; Verbraucher müssen direkt abhängig sein
 serde_json = "1"      # für die Ausgabe von api.json
 ```
+
+> `apidoc-mock` (Mock-Engine) ist eine interne Framework-Abhängigkeit, die automatisch vom Adapter eingebunden wird; Verbraucher müssen sie in der Regel nicht direkt verwenden.
 
 ### 2. Annotationen schreiben
 
@@ -175,14 +190,41 @@ Ausgabe (Auszug):
 }
 ```
 
+### 5. Online-Debugging und Mock (M4)
+
+Dokumentationsseite öffnen → Endpunkt auswählen → das Panel „Online-Debugging" rechts befüllt die Parameter nach den Mock-Regeln vor → Base URL auf den Zielservice richten (Standard `location.origin`, direkte Cross-Origin-Verbindung) → „Senden" klicken, um die echte Antwort zu erhalten (Statuscode / Dauer / pretty JSON). Das Debug-Panel blendet `not_debug`-Endpunkte standardmäßig aus; sie erscheinen erst nach dem Anhaken von „not_debug-Schnittstellen anzeigen".
+
+**CORS-Anforderung**: Online-Debugging verbindet der Browser direkt mit dem Zielendpunkt, daher muss der Zielservice den vom Adapter bereitgestellten `cors_layer` einbinden, um Cross-Origin-Anfragen zu erlauben; bei CORS-Fehlern zeigt das Panel einen gelben Hinweis.
+
+Mock-Regelsyntax (drei Prioritätsstufen):
+
+```rust
+#[apidoc::param(name = "email", ty = "string", desc = "邮箱", mock = "fake:email")]  // Generierung per fake-Regel
+#[apidoc::param(name = "status", ty = "string", desc = "状态", mock = "1")]          // nicht-leerer mock wird unverändert ausgegeben
+#[apidoc::param(name = "name", ty = "string", desc = "用户名")]                       // ohne mock: automatisch nach ty
+#[apidoc::returned(
+    name = "data",
+    ty = "object",
+    children = [
+        { name = "id", ty = "int", required },       // ohne mock → "1"
+        { name = "email", ty = "string", mock = "fake:email" },  // children rekursiv verschachtelt
+    ]
+)]
+fn create_user() -> String {
+    unimplemented!()
+}
+```
+
+15 eingebaute fake-Regeln: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`; unbekannte Regelnamen fallen auf Standardwerte zurück. Automatische Generierung ohne mock: int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`; Arrays haben fest 2 Einträge.
+
 ## Entwicklungsplan
 
 | Phase | Inhalt | Status |
 |-------|--------|--------|
 | M1 | Workspace-Gerüst + Datenmodell + Makro-MVP + linkme-Registrierung | ✅ Abgeschlossen |
-| M2 | axum-Adapter + eingebettete Dokumentations-UI + gruppierte Verzeichnisse | ⏳ Geplant |
-| M3 | Annotationen vervollständigen (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | Geplant |
-| M4 | Online-Debugging + Mock-Engine | Geplant |
+| M2 | axum-Adapter + eingebettete Dokumentations-UI + gruppierte Verzeichnisse | ✅ Abgeschlossen |
+| M3 | Annotationen vervollständigen (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ Abgeschlossen |
+| M4 | Online-Debugging + Mock-Engine | ✅ Abgeschlossen |
 | M5 | Export als markdown / typescript / swagger.json | Geplant |
 | M6 | Passwort-Authentifizierung, mehrere Anwendungen und Versionen, Veröffentlichung | Geplant |
 

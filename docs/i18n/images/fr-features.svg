@@ -7,24 +7,26 @@
   <rect width="940" height="560" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Fonctionnalités du projet apidoc-rust</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Fonctionnalités du projet apidoc-rust (M1–M4 terminé)</text>
 
   <!-- Carte 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implémenté M1</text>
   <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">Documentation par annotations</text>
-  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
-  <text x="60" y="150" font-size="13" fill="#333">Sept macros d'attributs, annotation par annotation, alignées sur la sémantique des attributs PHP</text>
-  <text x="60" y="170" font-size="13" fill="#333">Paramètres imbriqués : required / default / desc / mock / children</text>
+  <text x="60" y="130" font-size="13" fill="#333">7 macros M1 : title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">12 nouvelles en M3 : tag / group / author / header / route_param /</text>
+  <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
+  <text x="60" y="190" font-size="13" fill="#333">Paramètres imbriqués : required / default / desc / mock / children</text>
 
   <!-- Carte 2 -->
   <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="815" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implémenté M1</text>
   <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">Validation à la compilation</text>
-  <text x="500" y="130" font-size="13" fill="#333">url doit commencer par /, méthode en liste blanche, name de param obligatoire</text>
+  <text x="500" y="130" font-size="13" fill="#333">url commençant par /, méthode en liste blanche, param name obligatoire</text>
   <text x="500" y="150" font-size="13" fill="#333">Toute annotation invalide déclenche une erreur de compilation (span précis) ; la documentation ne se désynchronise jamais du code</text>
+  <text x="500" y="190" font-size="13" fill="#333">Les 12 annotations étendues en M3 sont également entièrement validées</text>
 
   <!-- Carte 3 -->
   <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -38,29 +40,29 @@
   <!-- Carte 4 -->
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implémenté M1</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Sortie api.json</text>
-  <text x="500" y="280" font-size="13" fill="#333">Sérialisation serde du modèle de données unifié (config + endpoints)</text>
-  <text x="500" y="300" font-size="13" fill="#333">Champs alignés sur la sémantique PHP : title/desc/url/method/params/querys/returned</text>
-  <text x="500" y="320" font-size="13" fill="#333">L'UI et les exports partagent la même source de données</text>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implémenté M2</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Adaptateur axum + UI de documentation</text>
+  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum : /apidoc (UI) · /apidoc/api.json · /apidoc/mock</text>
+  <text x="500" y="300" font-size="13" fill="#333">Panneau de débogage de l'UI intégré (page Html statique, zéro dépendance externe)</text>
+  <text x="500" y="320" font-size="13" fill="#333">Couche CORS : le navigateur peut se connecter directement à l'interface cible entre domaines</text>
 
   <!-- Carte 5 -->
-  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Prévu</text>
-  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">Débogage en ligne + Mock</text>
-  <text x="60" y="430" font-size="13" fill="#333">Débogage en CORS direct depuis le navigateur vers l'API cible, sans proxy serveur</text>
-  <text x="60" y="450" font-size="13" fill="#333">Les règles Mock (ex. @integer(1,100)) génèrent des données via le crate fake</text>
-  <text x="60" y="470" font-size="13" fill="#333">Multi-applications / multi-versions / mot de passe d'accès</text>
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implémenté M4</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">Débogage en ligne + moteur Mock</text>
+  <text x="60" y="430" font-size="13" fill="#333">Panneau de débogage : préremplissage mock + connexion CORS directe du navigateur à l'interface cible</text>
+  <text x="60" y="450" font-size="13" fill="#333">Moteur crates/apidoc-mock : génère les données via le crate fake</text>
+  <text x="60" y="470" font-size="13" fill="#333">15 règles : nom / email / téléphone / IP / URL / UUID / date / nombre / flottant / booléen / texte…</text>
 
   <!-- Carte 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Prévu</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Adaptation multi-frameworks + export</text>
-  <text x="500" y="430" font-size="13" fill="#333">Adaptateurs minces apidoc-axum / apidoc-actix, cœur inchangé</text>
-  <text x="500" y="450" font-size="13" fill="#333">Export Markdown / TypeScript / Swagger (OpenAPI3)</text>
-  <text x="500" y="470" font-size="13" fill="#333">Cache de documentation / événements de débogage (v2 : générateur de code, liens de partage)</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Export + multi-applications + actix</text>
+  <text x="500" y="430" font-size="13" fill="#333">Export M5 : Markdown / TypeScript / Swagger (OpenAPI3)</text>
+  <text x="500" y="450" font-size="13" fill="#333">M6 multi-applications / multi-versions / mot de passe d'accès</text>
+  <text x="500" y="470" font-size="13" fill="#333">Adaptateur apidoc-actix (mince enveloppe, cœur inchangé)</text>
 
   <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

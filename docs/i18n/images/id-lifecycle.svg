@@ -10,7 +10,7 @@
   <rect width="940" height="400" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="400" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Siklus Hidup Dokumentasi apidoc-rust</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Siklus Hidup Dokumentasi apidoc-rust (M1–M4 Selesai)</text>
 
   <!-- Langkah 1 -->
   <circle cx="85" cy="150" r="34" fill="#b58900"/>
@@ -18,6 +18,7 @@
   <text x="85" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Menulis Anotasi</text>
   <text x="85" y="235" text-anchor="middle" font-size="12" fill="#555">Dipasang pada handler</text>
   <text x="85" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">#[apidoc::*]</text>
+  <text x="85" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="119" y1="150" x2="181" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -27,6 +28,7 @@
   <text x="215" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Ekspansi Makro</text>
   <text x="215" y="235" text-anchor="middle" font-size="12" fill="#555">Dihasilkan saat kompilasi</text>
   <text x="215" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">DocFragmentEntry</text>
+  <text x="215" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="249" y1="150" x2="311" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -36,6 +38,7 @@
   <text x="345" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Registrasi linkme</text>
   <text x="345" y="235" text-anchor="middle" font-size="12" fill="#555">Slice statis terdistribusi</text>
   <text x="345" y="252" text-anchor="middle" font-size="12" fill="#555">Tanpa biaya runtime</text>
+  <text x="345" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="379" y1="150" x2="441" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -45,6 +48,7 @@
   <text x="475" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Agregasi collect()</text>
   <text x="475" y="235" text-anchor="middle" font-size="12" fill="#555">Gabungkan fragmen berdasarkan id</text>
   <text x="475" y="252" text-anchor="middle" font-size="12" fill="#555">Urutan deklarasi berdasarkan seq</text>
+  <text x="475" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="509" y1="150" x2="571" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -54,21 +58,29 @@
   <text x="605" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
   <text x="605" y="235" text-anchor="middle" font-size="12" fill="#555">Model data dokumentasi terpadu</text>
   <text x="605" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints</text>
+  <text x="605" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="639" y1="150" x2="701" y2="150" stroke="#555" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+  <line x1="639" y1="150" x2="701" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- Langkah 6, dalam rencana -->
-  <circle cx="735" cy="150" r="34" fill="none" stroke="#95a5a6" stroke-width="3" stroke-dasharray="6 4"/>
-  <text x="735" y="158" text-anchor="middle" font-size="26" fill="#95a5a6" font-weight="bold">6</text>
-  <text x="735" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#566573">Konsumsi</text>
-  <text x="735" y="235" text-anchor="middle" font-size="12" fill="#555">Penelusuran UI / debugging online</text>
-  <text x="735" y="252" text-anchor="middle" font-size="12" fill="#555">Ekspor Markdown·TS·Swagger</text>
+  <!-- Langkah 6: selesai -->
+  <circle cx="735" cy="150" r="34" fill="#16a085"/>
+  <text x="735" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
+  <text x="735" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Panel Debugging UI</text>
+  <text x="735" y="235" text-anchor="middle" font-size="12" fill="#555">Penelusuran direktori / debugging online</text>
+  <text x="735" y="252" text-anchor="middle" font-size="12" fill="#555">Praisi Mock / koneksi langsung CORS</text>
+  <text x="735" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+
+  <line x1="769" y1="150" x2="831" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- Langkah 7: selesai -->
+  <circle cx="865" cy="150" r="34" fill="#e67e22"/>
+  <text x="865" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
+  <text x="865" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">Alur Data Debugging</text>
+  <text x="865" y="235" text-anchor="middle" font-size="12" fill="#555">Koneksi langsung CORS ke API target</text>
+  <text x="865" y="252" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock → mock</text>
+  <text x="865" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
 
   <!-- Legenda -->
-  <rect x="240" y="320" width="24" height="12" fill="#27ae60"/>
-  <text x="272" y="331" font-size="13" fill="#333">Sudah diimplementasikan (M1)</text>
-  <rect x="430" y="320" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="462" y="331" font-size="13" fill="#333">Dalam rencana</text>
-
-  <text x="700" y="331" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <text x="470" y="331" text-anchor="middle" font-size="13" fill="#333">Penanda fase: M1 anotasi / pengumpulan / agregasi / output · M2 adaptor dan UI · M4 panel debugging / Mock / koneksi langsung CORS (semua selesai, tidak ada yang direncanakan)</text>
+  <text x="700" y="355" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

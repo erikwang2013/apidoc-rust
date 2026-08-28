@@ -35,19 +35,27 @@ apidoc-rust는 Rust로 구현된 **범용 플러그형 API 인터페이스 문�
 
 ## 기능
 
-### 구현됨 (M1)
+### 구현됨 (M1-M3)
 
 - **주석 기반 문서**: `title` / `desc` / `method` / `url` / `param` / `query` / `returned` 7개 속성 매크로로 개별 주석 작성(PHP attributes 방식에 대응), 파라미터는 `required` / `default` / `desc` / `mock` / `children` 중첩 지원
 - **컴파일 타임 검증**: url은 반드시 `/`로 시작, method 화이트리스트, param name 필수 등, 잘못된 주석은 컴파일 타임에 오류 발생(span 정밀)
 - **자동 수집**: linkme `distributed_slice` 정적 등록으로 수동 인터페이스 목록 불필요; `DocRegistry::collect()`가 id별로 병합하고 seq로 선언 순서를 복원하며, 크로스 crate 자동 수집
 - **api.json 출력**: serde 직렬화로 통일된 문서 데이터 모델(config + endpoints) 생성, 필드는 PHP 의미론에 정렬
+- **axum 어댑터 + 내장 문서 UI**: 라우트를 마운트하면 문서 페이지가 제공되며, 그룹 목차 탐색 지원(M2)
+- **주석 보강**: `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` 12개 신규 주석(M3)
+
+### 구현됨 (M4)
+
+- **온라인 디버깅**: 문서 페이지에 내장된 「온라인 디버깅」 패널 — Base URL을 `location.origin`으로 미리 채워 크로스 오리진으로 대상 서비스에 직접 연결, 파라미터 폼에 mock 미리 채움, `{name}` / `:name` 라우트 플레이스홀더 치환, GET/HEAD 파라미터는 query로 병합, 나머지 method는 JSON body로 조립, 요청 헤더 편집 + 커스텀 헤더, 응답 표시(상태 / 소요 시간 / pretty JSON), CORS 실패 시 노란색 힌트
+- **Mock 엔진**(`crates/apidoc-mock`, fake crate 의존, 15개 규칙: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). 규칙 우선순위: `mock="fake:xxx"`는 fake 규칙 테이블로 처리(미지정명은 기본값으로 폴백) → 그 외 비어 있지 않은 mock은 그대로 출력(예: `mock="1"`, `mock="erik"`) → mock 없으면 `ty`로 자동 생성(int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); children은 재귀 중첩, array는 고정 2항목
+- **mock 인터페이스**: axum 어댑터에 `GET /apidoc/mock?url=&method=` 추가, url + method 정확 일치, 불일치 시 404 반환; 디버깅 패널은 기본적으로 `not_debug` 엔드포인트를 숨기고, 「not_debug 인터페이스 표시」를 체크해야만 표시
+- **CORS 직접 연결**: 온라인 디버깅은 브라우저가 대상 인터페이스에 직접 연결하며, 어댑터의 `cors_layer`가 허용 처리(서버 측 리버스 프록시는 v2에 예정)
 
 ### 계획 중
 
-- 온라인 디버깅(브라우저 CORS로 대상 인터페이스 직접 연결), Mock 데이터(fake 규칙 생성)
 - 다중 앱 / 다중 버전 / 접근 비밀번호
-- Markdown / TypeScript / Swagger(OpenAPI3) 내보내기
-- 다중 프레임워크 어댑터(apidoc-axum / apidoc-actix)
+- Markdown / TypeScript / Swagger(OpenAPI3) 내보내기(M5)
+- 다중 프레임워크 어댑터(apidoc-axum 완료, apidoc-actix 미구현)
 - v2: 코드 생성기, 데이터 테이블 필드 참조, 공유 링크, 디버깅 이벤트
 
 ## 아키텍처
@@ -67,14 +75,19 @@ apidoc-rust는 Rust로 구현된 **범용 플러그형 API 인터페이스 문�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 설정(resolver 2)
+├── VERSION                    # 프로젝트 버전(v1.0.0, 프레임워크 버전 0.1.0과 분리)
 ├── crates/
 │   ├── apidoc/                # 런타임 코어(프레임워크 무관)
 │   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json
 │   │   ├── tests/             # 통합 테스트(매크로 확장/집계/직렬화/크로스 crate)
 │   │   └── examples/demo.rs   # 예제: 주석 + api.json 출력
-│   ├── apidoc-macros/         # proc-macro: 7개 속성 매크로
+│   ├── apidoc-macros/         # proc-macro: 19개 속성 매크로
 │   │   └── src/lib.rs         # 매크로 정의 + 파라미터 파싱 + 컴파일 타임 검증
-│   └── apidoc-test-fixtures/  # 크로스 crate 등록 테스트 픽스처
+│   ├── apidoc-mock/           # Mock 엔진(fake 규칙으로 mock 데이터 생성)
+│   ├── apidoc-test-fixtures/  # 크로스 crate 등록 테스트 픽스처
+│   └── apidoc-axum/           # axum 어댑터(문서 라우트 + cors_layer + /apidoc/mock)
+├── .github/
+│   └── workflows/release.yml  # 릴리스 워크플로(VERSION 읽기, 태그+릴리스 증분 생성)
 └── docs/
     ├── images/                # 아키텍처/기능/수명주기 다이어그램(SVG)
     └── i18n/                  # 다국어 문서(12개 언어)
@@ -91,6 +104,8 @@ apidoc-macros = "0.1"
 linkme = "0.3"        # 매크로 확장이 linkme 경로를 직접 참조하므로 소비 측은 직접 의존해야 함
 serde_json = "1"      # api.json 출력용
 ```
+
+> `apidoc-mock`(Mock 엔진)은 프레임워크 내부 의존성으로 어댑터가 자동으로 가져오므로, 일반적인 소비 측은 직접 사용할 필요가 없습니다.
 
 ### 2. 주석 작성
 
@@ -175,14 +190,41 @@ cargo run --example demo -p apidoc
 }
 ```
 
+### 5. 온라인 디버깅과 Mock(M4)
+
+문서 페이지를 열고 → 인터페이스를 선택하면 → 오른쪽 「온라인 디버깅」 패널에 mock 규칙대로 파라미터가 미리 채워집니다 → Base URL을 대상 서비스 주소로 지정하고(기본 `location.origin`, 크로스 오리진 직접 연결) → 보내기를 누르면 실제 응답(상태 코드 / 소요 시간 / pretty JSON)을 얻습니다. 디버깅 패널은 기본적으로 `not_debug` 엔드포인트를 숨기며, 「not_debug 인터페이스 표시」를 체크한 후에만 보여줍니다.
+
+**CORS 요구 사항**: 온라인 디버깅은 브라우저가 대상 인터페이스에 직접 연결하므로, 대상 서비스는 어댑터가 제공하는 `cors_layer`를 마운트해 크로스 오리진 요청을 허용해야 합니다. CORS 실패 시 패널에 노란색 힌트가 표시됩니다.
+
+Mock 규칙 문법(3단계 우선순위):
+
+```rust
+#[apidoc::param(name = "email", ty = "string", desc = "邮箱", mock = "fake:email")]  // fake 규칙 생성
+#[apidoc::param(name = "status", ty = "string", desc = "状态", mock = "1")]          // 비어 있지 않은 mock은 그대로 출력
+#[apidoc::param(name = "name", ty = "string", desc = "用户名")]                       // mock 없음: ty로 자동 생성
+#[apidoc::returned(
+    name = "data",
+    ty = "object",
+    children = [
+        { name = "id", ty = "int", required },       // mock 없음 → "1"
+        { name = "email", ty = "string", mock = "fake:email" },  // children 재귀 중첩
+    ]
+)]
+fn create_user() -> String {
+    unimplemented!()
+}
+```
+
+내장 fake 규칙 15개: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`; 알 수 없는 규칙명은 기본값으로 폴백됩니다. mock 없는 자동 생성 규칙: int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`; array는 고정 2항목.
+
 ## 개발 계획
 
 | 단계 | 내용 | 상태 |
 |------|------|------|
 | M1 | workspace 뼈대 + 데이터 모델 + 매크로 MVP + linkme 등록 | ✅ 완료 |
-| M2 | axum 어댑터 + 내장 문서 UI + 그룹 목차 | ⏳ 계획 중 |
-| M3 | 주석 보강(tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | 계획 중 |
-| M4 | 온라인 디버깅 + Mock 엔진 | 계획 중 |
+| M2 | axum 어댑터 + 내장 문서 UI + 그룹 목차 | ✅ 완료 |
+| M3 | 주석 보강(tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ 완료 |
+| M4 | 온라인 디버깅 + Mock 엔진 | ✅ 완료 |
 | M5 | markdown / typescript / swagger.json 내보내기 | 계획 중 |
 | M6 | 비밀번호 인증, 다중 앱·다중 버전, 릴리스 | 계획 중 |
 

@@ -35,19 +35,27 @@ apidoc-rust هو **مولّد وثائق API عام وقابل للتوسع عب
 
 ## المميزات
 
-### تم تنفيذه (M1)
+### تم تنفيذه (M1–M3)
 
 - **وثائق عبر التعليقات التوضيحية**: سبعة ماكروات سمات `title` / `desc` / `method` / `url` / `param` / `query` / `returned` تُعلَّق واجهةً تلو الأخرى (بما يطابق أسلوب سمات PHP attributes)، مع دعم التداخل في المعاملات: `required` / `default` / `desc` / `mock` / `children`
 - **التحقق في زمن الترجمة**: يجب أن يبدأ url بـ `/`، وmethod ضمن قائمة بيضاء، وparam name إلزامي... أي تعليق توضيحي غير صالح يُبلَغ عنه في زمن الترجمة (مع span دقيق)
 - **الجمع التلقائي**: تسجيل ثابت عبر `distributed_slice` من linkme دون الحاجة إلى قائمة واجهات يدوية؛ `DocRegistry::collect()` يدمج القطع حسب id ويستعيد ترتيب التعريف حسب seq، مع جمع تلقائي عبر crates متعددة
 - **إخراج api.json**: تسلسل serde لنموذج بيانات موحد (config + endpoints)، بحقول مطابقة لدلالات PHP
+- **محول axum + واجهة وثائق مدمجة**: تركيب المسار يعطيك صفحة الوثائق فورًا، مع تصفح الفهرس المجمّع (M2)
+- **استكمال التعليقات التوضيحية**: 12 تعليقًا جديدًا `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` (M3)
+
+### تم تنفيذه (M4)
+
+- **تصحيح أونلاين**: لوحة «تصحيح أونلاين» مدمجة في صفحة الوثائق — Base URL يُعبَّأ مسبقًا بـ `location.origin` للاتصال المباشر بالخدمة عبر النطاقات، نموذج المعاملات يُعبَّأ مسبقًا ببيانات mock، استبدال مواضع المسار `{name}` / `:name`، دمج معاملات GET/HEAD في query، وتجميع بقية الـ methods في JSON body، تحرير رؤوس الطلب + header مخصص، عرض الاستجابة (الحالة / الزمن / pretty JSON)، مع تنبيه أصفر عند فشل CORS
+- **محرك Mock** (`crates/apidoc-mock`، يعتمد على crate fake، 15 قاعدة: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). أولوية القواعد: `mock="fake:xxx"` تمر عبر جدول قواعد fake (الأسماء غير المعروفة تعود إلى قيمة افتراضية) ← بقية قيم mock غير الفارغة تُخرج كما هي (مثل `mock="1"`، `mock="erik"`) ← بدون mock يُولَّد تلقائيًا حسب `ty` (int←`"1"`، float←`"0.5"`، bool←`"true"`، object←`"{}"`، string←`"string"`)؛ children يتداخل بشكل متكرر، وarray ثابت على عنصرين
+- **واجهة mock**: محول axum يضيف `GET /apidoc/mock?url=&method=`، بمطابقة دقيقة لـ url + method، ويعيد 404 عند عدم التطابق؛ لوحة التصحيح تخفي افتراضيًا نقاط النهاية `not_debug`، ولا تظهرها إلا بعد تحديد «إظهار واجهات not_debug»
+- **اتصال CORS مباشر**: التصحيح أونلاين يربط المتصفح مباشرة بالواجهة الهدف، و`cors_layer` من المحول يتولى السماح (الوكيل العكسي من جهة الخادم يُترك لـ v2)
 
 ### قيد التخطيط
 
-- تصحيح أونلاين (اتصال المتصفح المباشر بالواجهة عبر CORS) وبيانات Mock (توليد وفق قواعد fake)
 - تطبيقات متعددة / إصدارات متعددة / كلمة مرور للوصول
-- تصدير Markdown / TypeScript / Swagger (OpenAPI3)
-- دعم أطر عمل متعددة (apidoc-axum / apidoc-actix)
+- تصدير Markdown / TypeScript / Swagger (OpenAPI3) (M5)
+- دعم أطر عمل متعددة (اكتمل apidoc-axum، ولم يُنجز apidoc-actix بعد)
 - v2: مولّد كود، مراجع لحقول جداول البيانات، روابط مشاركة، أحداث تصحيح
 
 ## البنية
@@ -67,14 +75,19 @@ apidoc-rust هو **مولّد وثائق API عام وقابل للتوسع عب
 ```
 apidoc-rust/
 ├── Cargo.toml                 # إعداد workspace (resolver 2)
+├── VERSION                    # إصدار المشروع (v1.0.0، منفصل عن إصدار الإطار 0.1.0)
 ├── crates/
 │   ├── apidoc/                # النواة في زمن التشغيل (مستقلة عن الإطار)
 │   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json
 │   │   ├── tests/             # اختبارات التكامل (توسيع الماكرو / التجميع / التسلسل / عبر crates)
 │   │   └── examples/demo.rs   # مثال: تعليقات توضيحية + إخراج api.json
-│   ├── apidoc-macros/         # proc-macro: 7 ماكروات سمات
+│   ├── apidoc-macros/         # proc-macro: 19 ماكروات سمات
 │   │   └── src/lib.rs         # تعريفات الماكرو + تحليل المعاملات + التحقق في زمن الترجمة
-│   └── apidoc-test-fixtures/  # نماذج اختبار التسجيل عبر crates
+│   ├── apidoc-mock/           # محرك Mock (توليد بيانات mock وفق قواعد fake)
+│   ├── apidoc-test-fixtures/  # نماذج اختبار التسجيل عبر crates
+│   └── apidoc-axum/           # محول axum (مسارات الوثائق + cors_layer + /apidoc/mock)
+├── .github/
+│   └── workflows/release.yml  # سير عمل النشر (يقرأ VERSION، وإنشاء tag+release تدريجي)
 └── docs/
     ├── images/                # مخططات البنية / الوظائف / دورة الحياة (SVG)
     └── i18n/                  # وثائق متعددة اللغات (12 لغة)
@@ -91,6 +104,8 @@ apidoc-macros = "0.1"
 linkme = "0.3"        # توسيع الماكرو يشير مباشرة إلى مسار linkme، لذا يجب أن تعتمد عليه جهة الاستهلاك مباشرة
 serde_json = "1"      # لاستخدام إخراج api.json
 ```
+
+> `apidoc-mock` (محرك Mock) تبعية داخلية للإطار، تُضاف تلقائيًا عبر المحول، ولا يحتاج المستهلك عمومًا إلى استخدامه مباشرة.
 
 ### 2. كتابة التعليقات التوضيحية
 
@@ -175,14 +190,41 @@ cargo run --example demo -p apidoc
 }
 ```
 
+### 5. التصحيح أونلاين و Mock (M4)
+
+افتح صفحة الوثائق ← اختر واجهة ← لوحة «التصحيح أونلاين» على اليمين تعبّئ المعاملات مسبقًا وفق قواعد mock ← وجّه Base URL إلى عنوان الخدمة الهدف (الافتراضي `location.origin`، اتصال مباشر عبر النطاقات) ← اضغط إرسال لتحصل على الاستجابة الحقيقية (رمز الحالة / الزمن / pretty JSON). لوحة التصحيح تخفي افتراضيًا نقاط النهاية `not_debug`، ولا تظهرها إلا بعد تحديد «إظهار واجهات not_debug».
+
+**متطلب CORS**: التصحيح أونلاين يربط المتصفح مباشرة بالواجهة الهدف، لذا يجب على الخدمة الهدف تركيب `cors_layer` الذي يوفره المحول للسماح بطلبات عبر النطاقات؛ وعند فشل CORS تعرض اللوحة تنبيهًا أصفر.
+
+صيغة قواعد Mock (ثلاث أولويات):
+
+```rust
+#[apidoc::param(name = "email", ty = "string", desc = "البريد", mock = "fake:email")]  // توليد عبر قاعدة fake
+#[apidoc::param(name = "status", ty = "string", desc = "الحالة", mock = "1")]          // mock غير فارغ يُخرج كما هو
+#[apidoc::param(name = "name", ty = "string", desc = "اسم المستخدم")]                   // بدون mock: توليد تلقائي حسب ty
+#[apidoc::returned(
+    name = "data",
+    ty = "object",
+    children = [
+        { name = "id", ty = "int", required },       // بدون mock → "1"
+        { name = "email", ty = "string", mock = "fake:email" },  // children يتداخل بشكل متكرر
+    ]
+)]
+fn create_user() -> String {
+    unimplemented!()
+}
+```
+
+15 قاعدة fake مدمجة: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`؛ الأسماء غير المعروفة تعود إلى قيمة افتراضية. قواعد التوليد التلقائي بدون mock: int←`"1"`، float←`"0.5"`، bool←`"true"`، object←`"{}"`، string←`"string"`؛ وarray ثابت على عنصرين.
+
 ## خطة التطوير
 
 | المرحلة | المحتوى | الحالة |
 |------|------|------|
 | M1 | هيكل workspace + نموذج البيانات + ماكرو MVP + تسجيل linkme | ✅ مكتمل |
-| M2 | محول axum + واجهة وثائق مدمجة + فهرس مجمّع | ⏳ قيد التخطيط |
-| M3 | استكمال التعليقات التوضيحية (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | قيد التخطيط |
-| M4 | تصحيح أونلاين + محرك Mock | قيد التخطيط |
+| M2 | محول axum + واجهة وثائق مدمجة + فهرس مجمّع | ✅ مكتمل |
+| M3 | استكمال التعليقات التوضيحية (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ مكتمل |
+| M4 | تصحيح أونلاين + محرك Mock | ✅ مكتمل |
 | M5 | تصدير markdown / typescript / swagger.json | قيد التخطيط |
 | M6 | مصادقة بكلمة مرور، تطبيقات وإصدارات متعددة، إصدار عام | قيد التخطيط |
 

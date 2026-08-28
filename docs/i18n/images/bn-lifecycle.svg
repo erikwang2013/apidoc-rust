@@ -10,65 +10,77 @@
   <rect width="940" height="400" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="400" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust ডকুমেন্টেশন জীবনচক্র</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust ডকুমেন্টেশন জীবনচক্র (M1–M4 সম্পন্ন)</text>
 
-  <!-- 步骤 1 -->
+  <!-- ধাপ 1 -->
   <circle cx="85" cy="150" r="34" fill="#b58900"/>
   <text x="85" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">1</text>
   <text x="85" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">অ্যানোটেশন লেখা</text>
   <text x="85" y="235" text-anchor="middle" font-size="12" fill="#555">handler-এ লাগানো</text>
   <text x="85" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">#[apidoc::*]</text>
+  <text x="85" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="119" y1="150" x2="181" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- 步骤 2 -->
+  <!-- ধাপ 2 -->
   <circle cx="215" cy="150" r="34" fill="#6c5ce7"/>
   <text x="215" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">2</text>
   <text x="215" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">ম্যাক্রো এক্সপানশন</text>
   <text x="215" y="235" text-anchor="middle" font-size="12" fill="#555">কম্পাইল-টাইম জেনারেশন</text>
   <text x="215" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">DocFragmentEntry</text>
+  <text x="215" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="249" y1="150" x2="311" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- 步骤 3 -->
+  <!-- ধাপ 3 -->
   <circle cx="345" cy="150" r="34" fill="#f39c12"/>
   <text x="345" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">3</text>
   <text x="345" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">linkme রেজিস্ট্রেশন</text>
   <text x="345" y="235" text-anchor="middle" font-size="12" fill="#555">স্ট্যাটিক ডিস্ট্রিবিউটেড স্লাইস</text>
   <text x="345" y="252" text-anchor="middle" font-size="12" fill="#555">শূন্য রানটাইম খরচ</text>
+  <text x="345" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="379" y1="150" x2="441" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- 步骤 4 -->
+  <!-- ধাপ 4 -->
   <circle cx="475" cy="150" r="34" fill="#2980b9"/>
   <text x="475" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">4</text>
   <text x="475" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">collect() অ্যাগ্রিগেশন</text>
   <text x="475" y="235" text-anchor="middle" font-size="12" fill="#555">id অনুযায়ী ফ্র্যাগমেন্ট মার্জ</text>
   <text x="475" y="252" text-anchor="middle" font-size="12" fill="#555">seq অনুযায়ী ডিক্লারেশন ক্রম পুনরুদ্ধার</text>
+  <text x="475" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="509" y1="150" x2="571" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- 步骤 5 -->
+  <!-- ধাপ 5 -->
   <circle cx="605" cy="150" r="34" fill="#27ae60"/>
   <text x="605" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
   <text x="605" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
   <text x="605" y="235" text-anchor="middle" font-size="12" fill="#555">ইউনিফাইড ডকুমেন্ট ডেটা মডেল</text>
   <text x="605" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints</text>
+  <text x="605" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="639" y1="150" x2="701" y2="150" stroke="#555" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+  <line x1="639" y1="150" x2="701" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- 步骤 6 规划中 -->
-  <circle cx="735" cy="150" r="34" fill="none" stroke="#95a5a6" stroke-width="3" stroke-dasharray="6 4"/>
-  <text x="735" y="158" text-anchor="middle" font-size="26" fill="#95a5a6" font-weight="bold">6</text>
-  <text x="735" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#566573">ব্যবহার</text>
-  <text x="735" y="235" text-anchor="middle" font-size="12" fill="#555">UI ব্রাউজিং / অনলাইন ডিবাগিং</text>
-  <text x="735" y="252" text-anchor="middle" font-size="12" fill="#555">Markdown·TS·Swagger এক্সপোর্ট</text>
+  <!-- ধাপ 6: সম্পন্ন -->
+  <circle cx="735" cy="150" r="34" fill="#16a085"/>
+  <text x="735" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
+  <text x="735" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI ডিবাগ প্যানেল</text>
+  <text x="735" y="235" text-anchor="middle" font-size="12" fill="#555">ডিরেক্টরি ব্রাউজিং / অনলাইন ডিবাগিং</text>
+  <text x="735" y="252" text-anchor="middle" font-size="12" fill="#555">Mock প্রি-ফিল / CORS ডাইরেক্ট</text>
+  <text x="735" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
 
-  <!-- 图例 -->
-  <rect x="240" y="320" width="24" height="12" fill="#27ae60"/>
-  <text x="272" y="331" font-size="13" fill="#333">বাস্তবায়িত (M1)</text>
-  <rect x="430" y="320" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="462" y="331" font-size="13" fill="#333">পরিকল্পনাধীন</text>
+  <line x1="769" y1="150" x2="831" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <text x="700" y="331" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <!-- ধাপ 7: সম্পন্ন -->
+  <circle cx="865" cy="150" r="34" fill="#e67e22"/>
+  <text x="865" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
+  <text x="865" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">ডিবাগ ডেটা ফ্লো</text>
+  <text x="865" y="235" text-anchor="middle" font-size="12" fill="#555">CORS ডাইরেক্টে টার্গেট ইন্টারফেস</text>
+  <text x="865" y="252" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock ← mock</text>
+  <text x="865" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
+
+  <!-- লেজেন্ড -->
+  <text x="470" y="331" text-anchor="middle" font-size="13" fill="#333">ফেজ মার্কিং: M1 অ্যানোটেশন / সংগ্রহ / অ্যাগ্রিগেশন / আউটপুট · M2 অ্যাডাপ্টার ও UI · M4 ডিবাগ প্যানেল / Mock / CORS ডাইরেক্ট (সব সম্পন্ন, পরিকল্পনাধীন কিছু নেই)</text>
+  <text x="700" y="355" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

@@ -7,16 +7,17 @@
   <rect width="940" height="560" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Fitur Proyek apidoc-rust</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Fitur Proyek apidoc-rust (M1–M4 Selesai)</text>
 
   <!-- Kartu 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M1</text>
   <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">Dokumentasi Berbasis Anotasi</text>
-  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
-  <text x="60" y="150" font-size="13" fill="#333">Tujuh makro atribut untuk anotasi satu per satu, selaras dengan semantik PHP attributes</text>
-  <text x="60" y="170" font-size="13" fill="#333">Parameter mendukung nesting required / default / desc / mock / children</text>
+  <text x="60" y="130" font-size="13" fill="#333">M1 tujuh makro: title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">M3 menambah 12: tag / group / author / header / route_param /</text>
+  <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
+  <text x="60" y="190" font-size="13" fill="#333">Parameter mendukung nesting required / default / desc / mock / children</text>
 
   <!-- Kartu 2 -->
   <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -24,7 +25,8 @@
   <text x="815" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M1</text>
   <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">Validasi Waktu Kompilasi</text>
   <text x="500" y="130" font-size="13" fill="#333">url harus diawali /, whitelist method, param name wajib diisi</text>
-  <text x="500" y="150" font-size="13" fill="#333">Anotasi tidak valid menghasilkan error saat kompilasi (span presisi), dokumentasi tidak pernah kehilangan sinkronisasi dengan kode</text>
+  <text x="500" y="150" font-size="13" fill="#333">Anotasi tidak valid error saat kompilasi (span presisi), dokumentasi selalu sinkron dengan kode</text>
+  <text x="500" y="190" font-size="13" fill="#333">12 anotasi perluasan M3 juga divalidasi penuh</text>
 
   <!-- Kartu 3 -->
   <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -38,29 +40,29 @@
   <!-- Kartu 4 -->
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M1</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Output api.json</text>
-  <text x="500" y="280" font-size="13" fill="#333">Serialisasi serde menyatukan model data dokumentasi (config + endpoints)</text>
-  <text x="500" y="300" font-size="13" fill="#333">Field selaras dengan semantik PHP: title/desc/url/method/params/querys/returned</text>
-  <text x="500" y="320" font-size="13" fill="#333">UI tampilan dan fungsi ekspor berbagi sumber data yang sama</text>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M2</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Adaptor axum + UI Dokumentasi</text>
+  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (UI) · /apidoc/api.json · /apidoc/mock</text>
+  <text x="500" y="300" font-size="13" fill="#333">Panel debugging UI dokumentasi tertanam (halaman statis Html, tanpa dependensi eksternal)</text>
+  <text x="500" y="320" font-size="13" fill="#333">Dukungan lapisan CORS: browser dapat terhubung langsung lintas-domain ke API target</text>
 
   <!-- Kartu 5 -->
-  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Dalam Rencana</text>
-  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">Debugging Online + Mock</text>
-  <text x="60" y="430" font-size="13" fill="#333">Debugging dengan koneksi langsung CORS dari browser ke API target, tanpa proxy server</text>
-  <text x="60" y="450" font-size="13" fill="#333">Aturan Mock (mis. @integer(1,100)) dipetakan ke crate fake untuk menghasilkan data</text>
-  <text x="60" y="470" font-size="13" fill="#333">Multi-aplikasi / multi-versi / kata sandi akses</text>
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M4</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">Debugging Online + Mesin Mock</text>
+  <text x="60" y="430" font-size="13" fill="#333">Panel debugging: praisi mock + koneksi langsung CORS browser ke API target</text>
+  <text x="60" y="450" font-size="13" fill="#333">Mesin crates/apidoc-mock: bergantung pada crate fake untuk menghasilkan data</text>
+  <text x="60" y="470" font-size="13" fill="#333">15 aturan: nama/email/telepon/IP/URL/UUID/tanggal/angka/float/boolean/teks…</text>
 
   <!-- Kartu 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Dalam Rencana</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Adaptasi Multi-kerangka + Ekspor</text>
-  <text x="500" y="430" font-size="13" fill="#333">Adaptor tipis apidoc-axum / apidoc-actix, inti tanpa perubahan</text>
-  <text x="500" y="450" font-size="13" fill="#333">Ekspor Markdown / TypeScript / Swagger (OpenAPI3)</text>
-  <text x="500" y="470" font-size="13" fill="#333">Cache dokumentasi / peristiwa debugging (v2: generator kode, tautan berbagi)</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Ekspor + multi-aplikasi + actix</text>
+  <text x="500" y="430" font-size="13" fill="#333">M5 ekspor: Markdown / TypeScript / Swagger(OpenAPI3)</text>
+  <text x="500" y="450" font-size="13" fill="#333">M6 multi-aplikasi / multi-versi / kata sandi akses</text>
+  <text x="500" y="470" font-size="13" fill="#333">Adaptor apidoc-actix (pembungkus tipis, inti tanpa perubahan)</text>
 
   <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

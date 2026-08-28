@@ -35,19 +35,27 @@ apidoc-rust 是一个用 Rust 实现的**通用插件式 API 接口文档生成�
 
 ## 特性
 
-### 已实现（M1）
+### 已实现（M1-M3）
 
 - **注解式文档**：`title` / `desc` / `method` / `url` / `param` / `query` / `returned` 七个属性宏，逐条注解（对应 PHP attributes 写法），参数支持 `required` / `default` / `desc` / `mock` / `children` 嵌套
 - **编译期校验**：url 必须以 `/` 开头、method 白名单、param name 必填等，非法注解编译期报错（span 精确）
 - **自动收集**：linkme `distributed_slice` 静态注册，无需手动接口清单；`DocRegistry::collect()` 按 id 合并、按 seq 恢复声明顺序，跨 crate 自动收集
 - **api.json 输出**：serde 序列化统一文档数据模型（config + endpoints），字段对齐 PHP 语义
+- **axum 适配器 + 内嵌文档 UI**：挂载路由即得文档页面，分组目录浏览（M2）
+- **注解补齐**：`tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` 12 个新注解（M3）
+
+### 已实现（M4）
+
+- **在线调试**：文档页内置「在线调试」面板——Base URL 预填 `location.origin` 跨域直连目标服务、参数表单 mock 预填、`{name}` / `:name` 路由占位符替换、GET/HEAD 参数并入 query、其余 method 组装 JSON body、请求头编辑 + 自定义 header、响应展示（状态 / 耗时 / pretty JSON）、CORS 失败黄色提示
+- **Mock 引擎**（`crates/apidoc-mock`，依赖 fake crate，15 条规则：name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date）。规则优先级：`mock="fake:xxx"` 走 fake 规则表（未知名回退默认值）→ 其余非空 mock 原样直出（如 `mock="1"`、`mock="erik"`）→ 无 mock 按 `ty` 自动生成（int→`"1"`、float→`"0.5"`、bool→`"true"`、object→`"{}"`、string→`"string"`）；children 递归嵌套对象，array 固定 2 项
+- **mock 接口**：axum 适配器新增 `GET /apidoc/mock?url=&method=`，url + method 精确匹配，未命中返回 404；调试面板默认隐藏 `not_debug` 端点，勾选「显示 not_debug 接口」才显示
+- **CORS 直连**：在线调试由浏览器直连目标接口，适配器 `cors_layer` 负责放行（服务端反向代理留 v2）
 
 ### 规划中
 
-- 在线调试（浏览器 CORS 直连目标接口）、Mock 数据（fake 规则生成）
 - 多应用 / 多版本 / 访问密码
-- 导出 Markdown / TypeScript / Swagger（OpenAPI3）
-- 多框架适配（apidoc-axum / apidoc-actix）
+- 导出 Markdown / TypeScript / Swagger（OpenAPI3）（M5）
+- 多框架适配（apidoc-axum 已完成，apidoc-actix 未做）
 - v2：代码生成器、数据表字段引用、分享链接、调试事件
 
 ## 架构
@@ -67,14 +75,19 @@ apidoc-rust 是一个用 Rust 实现的**通用插件式 API 接口文档生成�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 配置（resolver 2）
+├── VERSION                    # 项目版本（v1.0.0，与框架版本 0.1.0 分离）
 ├── crates/
 │   ├── apidoc/                # 运行时核心（框架无关）
 │   │   ├── src/lib.rs         # 数据模型 + DocRegistry 聚合 + api.json
 │   │   ├── tests/             # 集成测试（宏展开/聚合/序列化/跨 crate）
 │   │   └── examples/demo.rs   # 示例：注解 + 输出 api.json
-│   ├── apidoc-macros/         # proc-macro：7 个属性宏
+│   ├── apidoc-macros/         # proc-macro：19 个属性宏
 │   │   └── src/lib.rs         # 宏定义 + 参数解析 + 编译期校验
-│   └── apidoc-test-fixtures/  # 跨 crate 注册测试夹具
+│   ├── apidoc-mock/           # Mock 引擎（fake 规则生成 mock 数据）
+│   ├── apidoc-test-fixtures/  # 跨 crate 注册测试夹具
+│   └── apidoc-axum/           # axum 适配器（文档路由 + cors_layer + /apidoc/mock）
+├── .github/
+│   └── workflows/release.yml  # 发布工作流（读取 VERSION，增量创建 tag+release）
 └── docs/
     ├── images/                # 架构/功能/生命周期图（SVG）
     └── i18n/                  # 多语言文档（12 种语言）
@@ -91,6 +104,8 @@ apidoc-macros = "0.1"
 linkme = "0.3"        # 宏展开直接引用 linkme 路径，消费方需直接依赖
 serde_json = "1"      # 输出 api.json 用
 ```
+
+> `apidoc-mock`（Mock 引擎）为框架内部依赖，由适配器自动引入，一般消费方无需直接使用。
 
 ### 2. 编写注解
 
@@ -224,6 +239,33 @@ cargo run --example demo -p apidoc
 }
 ```
 
+### 5. 在线调试与 Mock（M4）
+
+打开文档页面 → 选中接口 → 右侧「在线调试」面板按 mock 规则预填好参数 → 将 Base URL 指向目标服务地址（默认 `location.origin`，跨域直连）→ 点击发送，即得真实响应（状态码 / 耗时 / pretty JSON）。调试面板默认隐藏 `not_debug` 端点，勾选「显示 not_debug 接口」后才展示。
+
+**CORS 要求**：在线调试由浏览器直连目标接口，目标服务需挂载适配器提供的 `cors_layer` 放行跨域请求；CORS 失败时面板给出黄色提示。
+
+Mock 规则语法（三个优先级）：
+
+```rust
+#[apidoc::param(name = "email", ty = "string", desc = "邮箱", mock = "fake:email")]  // fake 规则生成
+#[apidoc::param(name = "status", ty = "string", desc = "状态", mock = "1")]          // 非空 mock 原样直出
+#[apidoc::param(name = "name", ty = "string", desc = "用户名")]                       // 无 mock：按 ty 自动生成
+#[apidoc::returned(
+    name = "data",
+    ty = "object",
+    children = [
+        { name = "id", ty = "int", required },       // 无 mock → "1"
+        { name = "email", ty = "string", mock = "fake:email" },  // children 递归嵌套
+    ]
+)]
+fn create_user() -> String {
+    unimplemented!()
+}
+```
+
+内置 15 条 fake 规则：`name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`；未知名规则回退为默认值。无 mock 的自动生成规则：int→`"1"`、float→`"0.5"`、bool→`"true"`、object→`"{}"`、string→`"string"`；array 固定 2 项。
+
 ## 开发计划
 
 | 阶段 | 内容 | 状态 |
@@ -231,7 +273,7 @@ cargo run --example demo -p apidoc
 | M1 | workspace 骨架 + 数据模型 + 宏 MVP + linkme 注册 | ✅ 已完成 |
 | M2 | axum 适配器 + 内嵌文档 UI + 分组目录 | ✅ 已完成 |
 | M3 | 注解补齐（tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref） | ✅ 已完成 |
-| M4 | 在线调试 + Mock 引擎 | 规划中 |
+| M4 | 在线调试 + Mock 引擎 | ✅ 已完成 |
 | M5 | 导出 markdown / typescript / swagger.json | 规划中 |
 | M6 | 密码鉴权、多应用多版本、发布 | 规划中 |
 

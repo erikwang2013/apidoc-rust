@@ -7,16 +7,17 @@
   <rect width="940" height="560" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 项目功能</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 项目功能（M1–M4 已完成）</text>
 
   <!-- 卡片 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M1</text>
   <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">注解式文档</text>
-  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
-  <text x="60" y="150" font-size="13" fill="#333">七个属性宏逐条注解，对齐 PHP attributes 语义</text>
-  <text x="60" y="170" font-size="13" fill="#333">参数支持 required / default / desc / mock / children 嵌套</text>
+  <text x="60" y="130" font-size="13" fill="#333">M1 七宏：title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">M3 新增 12 个：tag / group / author / header / route_param /</text>
+  <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
+  <text x="60" y="190" font-size="13" fill="#333">参数支持 required / default / desc / mock / children 嵌套</text>
 
   <!-- 卡片 2 -->
   <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -25,6 +26,7 @@
   <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">编译期校验</text>
   <text x="500" y="130" font-size="13" fill="#333">url 必须以 / 开头、method 白名单、param name 必填</text>
   <text x="500" y="150" font-size="13" fill="#333">非法注解编译期报错（span 精确），文档与代码永不失同步</text>
+  <text x="500" y="190" font-size="13" fill="#333">M3 扩展 12 个注解同样全量校验</text>
 
   <!-- 卡片 3 -->
   <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -38,29 +40,29 @@
   <!-- 卡片 4 -->
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M1</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">api.json 输出</text>
-  <text x="500" y="280" font-size="13" fill="#333">serde 序列化统一文档数据模型（config + endpoints）</text>
-  <text x="500" y="300" font-size="13" fill="#333">字段对齐 PHP 语义：title/desc/url/method/params/querys/returned</text>
-  <text x="500" y="320" font-size="13" fill="#333">UI 展示与导出功能共用同一数据源</text>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M2</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">axum 适配器 + 文档 UI</text>
+  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum：/apidoc（UI）· /apidoc/api.json · /apidoc/mock</text>
+  <text x="500" y="300" font-size="13" fill="#333">内嵌文档 UI 调试面板（Html 静态页，零外部依赖）</text>
+  <text x="500" y="320" font-size="13" fill="#333">CORS 层支持：浏览器可跨域直连目标接口</text>
 
   <!-- 卡片 5 -->
-  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">规划中</text>
-  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">在线调试 + Mock</text>
-  <text x="60" y="430" font-size="13" fill="#333">浏览器 CORS 直连目标接口调试，无需服务端代理</text>
-  <text x="60" y="450" font-size="13" fill="#333">Mock 规则（@integer(1,100) 等）映射 fake crate 生成数据</text>
-  <text x="60" y="470" font-size="13" fill="#333">多应用 / 多版本 / 访问密码</text>
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M4</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">在线调试 + Mock 引擎</text>
+  <text x="60" y="430" font-size="13" fill="#333">调试面板：mock 预填 + 浏览器 CORS 直连目标接口</text>
+  <text x="60" y="450" font-size="13" fill="#333">crates/apidoc-mock 引擎：依赖 fake crate 生成数据</text>
+  <text x="60" y="470" font-size="13" fill="#333">15 条规则：姓名/邮箱/电话/IP/URL/UUID/日期/数字/浮点/布尔/文本…</text>
 
   <!-- 卡片 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">规划中</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">多框架适配 + 导出</text>
-  <text x="500" y="430" font-size="13" fill="#333">apidoc-axum / apidoc-actix 薄适配器，核心零改动</text>
-  <text x="500" y="450" font-size="13" fill="#333">导出 Markdown / TypeScript / Swagger(OpenAPI3)</text>
-  <text x="500" y="470" font-size="13" fill="#333">文档缓存 / 调试事件（v2：代码生成器、分享链接）</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">导出 + 多应用 + actix</text>
+  <text x="500" y="430" font-size="13" fill="#333">M5 导出：Markdown / TypeScript / Swagger(OpenAPI3)</text>
+  <text x="500" y="450" font-size="13" fill="#333">M6 多应用 / 多版本 / 访问密码</text>
+  <text x="500" y="470" font-size="13" fill="#333">apidoc-actix 适配器（薄封装，核心零改动）</text>
 
   <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

@@ -7,16 +7,17 @@
   <rect width="940" height="560" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 프로젝트 기능</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 프로젝트 기능 (M1–M4 완료)</text>
 
   <!-- 카드 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">구현됨 M1</text>
   <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">주석 기반 문서</text>
-  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
-  <text x="60" y="150" font-size="13" fill="#333">속성 매크로 7개로 개별 주석, PHP attributes 의미론에 정렬</text>
-  <text x="60" y="170" font-size="13" fill="#333">파라미터는 required / default / desc / mock / children 중첩 지원</text>
+  <text x="60" y="130" font-size="13" fill="#333">M1 기본 7개: title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">M3 추가 12개: tag / group / author / header / route_param /</text>
+  <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
+  <text x="60" y="190" font-size="13" fill="#333">파라미터는 required / default / desc / mock / children 중첩 지원</text>
 
   <!-- 카드 2 -->
   <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -25,6 +26,7 @@
   <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">컴파일 타임 검증</text>
   <text x="500" y="130" font-size="13" fill="#333">url은 /로 시작, method 화이트리스트, param name 필수</text>
   <text x="500" y="150" font-size="13" fill="#333">잘못된 주석은 컴파일 타임 오류(span 정밀), 문서와 코드 동기화 유지</text>
+  <text x="500" y="190" font-size="13" fill="#333">M3 확장 12개 주석도 전량 검증</text>
 
   <!-- 카드 3 -->
   <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -33,34 +35,34 @@
   <text x="60" y="256" font-size="17" font-weight="bold" fill="#1e8449">자동 수집</text>
   <text x="60" y="280" font-size="13" fill="#333">linkme distributed_slice 정적 등록, 수동 인터페이스 목록 불필요</text>
   <text x="60" y="300" font-size="13" fill="#333">DocRegistry::collect()로 id별 병합, seq로 선언 순서 복원</text>
-  <text x="60" y="320" font-size="13" fill="#333">크로스 crate 자동 수집, "코드 스캔 = 전체 인터페이스 획득"과 동일</text>
+  <text x="60" y="320" font-size="13" fill="#333">크로스 crate 자동 수집, "코드 스캔 = 전체 인터페이스"와 동일</text>
 
   <!-- 카드 4 -->
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">구현됨 M1</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">api.json 출력</text>
-  <text x="500" y="280" font-size="13" fill="#333">serde 직렬화로 통일된 문서 데이터 모델(config + endpoints)</text>
-  <text x="500" y="300" font-size="13" fill="#333">필드는 PHP 의미론에 정렬: title/desc/url/method/params/querys/returned</text>
-  <text x="500" y="320" font-size="13" fill="#333">UI 표시와 내보내기가 동일한 데이터 소스 공유</text>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">구현됨 M2</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">axum 어댑터 + 문서 UI</text>
+  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc(UI) · /apidoc/api.json · /apidoc/mock</text>
+  <text x="500" y="300" font-size="13" fill="#333">내장 문서 UI 디버깅 패널(정적 Html, 외부 의존성 0)</text>
+  <text x="500" y="320" font-size="13" fill="#333">CORS 레이어: 브라우저 크로스 오리진 직접 연결 지원</text>
 
   <!-- 카드 5 -->
-  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">계획 중</text>
-  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">온라인 디버깅 + Mock</text>
-  <text x="60" y="430" font-size="13" fill="#333">브라우저 CORS로 대상 인터페이스 직접 디버깅, 서버 프록시 불필요</text>
-  <text x="60" y="450" font-size="13" fill="#333">Mock 규칙(@integer(1,100) 등)을 fake crate에 매핑해 데이터 생성</text>
-  <text x="60" y="470" font-size="13" fill="#333">다중 앱 / 다중 버전 / 접근 비밀번호</text>
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">구현됨 M4</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">온라인 디버깅 + Mock 엔진</text>
+  <text x="60" y="430" font-size="13" fill="#333">디버깅 패널: mock 프리필 + 브라우저 CORS 직접 연결</text>
+  <text x="60" y="450" font-size="13" fill="#333">crates/apidoc-mock 엔진: fake crate 의존으로 데이터 생성</text>
+  <text x="60" y="470" font-size="13" fill="#333">15개 규칙: 이름/이메일/전화/IP/URL/UUID/날짜/숫자/실수/불리언/텍스트…</text>
 
   <!-- 카드 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">계획 중</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">다중 프레임워크 어댑터 + 내보내기</text>
-  <text x="500" y="430" font-size="13" fill="#333">apidoc-axum / apidoc-actix 얇은 어댑터, 코어 무변경</text>
-  <text x="500" y="450" font-size="13" fill="#333">내보내기: Markdown / TypeScript / Swagger(OpenAPI3)</text>
-  <text x="500" y="470" font-size="13" fill="#333">문서 캐시 / 디버깅 이벤트(v2: 코드 생성기, 공유 링크)</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">내보내기 + 다중 앱 + actix</text>
+  <text x="500" y="430" font-size="13" fill="#333">M5 내보내기: Markdown / TypeScript / Swagger(OpenAPI3)</text>
+  <text x="500" y="450" font-size="13" fill="#333">M6 다중 앱 / 다중 버전 / 접근 비밀번호</text>
+  <text x="500" y="470" font-size="13" fill="#333">apidoc-actix 어댑터(얇은 래퍼, 코어 무변경)</text>
 
   <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

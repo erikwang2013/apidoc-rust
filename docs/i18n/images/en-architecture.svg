@@ -7,48 +7,68 @@
   <rect width="940" height="600" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="600" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Overall Architecture</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Overall Architecture (M4 Complete)</text>
 
   <!-- User code layer -->
-  <rect x="120" y="62" width="700" height="72" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
-  <text x="140" y="90" font-size="17" font-weight="bold" fill="#5f4b00">User Code Layer</text>
-  <text x="140" y="114" font-size="13" fill="#333" font-family="monospace">#[apidoc::title(...)]  #[apidoc::method("GET")]  #[apidoc::param(name="id", ty="int", required)] ...</text>
-  <text x="470" y="146" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <rect x="120" y="62" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <text x="140" y="88" font-size="17" font-weight="bold" fill="#5f4b00">User Code Layer</text>
+  <text x="140" y="112" font-size="13" fill="#333" font-family="monospace">#[apidoc::title(...)]  #[apidoc::method("GET")]  #[apidoc::param(name="id", ty="int", required)] ...</text>
 
   <!-- Compile time -->
-  <rect x="120" y="156" width="700" height="66" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
-  <text x="140" y="184" font-size="17" font-weight="bold" fill="#3d2f9e">Compile Time · apidoc-macros (proc-macro)</text>
-  <text x="140" y="207" font-size="13" fill="#333">7 attribute macros: title / desc / method / url / param / query / returned (with compile-time argument validation)</text>
-  <text x="470" y="234" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <rect x="120" y="138" width="700" height="72" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
+  <rect x="730" y="144" width="76" height="22" rx="11" fill="#6c5ce7"/>
+  <text x="768" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1 + M3</text>
+  <text x="140" y="164" font-size="17" font-weight="bold" fill="#3d2f9e">Compile Time · apidoc-macros (proc-macro)</text>
+  <text x="140" y="188" font-size="12" fill="#333">19 attribute macros: 7 base (M1: title/desc/method/url/param/query/returned) + 12 extended (M3: tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref)</text>
+  <text x="140" y="204" font-size="12" fill="#555">All with compile-time parameter validation (url starts with /, method whitelist, param name required); invalid annotations fail the build</text>
 
   <!-- Registration -->
-  <rect x="250" y="244" width="440" height="52" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
-  <text x="470" y="268" text-anchor="middle" font-size="15" font-weight="bold" fill="#7d5200">linkme distributed_slice Static Registration</text>
-  <text x="470" y="287" text-anchor="middle" font-size="12" fill="#555">DocFragmentEntry generated at compile time, collected with zero runtime cost</text>
-  <text x="470" y="308" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <rect x="250" y="222" width="440" height="46" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
+  <rect x="610" y="227" width="62" height="20" rx="10" fill="#f39c12"/>
+  <text x="641" y="241" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <text x="470" y="246" text-anchor="middle" font-size="15" font-weight="bold" fill="#7d5200">linkme distributed_slice Static Registration</text>
+  <text x="470" y="263" text-anchor="middle" font-size="12" fill="#555">DocFragmentEntry generated at compile time, zero-cost collection, aggregated automatically across crates</text>
 
   <!-- Runtime core -->
-  <rect x="120" y="318" width="700" height="72" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
-  <text x="140" y="346" font-size="17" font-weight="bold" fill="#1a5276">Runtime Core · apidoc (framework-agnostic)</text>
-  <text x="140" y="370" font-size="13" fill="#333">DocRegistry::collect() merges fragments by id, restores declaration order by seq → ApiDoc data model</text>
-  <text x="140" y="386" font-size="13" fill="#555" font-family="monospace">→ api.json (serde serialization, shared by UI and exports)</text>
-  <text x="470" y="402" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <rect x="120" y="280" width="700" height="58" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
+  <rect x="730" y="285" width="62" height="20" rx="10" fill="#2980b9"/>
+  <text x="761" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <text x="140" y="308" font-size="17" font-weight="bold" fill="#1a5276">Runtime Core · apidoc (framework-agnostic)</text>
+  <text x="140" y="330" font-size="13" fill="#333">DocRegistry::collect() merges fragments by id, restores declaration order by seq → ApiDoc data model</text>
+  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serde serialization, shared by UI and export)</text>
 
-  <!-- Adapter layer (planned) -->
-  <rect x="120" y="412" width="700" height="62" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="140" y="440" font-size="16" font-weight="bold" fill="#566573">Adapter Layer (planned) · thin wrappers, zero core changes</text>
-  <text x="140" y="462" font-size="13" fill="#333">apidoc-axum / apidoc-actix: route mounting, CORS headers</text>
-  <text x="470" y="486" text-anchor="middle" font-size="16" fill="#555">▼</text>
+  <!-- Adapter layer done -->
+  <rect x="120" y="350" width="700" height="62" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="656" y="355" width="76" height="22" rx="11" fill="#27ae60"/>
+  <text x="694" y="370" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2 + M4</text>
+  <text x="140" y="376" font-size="16" font-weight="bold" fill="#1e8449">Adapter Layer (Done) · apidoc-axum: route mounting + CORS, zero core changes</text>
+  <text x="140" y="398" font-size="13" fill="#333">/apidoc (UI debug panel) · /apidoc/api.json (doc data) · /apidoc/mock (Mock engine)</text>
+  <!-- actix planned -->
+  <rect x="656" y="384" width="148" height="24" rx="6" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="730" y="400" text-anchor="middle" font-size="12" fill="#566573">apidoc-actix (planned)</text>
 
-  <!-- Presentation layer (planned) -->
-  <rect x="120" y="496" width="700" height="66" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="140" y="524" font-size="16" font-weight="bold" fill="#566573">Presentation Layer (planned) · docs UI</text>
-  <text x="140" y="547" font-size="13" fill="#333">Catalog browsing / online debugging (CORS direct) / Mock data / export Markdown · TypeScript · Swagger</text>
+  <!-- Presentation layer done -->
+  <rect x="120" y="424" width="700" height="50" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="730" y="429" width="62" height="20" rx="10" fill="#27ae60"/>
+  <text x="761" y="443" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
+  <text x="140" y="449" font-size="16" font-weight="bold" fill="#1e8449">Presentation Layer (Done) · docs UI debug panel (embedded Html, zero external deps)</text>
+  <text x="140" y="467" font-size="13" fill="#333">Catalog browsing / online debugging (CORS direct) / Mock prefill</text>
+
+  <!-- Data flow -->
+  <rect x="120" y="486" width="700" height="44" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <rect x="730" y="491" width="62" height="20" rx="10" fill="#b58900"/>
+  <text x="761" y="505" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
+  <text x="140" y="508" font-size="13" fill="#333" font-family="monospace">browser → /apidoc (debug panel) → CORS direct → target endpoint (real request)</text>
+  <text x="140" y="524" font-size="13" fill="#333" font-family="monospace">browser → /apidoc/mock → Mock data (fake crate · 15 rules)</text>
+
+  <!-- workspace -->
+  <rect x="120" y="542" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
+  <text x="470" y="560" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (core) · apidoc-macros (macros) · apidoc-axum (adapter) · apidoc-mock (Mock·fake) · apidoc-test-fixtures (test fixtures)</text>
 
   <!-- Legend -->
-  <rect x="120" y="572" width="24" height="12" fill="#2980b9"/>
-  <text x="152" y="583" font-size="13" fill="#333">Implemented (M1)</text>
-  <rect x="300" y="572" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="332" y="583" font-size="13" fill="#333">Planned</text>
-  <text x="700" y="583" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <rect x="120" y="578" width="24" height="12" fill="#27ae60"/>
+  <text x="152" y="589" font-size="13" fill="#333">Implemented (M1–M4)</text>
+  <rect x="310" y="578" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="342" y="589" font-size="13" fill="#333">Planned (M5 export / M6 multi-app multi-version / actix)</text>
+  <text x="700" y="589" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

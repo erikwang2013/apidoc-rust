@@ -7,24 +7,26 @@
   <rect width="940" height="560" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">وظائف مشروع apidoc-rust</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">وظائف مشروع apidoc-rust (اكتمل M1–M4)</text>
 
   <!-- البطاقة 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">تم تنفيذه M1</text>
   <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">وثائق عبر التعليقات التوضيحية</text>
-  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
-  <text x="60" y="150" font-size="13" fill="#333">سبعة ماكروات سمات تُعلَّق واحدًا تلو الآخر بما يطابق دلالات PHP attributes</text>
-  <text x="60" y="170" font-size="13" fill="#333">تدعم المعاملات التداخل: required / default / desc / mock / children</text>
+  <text x="60" y="130" font-size="13" fill="#333">M1 سبعة ماكروات: title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">M3 يضيف 12: tag / group / author / header / route_param /</text>
+  <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
+  <text x="60" y="190" font-size="13" fill="#333">المعاملات تدعم التداخل: required / default / desc / mock / children</text>
 
   <!-- البطاقة 2 -->
   <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="815" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">تم تنفيذه M1</text>
   <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">التحقق في زمن الترجمة</text>
-  <text x="500" y="130" font-size="13" fill="#333">يجب أن يبدأ url بـ /، وmethod ضمن قائمة بيضاء، وparam name إلزامي</text>
-  <text x="500" y="150" font-size="13" fill="#333">التعليقات غير الصالحة تسبب خطأ في زمن الترجمة (مع span دقيق)، فلا تنفصل الوثائق عن الكود أبدًا</text>
+  <text x="500" y="130" font-size="13" fill="#333">url يجب أن يبدأ بـ /، وmethod ضمن قائمة بيضاء، وparam name إلزامي</text>
+  <text x="500" y="150" font-size="13" fill="#333">الغير صالح يسبب خطأ الترجمة (span دقيق)، فتبقى الوثائق متزامنة مع الكود دائمًا</text>
+  <text x="500" y="190" font-size="13" fill="#333">تعليقات M3 الاثنا عشر الموسّعة تخضع للتحقق نفسه بالكامل</text>
 
   <!-- البطاقة 3 -->
   <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -38,29 +40,29 @@
   <!-- البطاقة 4 -->
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">تم تنفيذه M1</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">إخراج api.json</text>
-  <text x="500" y="280" font-size="13" fill="#333">تسلسل serde لنموذج بيانات موحد للوثائق (config + endpoints)</text>
-  <text x="500" y="300" font-size="13" fill="#333">الحقول مطابقة لدلالات PHP: title/desc/url/method/params/querys/returned</text>
-  <text x="500" y="320" font-size="13" fill="#333">واجهة العرض والتصدير تشتركان في مصدر البيانات نفسه</text>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">تم تنفيذه M2</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">محول axum + واجهة الوثائق</text>
+  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (الواجهة) · /apidoc/api.json · /apidoc/mock</text>
+  <text x="500" y="300" font-size="13" fill="#333">لوحة تصحيح أونلاين مدمجة في واجهة الوثائق (صفحة Html ثابتة بلا تبعيات خارجية)</text>
+  <text x="500" y="320" font-size="13" fill="#333">دعم طبقة CORS: المتصفح يصل مباشرة بالواجهة الهدف عبر النطاقات</text>
 
   <!-- البطاقة 5 -->
-  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">قيد التخطيط</text>
-  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">تصحيح أونلاين + Mock</text>
-  <text x="60" y="430" font-size="13" fill="#333">تصحيح بالاتصال المباشر من المتصفح إلى الواجهة عبر CORS دون وكيل من جهة الخادم</text>
-  <text x="60" y="450" font-size="13" fill="#333">قواعد Mock (مثل @integer(1,100)) تُولّد البيانات عبر crate fake</text>
-  <text x="60" y="470" font-size="13" fill="#333">تطبيقات متعددة / إصدارات متعددة / كلمة مرور للوصول</text>
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">تم تنفيذه M4</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">تصحيح أونلاين + محرك Mock</text>
+  <text x="60" y="430" font-size="13" fill="#333">لوحة التصحيح: تعبئة mock مسبقًا + اتصال المتصفح المباشر عبر CORS بالواجهة الهدف</text>
+  <text x="60" y="450" font-size="13" fill="#333">محرك crates/apidoc-mock: يعتمد على crate fake لتوليد البيانات</text>
+  <text x="60" y="470" font-size="13" fill="#333">15 قاعدة: اسم/بريد/هاتف/IP/URL/UUID/تاريخ/رقم/عائم/منطقي/نص…</text>
 
   <!-- البطاقة 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">قيد التخطيط</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">دعم أطر متعددة + تصدير</text>
-  <text x="500" y="430" font-size="13" fill="#333">محولان رقيقان apidoc-axum / apidoc-actix دون أي تعديل على النواة</text>
-  <text x="500" y="450" font-size="13" fill="#333">تصدير Markdown / TypeScript / Swagger (OpenAPI3)</text>
-  <text x="500" y="470" font-size="13" fill="#333">تخزين الوثائق مؤقتًا / أحداث تصحيح (v2: مولّد الكود وروابط المشاركة)</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">تصدير + تطبيقات متعددة + actix</text>
+  <text x="500" y="430" font-size="13" fill="#333">M5 تصدير: Markdown / TypeScript / Swagger(OpenAPI3)</text>
+  <text x="500" y="450" font-size="13" fill="#333">M6 تطبيقات متعددة / إصدارات متعددة / كلمة مرور للوصول</text>
+  <text x="500" y="470" font-size="13" fill="#333">محول apidoc-actix (تغليف رقيق، النواة بلا تعديل)</text>
 
   <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

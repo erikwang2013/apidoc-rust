@@ -35,19 +35,27 @@ apidoc-rust एक Rust में कार्यान्वित **साम�
 
 ## विशेषताएँ
 
-### कार्यान्वित (M1)
+### कार्यान्वित (M1-M3)
 
 - **एनोटेशन-आधारित दस्तावेज़**: `title` / `desc` / `method` / `url` / `param` / `query` / `returned` सात एट्रिब्यूट मैक्रो, एक-एक करके एनोटेट करें (PHP attributes लेखन शैली के अनुरूप), पैरामीटर `required` / `default` / `desc` / `mock` / `children` नेस्टिंग का समर्थन करते हैं
 - **संकलन-समय सत्यापन**: url को `/` से शुरू होना चाहिए, method श्वेतसूची, param name अनिवार्य आदि; अवैध एनोटेशन संकलन के समय त्रुटि देते हैं (सटीक span के साथ)
 - **स्वचालित संग्रह**: linkme `distributed_slice` स्थैतिक पंजीकरण, मैन्युअल इंटरफ़ेस सूची की आवश्यकता नहीं; `DocRegistry::collect()` id के आधार पर मर्ज करता है, seq के आधार पर घोषणा क्रम पुनर्स्थापित करता है, क्रॉस-crate स्वचालित संग्रह
 - **api.json आउटपुट**: serde एकीकृत दस्तावेज़ डेटा मॉडल (config + endpoints) का क्रमांकन करता है, फ़ील्ड PHP शब्दार्थ के अनुरूप हैं
+- **axum अडैप्टर + एम्बेडेड दस्तावेज़ UI**: रूट माउंट करते ही दस्तावेज़ पेज मिलता है, समूहित कैटलॉग ब्राउज़िंग (M2)
+- **एनोटेशन पूरा करना**: 12 नए एनोटेशन — `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` (M3)
+
+### कार्यान्वित (M4)
+
+- **ऑनलाइन डिबगिंग**: दस्तावेज़ पेज में «ऑनलाइन डिबगिंग» पैनल बिल्ट-इन है — Base URL `location.origin` से प्री-फिल होकर लक्ष्य सेवा से सीधे क्रॉस-डोमेन जुड़ता है, पैरामीटर फ़ॉर्म mock से प्री-फिल, `{name}` / `:name` रूट प्लेसहोल्डर प्रतिस्थापन, GET/HEAD पैरामीटर query में जोड़े जाते हैं, बाकी method का JSON body बनता है, रिक्वेस्ट हेडर संपादन + कस्टम header, रिस्पॉन्स प्रदर्शन (स्थिति / समय / pretty JSON), CORS विफलता पर पीली चेतावनी
+- **मॉक इंजन** (`crates/apidoc-mock`, fake crate पर निर्भर, 15 नियम: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date)। नियम प्राथमिकता: `mock="fake:xxx"` fake नियम तालिका से (अज्ञात नाम → डिफ़ॉल्ट मान) → बाकी गैर-खाली mock ज्यों-का-त्यों आउटपुट (जैसे `mock="1"`, `mock="erik"`) → बिना mock के `ty` के अनुसार स्वतः जनरेट (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); children रिकर्सिव रूप से नेस्टेड, array में निश्चित 2 आइटम
+- **mock इंटरफ़ेस**: axum अडैप्टर में नया `GET /apidoc/mock?url=&method=`, url + method का सटीक मिलान, न मिलने पर 404; डिबग पैनल डिफ़ॉल्ट रूप से `not_debug` एंडपॉइंट छिपाता है, «not_debug इंटरफ़ेस दिखाएँ» चेक करने पर ही दिखते हैं
+- **CORS सीधा कनेक्शन**: ऑनलाइन डिबगिंग में ब्राउज़र सीधे लक्ष्य इंटरफ़ेस से जुड़ता है, अडैप्टर का `cors_layer` अनुमति देता है (सर्वर-साइड रिवर्स प्रॉक्सी v2 के लिए)
 
 ### नियोजित
 
-- ऑनलाइन डिबगिंग (ब्राउज़र CORS द्वारा सीधे लक्ष्य इंटरफ़ेस से जुड़ना), मॉक डेटा (fake नियमों द्वारा उत्पन्न)
 - एकाधिक ऐप / एकाधिक संस्करण / एक्सेस पासवर्ड
-- निर्यात Markdown / TypeScript / Swagger (OpenAPI3)
-- बहु-फ्रेमवर्क अनुकूलन (apidoc-axum / apidoc-actix)
+- निर्यात Markdown / TypeScript / Swagger (OpenAPI3) (M5)
+- बहु-फ्रेमवर्क अनुकूलन (apidoc-axum पूर्ण, apidoc-actix शेष)
 - v2: कोड जनरेटर, डेटा तालिका फ़ील्ड संदर्भ, साझा लिंक, डिबग इवेंट
 
 ## वास्तुकला
@@ -67,14 +75,19 @@ apidoc-rust एक Rust में कार्यान्वित **साम�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace कॉन्फ़िगरेशन (resolver 2)
+├── VERSION                    # परियोजना संस्करण (v1.0.0, फ्रेमवर्क संस्करण 0.1.0 से अलग)
 ├── crates/
 │   ├── apidoc/                # रनटाइम कोर (फ्रेमवर्क-स्वतंत्र)
 │   │   ├── src/lib.rs         # डेटा मॉडल + DocRegistry एकत्रीकरण + api.json
 │   │   ├── tests/             # इंटीग्रेशन टेस्ट (मैक्रो विस्तार/एकत्रीकरण/क्रमांकन/क्रॉस-crate)
 │   │   └── examples/demo.rs   # उदाहरण: एनोटेशन + api.json आउटपुट
-│   ├── apidoc-macros/         # proc-macro: 7 एट्रिब्यूट मैक्रो
+│   ├── apidoc-macros/         # proc-macro: 19 एट्रिब्यूट मैक्रो
 │   │   └── src/lib.rs         # मैक्रो परिभाषाएँ + पैरामीटर पार्सिंग + संकलन-समय सत्यापन
-│   └── apidoc-test-fixtures/  # क्रॉस-crate पंजीकरण टेस्ट फिक्स्चर
+│   ├── apidoc-mock/           # मॉक इंजन (fake नियमों से mock डेटा जनरेट)
+│   ├── apidoc-test-fixtures/  # क्रॉस-crate पंजीकरण टेस्ट फिक्स्चर
+│   └── apidoc-axum/           # axum अडैप्टर (दस्तावेज़ रूट + cors_layer + /apidoc/mock)
+├── .github/
+│   └── workflows/release.yml  # रिलीज़ वर्कफ़्लो (VERSION पढ़कर, incremental tag+release बनाता है)
 └── docs/
     ├── images/                # वास्तुकला/कार्यक्षमता/जीवनचक्र आरेख (SVG)
     └── i18n/                  # बहुभाषी दस्तावेज़ (12 भाषाएँ)
@@ -175,14 +188,41 @@ cargo run --example demo -p apidoc
 }
 ```
 
+### 5. ऑनलाइन डिबगिंग और मॉक (M4)
+
+दस्तावेज़ पेज खोलें → इंटरफ़ेस चुनें → दाईं ओर «ऑनलाइन डिबगिंग» पैनल mock नियमों के अनुसार पैरामीटर प्री-फिल करता है → Base URL को लक्ष्य सेवा के पते पर ले जाएँ (डिफ़ॉल्ट `location.origin`, सीधा क्रॉस-डोमेन कनेक्शन) → भेजें पर क्लिक करें, वास्तविक रिस्पॉन्स मिलता है (स्टेटस कोड / समय / pretty JSON)। डिबग पैनल डिफ़ॉल्ट रूप से `not_debug` एंडपॉइंट छिपाता है, «not_debug इंटरफ़ेस दिखाएँ» चेक करने के बाद ही दिखते हैं।
+
+**CORS आवश्यकता**: ऑनलाइन डिबगिंग में ब्राउज़र सीधे लक्ष्य इंटरफ़ेस से जुड़ता है; लक्ष्य सेवा को अडैप्टर द्वारा प्रदान किया गया `cors_layer` माउंट करना होगा ताकि क्रॉस-डोमेन अनुरोध अनुमत हों; CORS विफल होने पर पैनल पीली चेतावनी दिखाता है।
+
+मॉक नियम सिंटैक्स (तीन प्राथमिकताएँ):
+
+```rust
+#[apidoc::param(name = "email", ty = "string", desc = "邮箱", mock = "fake:email")]  // fake नियम से जनरेट
+#[apidoc::param(name = "status", ty = "string", desc = "状态", mock = "1")]          // गैर-खाली mock ज्यों-का-त्यों
+#[apidoc::param(name = "name", ty = "string", desc = "用户名")]                       // बिना mock: ty के अनुसार स्वतः जनरेट
+#[apidoc::returned(
+    name = "data",
+    ty = "object",
+    children = [
+        { name = "id", ty = "int", required },       // बिना mock → "1"
+        { name = "email", ty = "string", mock = "fake:email" },  // children रिकर्सिव नेस्टिंग
+    ]
+)]
+fn create_user() -> String {
+    unimplemented!()
+}
+```
+
+15 अंतर्निर्मित fake नियम: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`; अज्ञात नियम नाम डिफ़ॉल्ट मान पर वापस चला जाता है। बिना mock के स्वतः जनरेशन: int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`; array में निश्चित 2 आइटम।
+
 ## विकास योजना
 
 | चरण | विवरण | स्थिति |
 |------|------|------|
 | M1 | workspace ढाँचा + डेटा मॉडल + मैक्रो MVP + linkme पंजीकरण | ✅ पूर्ण |
-| M2 | axum अडैप्टर + एम्बेडेड दस्तावेज़ UI + समूहित कैटलॉग | ⏳ नियोजित |
-| M3 | एनोटेशन पूरा करना (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | नियोजित |
-| M4 | ऑनलाइन डिबगिंग + मॉक इंजन | नियोजित |
+| M2 | axum अडैप्टर + एम्बेडेड दस्तावेज़ UI + समूहित कैटलॉग | ✅ पूर्ण |
+| M3 | एनोटेशन पूरा करना (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ पूर्ण |
+| M4 | ऑनलाइन डिबगिंग + मॉक इंजन | ✅ पूर्ण |
 | M5 | निर्यात markdown / typescript / swagger.json | नियोजित |
 | M6 | पासवर्ड प्रमाणीकरण, एकाधिक ऐप और संस्करण, रिलीज़ | नियोजित |
 

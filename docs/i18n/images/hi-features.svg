@@ -7,16 +7,17 @@
   <rect width="940" height="560" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust परियोजना कार्यक्षमता</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust परियोजना कार्यक्षमता (M1–M4 पूर्ण)</text>
 
   <!-- कार्ड 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">कार्यान्वित M1</text>
   <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">एनोटेशन-आधारित दस्तावेज़</text>
-  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
-  <text x="60" y="150" font-size="13" fill="#333">सात एट्रिब्यूट मैक्रो से एक-एक एनोटेशन, PHP attributes शब्दार्थ के अनुरूप</text>
-  <text x="60" y="170" font-size="13" fill="#333">पैरामीटर nested required / default / desc / mock / children समर्थित</text>
+  <text x="60" y="130" font-size="13" fill="#333">M1 की 7 मैक्रो: title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">M3 में 12 नए: tag / group / author / header / route_param /</text>
+  <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
+  <text x="60" y="190" font-size="13" fill="#333">पैरामीटर nested required / default / desc / mock / children समर्थित</text>
 
   <!-- कार्ड 2 -->
   <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -25,6 +26,7 @@
   <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">संकलन-समय सत्यापन</text>
   <text x="500" y="130" font-size="13" fill="#333">url को / से शुरू होना चाहिए, method श्वेतसूची, param name अनिवार्य</text>
   <text x="500" y="150" font-size="13" fill="#333">अवैध एनोटेशन पर संकलन-समय त्रुटि (सटीक span), दस्तावेज़ कभी कोड से अतुल्यकालिक नहीं</text>
+  <text x="500" y="190" font-size="13" fill="#333">M3 की 12 विस्तार एनोटेशन भी पूरी तरह सत्यापित</text>
 
   <!-- कार्ड 3 -->
   <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -33,34 +35,34 @@
   <text x="60" y="256" font-size="17" font-weight="bold" fill="#1e8449">स्वचालित संग्रह</text>
   <text x="60" y="280" font-size="13" fill="#333">linkme distributed_slice स्थैतिक पंजीकरण, मैन्युअल इंटरफ़ेस सूची की आवश्यकता नहीं</text>
   <text x="60" y="300" font-size="13" fill="#333">DocRegistry::collect() id से मर्ज, seq से घोषणा क्रम पुनर्स्थापित</text>
-  <text x="60" y="320" font-size="13" fill="#333">क्रॉस-crate स्वचालित संग्रह, "कोड स्कैन करते ही सभी इंटरफ़ेस" के बराबर</text>
+  <text x="60" y="320" font-size="13" fill="#333">क्रॉस-crate स्वचालित संग्रह, «कोड स्कैन करते ही सभी इंटरफ़ेस» के बराबर</text>
 
   <!-- कार्ड 4 -->
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">कार्यान्वित M1</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">api.json आउटपुट</text>
-  <text x="500" y="280" font-size="13" fill="#333">serde से क्रमांकित एकीकृत दस्तावेज़ डेटा मॉडल (config + endpoints)</text>
-  <text x="500" y="300" font-size="13" fill="#333">फ़ील्ड PHP शब्दार्थ के अनुरूप: title/desc/url/method/params/querys/returned</text>
-  <text x="500" y="320" font-size="13" fill="#333">UI प्रदर्शन और निर्यात एक ही डेटा स्रोत साझा करते हैं</text>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">कार्यान्वित M2</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">axum अडैप्टर + दस्तावेज़ UI</text>
+  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (UI) · /apidoc/api.json · /apidoc/mock</text>
+  <text x="500" y="300" font-size="13" fill="#333">एम्बेडेड दस्तावेज़ UI डिबग पैनल (स्थैतिक Html पेज, शून्य बाहरी निर्भरता)</text>
+  <text x="500" y="320" font-size="13" fill="#333">CORS परत: ब्राउज़र सीधे क्रॉस-डोमेन लक्ष्य इंटरफ़ेस से जुड़ सकता है</text>
 
   <!-- कार्ड 5 -->
-  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">नियोजित</text>
-  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">ऑनलाइन डिबगिंग + मॉक</text>
-  <text x="60" y="430" font-size="13" fill="#333">ब्राउज़र सीधे CORS द्वारा लक्ष्य इंटरफ़ेस से डिबग, सर्वर प्रॉक्सी की आवश्यकता नहीं</text>
-  <text x="60" y="450" font-size="13" fill="#333">मॉक नियम (@integer(1,100) आदि) fake crate के माध्यम से डेटा उत्पन्न करते हैं</text>
-  <text x="60" y="470" font-size="13" fill="#333">एकाधिक ऐप / एकाधिक संस्करण / एक्सेस पासवर्ड</text>
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">कार्यान्वित M4</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">ऑनलाइन डिबगिंग + मॉक इंजन</text>
+  <text x="60" y="430" font-size="13" fill="#333">डिबग पैनल: मॉक प्री-फिल + ब्राउज़र CORS द्वारा सीधे लक्ष्य इंटरफ़ेस से जुड़ाव</text>
+  <text x="60" y="450" font-size="13" fill="#333">crates/apidoc-mock इंजन: fake crate से डेटा जनरेट करता है</text>
+  <text x="60" y="470" font-size="13" fill="#333">15 नियम: नाम/ईमेल/फ़ोन/IP/URL/UUID/दिनांक/संख्या/फ्लोट/बूल/टेक्स्ट…</text>
 
   <!-- कार्ड 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">नियोजित</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">बहु-फ्रेमवर्क अनुकूलन + निर्यात</text>
-  <text x="500" y="430" font-size="13" fill="#333">apidoc-axum / apidoc-actix पतले अडैप्टर, कोर में कोई बदलाव नहीं</text>
-  <text x="500" y="450" font-size="13" fill="#333">निर्यात Markdown / TypeScript / Swagger (OpenAPI3)</text>
-  <text x="500" y="470" font-size="13" fill="#333">दस्तावेज़ कैशिंग / डिबग इवेंट (v2: कोड जनरेटर, साझा लिंक)</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">निर्यात + एकाधिक ऐप + actix</text>
+  <text x="500" y="430" font-size="13" fill="#333">M5 निर्यात: Markdown / TypeScript / Swagger (OpenAPI3)</text>
+  <text x="500" y="450" font-size="13" fill="#333">M6 एकाधिक ऐप / एकाधिक संस्करण / एक्सेस पासवर्ड</text>
+  <text x="500" y="470" font-size="13" fill="#333">apidoc-actix अडैप्टर (पतली रैपर, कोर में कोई बदलाव नहीं)</text>
 
   <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

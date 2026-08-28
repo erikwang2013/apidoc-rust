@@ -35,19 +35,27 @@ apidoc-rust es un **generador de documentación de API universal y basado en plu
 
 ## Características
 
-### Implementado (M1)
+### Implementado (M1-M3)
 
 - **Documentación por anotaciones**: siete macros de atributo — `title` / `desc` / `method` / `url` / `param` / `query` / `returned` —, una anotación por entrada (equivalente a la sintaxis de PHP attributes); los parámetros admiten anidación `required` / `default` / `desc` / `mock` / `children`
 - **Validación en tiempo de compilación**: la url debe comenzar con `/`, lista blanca de method, param name obligatorio, etc.; las anotaciones inválidas fallan en tiempo de compilación (span preciso)
 - **Recolección automática**: registro estático con linkme `distributed_slice`, sin listado manual de interfaces; `DocRegistry::collect()` fusiona por id y restaura el orden de declaración por seq, con recolección automática entre crates
 - **Salida api.json**: serde serializa un modelo de datos de documentación unificado (config + endpoints); los campos se alinean con la semántica de PHP
+- **Adaptador axum + UI de documentación integrada**: montar la ruta y ya está la página de documentación; navegación por directorios agrupados (M2)
+- **Ampliación de anotaciones**: 12 anotaciones nuevas — `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` (M3)
+
+### Implementado (M4)
+
+- **Depuración en línea**: la página de documentación incluye el panel «Depuración en línea» — Base URL prellenada con `location.origin` para conexión directa entre dominios al servicio de destino, parámetros del formulario prellenados con mock, sustitución de marcadores de ruta `{name}` / `:name`, parámetros GET/HEAD incorporados a la query string, cuerpo JSON ensamblado para el resto de métodos, edición de cabeceras de petición + cabeceras personalizadas, visualización de la respuesta (estado / tiempo / JSON bonito), aviso amarillo si falla CORS
+- **Motor Mock** (`crates/apidoc-mock`, depende del crate fake, 15 reglas: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). Prioridad de reglas: `mock="fake:xxx"` usa la tabla de reglas fake (nombre desconocido → valor por defecto) → el resto de mock no vacíos se devuelven tal cual (p. ej. `mock="1"`, `mock="erik"`) → sin mock, generación automática según `ty` (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); los children se anidan recursivamente, los array fijan 2 elementos
+- **Interfaz mock**: el adaptador axum añade `GET /apidoc/mock?url=&method=`, coincidencia exacta de url + method, devuelve 404 si no coincide; el panel de depuración oculta por defecto los endpoints `not_debug`, que solo se muestran al marcar «Mostrar interfaces not_debug»
+- **Conexión CORS directa**: la depuración en línea conecta el navegador directamente a la interfaz de destino; el `cors_layer` del adaptador permite el paso (proxy inverso del servidor reservado para v2)
 
 ### Planificado
 
-- Depuración en línea (el navegador se conecta directamente a la interfaz de destino vía CORS), datos Mock (generados con reglas fake)
 - Múltiples aplicaciones / múltiples versiones / contraseña de acceso
-- Exportación a Markdown / TypeScript / Swagger (OpenAPI3)
-- Adaptación a múltiples frameworks (apidoc-axum / apidoc-actix)
+- Exportación a Markdown / TypeScript / Swagger (OpenAPI3) (M5)
+- Adaptación a múltiples frameworks (apidoc-axum terminado, apidoc-actix pendiente)
 - v2: generador de código, referencias a campos de tablas de datos, enlaces para compartir, eventos de depuración
 
 ## Arquitectura
@@ -67,14 +75,19 @@ apidoc-rust es un **generador de documentación de API universal y basado en plu
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuración del workspace (resolver 2)
+├── VERSION                    # versión del proyecto (v1.0.0, separada de la versión del framework 0.1.0)
 ├── crates/
 │   ├── apidoc/                # núcleo en tiempo de ejecución (independiente del framework)
 │   │   ├── src/lib.rs         # modelo de datos + agregación DocRegistry + api.json
 │   │   ├── tests/             # pruebas de integración (expansión de macros / agregación / serialización / entre crates)
 │   │   └── examples/demo.rs   # ejemplo: anotaciones + salida api.json
-│   ├── apidoc-macros/         # proc-macro: 7 macros de atributo
+│   ├── apidoc-macros/         # proc-macro: 19 macros de atributo
 │   │   └── src/lib.rs         # definición de macros + análisis de parámetros + validación en tiempo de compilación
-│   └── apidoc-test-fixtures/  # accesorios de prueba para registro entre crates
+│   ├── apidoc-mock/           # motor Mock (generación de datos Mock por reglas fake)
+│   ├── apidoc-test-fixtures/  # accesorios de prueba para registro entre crates
+│   └── apidoc-axum/           # adaptador axum (rutas de documentación + cors_layer + /apidoc/mock)
+├── .github/
+│   └── workflows/release.yml  # workflow de publicación (lee VERSION, crea tag + release de forma incremental)
 └── docs/
     ├── images/                # diagramas de arquitectura / funcionalidades / ciclo de vida (SVG)
     └── i18n/                  # documentación multilingüe (12 idiomas)
@@ -175,14 +188,41 @@ Salida (extracto):
 }
 ```
 
+### 5. Depuración en línea y Mock (M4)
+
+Abra la página de documentación → seleccione una interfaz → el panel «Depuración en línea» de la derecha prellena los parámetros según las reglas Mock → apunte la Base URL a la dirección del servicio de destino (por defecto `location.origin`, conexión directa entre dominios) → haga clic en Enviar y obtendrá la respuesta real (código de estado / tiempo / JSON bonito). El panel de depuración oculta por defecto los endpoints `not_debug`, que solo se muestran tras marcar «Mostrar interfaces not_debug».
+
+**Requisito CORS**: la depuración en línea conecta el navegador directamente a la interfaz de destino; el servicio de destino debe montar el `cors_layer` proporcionado por el adaptador para permitir peticiones entre dominios; si CORS falla, el panel muestra un aviso amarillo.
+
+Sintaxis de las reglas Mock (tres prioridades):
+
+```rust
+#[apidoc::param(name = "email", ty = "string", desc = "邮箱", mock = "fake:email")]  // generado por la regla fake
+#[apidoc::param(name = "status", ty = "string", desc = "状态", mock = "1")]          // mock no vacío devuelto tal cual
+#[apidoc::param(name = "name", ty = "string", desc = "用户名")]                       // sin mock: generación automática según ty
+#[apidoc::returned(
+    name = "data",
+    ty = "object",
+    children = [
+        { name = "id", ty = "int", required },       // sin mock → "1"
+        { name = "email", ty = "string", mock = "fake:email" },  // anidación recursiva de children
+    ]
+)]
+fn create_user() -> String {
+    unimplemented!()
+}
+```
+
+15 reglas fake integradas: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`; los nombres de regla desconocidos vuelven al valor por defecto. Generación automática sin mock: int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`; los array fijan 2 elementos.
+
 ## Plan de desarrollo
 
 | Fase | Contenido | Estado |
 |------|-----------|--------|
 | M1 | esqueleto del workspace + modelo de datos + MVP de macros + registro linkme | ✅ Completado |
-| M2 | adaptador axum + UI de documentación integrada + directorio por grupos | ⏳ Planificado |
-| M3 | completar anotaciones (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | Planificado |
-| M4 | depuración en línea + motor Mock | Planificado |
+| M2 | adaptador axum + UI de documentación integrada + directorio por grupos | ✅ Completado |
+| M3 | completar anotaciones (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ Completado |
+| M4 | depuración en línea + motor Mock | ✅ Completado |
 | M5 | exportar markdown / typescript / swagger.json | Planificado |
 | M6 | autenticación con contraseña, múltiples aplicaciones y versiones, publicación | Planificado |
 

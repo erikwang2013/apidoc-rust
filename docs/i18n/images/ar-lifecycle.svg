@@ -10,7 +10,7 @@
   <rect width="940" height="400" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="400" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">دورة حياة وثائق apidoc-rust</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">دورة حياة وثائق apidoc-rust (اكتمل M1–M4)</text>
 
   <!-- الخطوة 1 -->
   <circle cx="85" cy="150" r="34" fill="#b58900"/>
@@ -18,6 +18,7 @@
   <text x="85" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">كتابة التعليقات التوضيحية</text>
   <text x="85" y="235" text-anchor="middle" font-size="12" fill="#555">تُعلَّق على handler</text>
   <text x="85" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">#[apidoc::*]</text>
+  <text x="85" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="119" y1="150" x2="181" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -27,6 +28,7 @@
   <text x="215" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">توسيع الماكرو</text>
   <text x="215" y="235" text-anchor="middle" font-size="12" fill="#555">يُولَّد في زمن الترجمة</text>
   <text x="215" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">DocFragmentEntry</text>
+  <text x="215" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="249" y1="150" x2="311" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -36,6 +38,7 @@
   <text x="345" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">تسجيل linkme</text>
   <text x="345" y="235" text-anchor="middle" font-size="12" fill="#555">شريحة موزعة ثابتة</text>
   <text x="345" y="252" text-anchor="middle" font-size="12" fill="#555">بلا تكلفة في زمن التشغيل</text>
+  <text x="345" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="379" y1="150" x2="441" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -45,6 +48,7 @@
   <text x="475" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">تجميع collect()</text>
   <text x="475" y="235" text-anchor="middle" font-size="12" fill="#555">دمج القطع حسب id</text>
   <text x="475" y="252" text-anchor="middle" font-size="12" fill="#555">استعادة ترتيب التعريف حسب seq</text>
+  <text x="475" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="509" y1="150" x2="571" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -54,21 +58,29 @@
   <text x="605" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
   <text x="605" y="235" text-anchor="middle" font-size="12" fill="#555">نموذج بيانات موحد للوثائق</text>
   <text x="605" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints</text>
+  <text x="605" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="639" y1="150" x2="701" y2="150" stroke="#555" stroke-width="3" stroke-dasharray="6 4" marker-end="url(#arrow)"/>
+  <line x1="639" y1="150" x2="701" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- الخطوة 6: قيد التخطيط -->
-  <circle cx="735" cy="150" r="34" fill="none" stroke="#95a5a6" stroke-width="3" stroke-dasharray="6 4"/>
-  <text x="735" y="158" text-anchor="middle" font-size="26" fill="#95a5a6" font-weight="bold">6</text>
-  <text x="735" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#566573">الاستهلاك</text>
-  <text x="735" y="235" text-anchor="middle" font-size="12" fill="#555">تصفح عبر الواجهة / تصحيح أونلاين</text>
-  <text x="735" y="252" text-anchor="middle" font-size="12" fill="#555">تصدير Markdown · TS · Swagger</text>
+  <!-- الخطوة 6: مكتملة -->
+  <circle cx="735" cy="150" r="34" fill="#16a085"/>
+  <text x="735" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
+  <text x="735" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">لوحة تصحيح الواجهة</text>
+  <text x="735" y="235" text-anchor="middle" font-size="12" fill="#555">تصفح الفهرس / تصحيح أونلاين</text>
+  <text x="735" y="252" text-anchor="middle" font-size="12" fill="#555">تعبئة mock مسبقًا / اتصال CORS المباشر</text>
+  <text x="735" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+
+  <line x1="769" y1="150" x2="831" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- الخطوة 7: مكتملة -->
+  <circle cx="865" cy="150" r="34" fill="#e67e22"/>
+  <text x="865" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
+  <text x="865" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">تدفق بيانات التصحيح</text>
+  <text x="865" y="235" text-anchor="middle" font-size="12" fill="#555">اتصال CORS مباشر بالواجهة الهدف</text>
+  <text x="865" y="252" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock ← mock</text>
+  <text x="865" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
 
   <!-- المفتاح -->
-  <rect x="240" y="320" width="24" height="12" fill="#27ae60"/>
-  <text x="272" y="331" font-size="13" fill="#333">تم تنفيذه (M1)</text>
-  <rect x="430" y="320" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="462" y="331" font-size="13" fill="#333">قيد التخطيط</text>
-
-  <text x="700" y="331" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <text x="470" y="331" text-anchor="middle" font-size="13" fill="#333">الترميز المرحلي: M1 وثائق / جمع / تجميع / إخراج · M2 المحول والواجهة · M4 لوحة التصحيح / Mock / اتصال CORS المباشر (كلها مكتملة، لا توجد بنود قيد التخطيط)</text>
+  <text x="700" y="355" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

@@ -7,16 +7,17 @@
   <rect width="940" height="560" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Recursos do projeto apidoc-rust</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Recursos do projeto apidoc-rust (M1–M4 concluído)</text>
 
   <!-- Card 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M1</text>
   <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">Documentação por anotações</text>
-  <text x="60" y="130" font-size="13" fill="#333">title / desc / method / url / param / query / returned</text>
-  <text x="60" y="150" font-size="13" fill="#333">Sete macros de atributo para anotar item a item, alinhados à semântica dos attributes do PHP</text>
-  <text x="60" y="170" font-size="13" fill="#333">Parâmetros suportam aninhamento de required / default / desc / mock / children</text>
+  <text x="60" y="130" font-size="13" fill="#333">7 macros M1: title / desc / method / url / param / query / returned</text>
+  <text x="60" y="150" font-size="13" fill="#333">12 novas em M3: tag / group / author / header / route_param /</text>
+  <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
+  <text x="60" y="190" font-size="13" fill="#333">Parâmetros suportam aninhamento de required / default / desc / mock / children</text>
 
   <!-- Card 2 -->
   <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -25,6 +26,7 @@
   <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">Validação em tempo de compilação</text>
   <text x="500" y="130" font-size="13" fill="#333">url deve começar com /, method em lista de permissão, param name obrigatório</text>
   <text x="500" y="150" font-size="13" fill="#333">Anotações inválidas geram erro de compilação (span preciso); a documentação nunca fica dessincronizada do código</text>
+  <text x="500" y="190" font-size="13" fill="#333">As 12 anotações estendidas em M3 também são totalmente validadas</text>
 
   <!-- Card 3 -->
   <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -33,34 +35,34 @@
   <text x="60" y="256" font-size="17" font-weight="bold" fill="#1e8449">Coleta automática</text>
   <text x="60" y="280" font-size="13" fill="#333">Registro estático via linkme distributed_slice, sem lista manual de endpoints</text>
   <text x="60" y="300" font-size="13" fill="#333">DocRegistry::collect() mescla por id e restaura a ordem de declaração por seq</text>
-  <text x="60" y="320" font-size="13" fill="#333">Coleta automática entre crates — equivale a "escaneie o código e obtenha todos os endpoints"</text>
+  <text x="60" y="320" font-size="13" fill="#333">Coleta automática entre crates — equivale a «escaneie o código e obtenha todos os endpoints»</text>
 
   <!-- Card 4 -->
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M1</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Saída api.json</text>
-  <text x="500" y="280" font-size="13" fill="#333">O serde serializa o modelo de dados unificado da documentação (config + endpoints)</text>
-  <text x="500" y="300" font-size="13" fill="#333">Campos alinhados à semântica do PHP: title/desc/url/method/params/querys/returned</text>
-  <text x="500" y="320" font-size="13" fill="#333">A UI e a exportação compartilham a mesma fonte de dados</text>
+  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M2</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Adaptador axum + UI de documentação</text>
+  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (UI) · /apidoc/api.json · /apidoc/mock</text>
+  <text x="500" y="300" font-size="13" fill="#333">Painel de depuração da UI embutido (página Html estática, zero dependência externa)</text>
+  <text x="500" y="320" font-size="13" fill="#333">Camada CORS: o navegador pode conectar-se diretamente ao endpoint de destino entre domínios</text>
 
   <!-- Card 5 -->
-  <rect x="40" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="300" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Planejado</text>
-  <text x="60" y="406" font-size="17" font-weight="bold" fill="#566573">Depuração on-line + Mock</text>
-  <text x="60" y="430" font-size="13" fill="#333">Depure conectando-se diretamente ao endpoint via CORS no navegador, sem proxy no servidor</text>
-  <text x="60" y="450" font-size="13" fill="#333">Regras de Mock (como @integer(1,100)) mapeiam a geração de dados do crate fake</text>
-  <text x="60" y="470" font-size="13" fill="#333">Múltiplos aplicativos / múltiplas versões / senha de acesso</text>
+  <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M4</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">Depuração on-line + mecanismo Mock</text>
+  <text x="60" y="430" font-size="13" fill="#333">Painel de depuração: pré-preenchimento mock + conexão CORS direta do navegador ao endpoint de destino</text>
+  <text x="60" y="450" font-size="13" fill="#333">Mecanismo crates/apidoc-mock: gera dados com o crate fake</text>
+  <text x="60" y="470" font-size="13" fill="#333">15 regras: nome / email / telefone / IP / URL / UUID / data / número / flutuante / booleano / texto…</text>
 
   <!-- Card 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Planejado</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Adaptação a múltiplos frameworks + exportação</text>
-  <text x="500" y="430" font-size="13" fill="#333">Adaptadores finos apidoc-axum / apidoc-actix, núcleo sem alterações</text>
-  <text x="500" y="450" font-size="13" fill="#333">Exportação Markdown / TypeScript / Swagger (OpenAPI3)</text>
-  <text x="500" y="470" font-size="13" fill="#333">Cache de documentação / eventos de depuração (v2: gerador de código, links de compartilhamento)</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Export + múltiplos aplicativos + actix</text>
+  <text x="500" y="430" font-size="13" fill="#333">Export M5: Markdown / TypeScript / Swagger (OpenAPI3)</text>
+  <text x="500" y="450" font-size="13" fill="#333">M6 múltiplos aplicativos / múltiplas versões / senha de acesso</text>
+  <text x="500" y="470" font-size="13" fill="#333">Adaptador apidoc-actix (encapsulamento fino, núcleo sem alterações)</text>
 
   <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

@@ -35,19 +35,27 @@ apidoc-rust は Rust で実装された**汎用プラグイン型 API インタ�
 
 ## 特徴
 
-### 実装済み（M1）
+### 実装済み（M1–M3）
 
 - **注釈式ドキュメント**：`title` / `desc` / `method` / `url` / `param` / `query` / `returned` の 7 つの属性マクロで項目ごとに注釈します（PHP attributes の書き方に対応）。パラメータは `required` / `default` / `desc` / `mock` / `children` のネストに対応
 - **コンパイル期検証**：url は `/` で始まる必要があり、method はホワイトリスト、param の name は必須など、不正な注釈はコンパイル期にエラーになります（span 単位で正確）
 - **自動収集**：linkme の `distributed_slice` による静的登録で、手動のインターフェース一覧は不要。`DocRegistry::collect()` が id でマージし、seq で宣言順を復元、crate をまたいで自動収集します
 - **api.json 出力**：serde で統一ドキュメントデータモデル（config + endpoints）をシリアライズし、フィールドは PHP のセマンティクスに合わせます
+- **axum アダプタ + 組み込みドキュメント UI**：ルートをマウントするだけでドキュメントページが使え、グループ別ディレクトリで閲覧できます（M2）
+- **注釈の拡充**：`tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` の 12 個の新注釈（M3）
+
+### 実装済み（M4）
+
+- **オンラインデバッグ**：ドキュメントページに組み込みの「オンラインデバッグ」パネル——Base URL は `location.origin` で事前入力されクロスオリジンで対象サービスに直結、パラメータフォームは mock で事前入力、`{name}` / `:name` のルートプレースホルダー置換、GET/HEAD パラメータは query に統合、その他の method は JSON body に組み立て、リクエストヘッダー編集 + カスタム header、レスポンス表示（ステータス / 所要時間 / pretty JSON）、CORS 失敗時は黄色の警告
+- **Mock エンジン**（`crates/apidoc-mock`、fake crate 依存、15 ルール：name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date）。ルール優先度：`mock="fake:xxx"` は fake ルール表を通る（不明な名前はデフォルト値にフォールバック）→ その他の非空 mock はそのまま出力（例：`mock="1"`、`mock="erik"`）→ mock なしは `ty` に応じて自動生成（int→`"1"`、float→`"0.5"`、bool→`"true"`、object→`"{}"`、string→`"string"`）；children は再帰的にネスト、array は固定 2 項目
+- **mock インターフェース**：axum アダプタに `GET /apidoc/mock?url=&method=` を追加、url + method を完全一致で照合し、不一致は 404；デバッグパネルはデフォルトで `not_debug` エンドポイントを非表示にし、「not_debug インターフェースを表示」にチェックすると表示
+- **CORS 直結**：オンラインデバッグはブラウザから対象インターフェースに直接接続し、アダプタの `cors_layer` が許可します（サーバー側リバースプロキシは v2 に持ち越し）
 
 ### 計画中
 
-- オンラインデバッグ（ブラウザから CORS で対象インターフェースに直接接続）、Mock データ（fake ルールによる生成）
 - 複数アプリ / 複数バージョン / アクセスパスワード
-- Markdown / TypeScript / Swagger（OpenAPI3）のエクスポート
-- 複数フレームワーク対応（apidoc-axum / apidoc-actix）
+- Markdown / TypeScript / Swagger（OpenAPI3）のエクスポート（M5）
+- 複数フレームワーク対応（apidoc-axum は完了、apidoc-actix は未着手）
 - v2：コードジェネレータ、データテーブルフィールド参照、共有リンク、デバッグイベント
 
 ## アーキテクチャ
@@ -67,14 +75,19 @@ apidoc-rust は Rust で実装された**汎用プラグイン型 API インタ�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 設定（resolver 2）
+├── VERSION                    # プロジェクトバージョン（v1.0.0、フレームワーク 0.1.0 と分離）
 ├── crates/
 │   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
 │   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json
 │   │   ├── tests/             # 統合テスト（マクロ展開/集約/シリアライズ/クロス crate）
 │   │   └── examples/demo.rs   # サンプル：注釈 + api.json 出力
-│   ├── apidoc-macros/         # proc-macro：7 つの属性マクロ
+│   ├── apidoc-macros/         # proc-macro：19 つの属性マクロ
 │   │   └── src/lib.rs         # マクロ定義 + パラメータ解析 + コンパイル期検証
-│   └── apidoc-test-fixtures/  # クロス crate 登録テストフィクスチャ
+│   ├── apidoc-mock/           # Mock エンジン（fake ルールで mock データ生成）
+│   ├── apidoc-test-fixtures/  # クロス crate 登録テストフィクスチャ
+│   └── apidoc-axum/           # axum アダプタ（ドキュメントルート + cors_layer + /apidoc/mock）
+├── .github/
+│   └── workflows/release.yml  # リリースワークフロー（VERSION を読み、tag+release を増分作成）
 └── docs/
     ├── images/                # アーキテクチャ/機能/ライフサイクル図（SVG）
     └── i18n/                  # 多言語ドキュメント（12 言語）
@@ -91,6 +104,8 @@ apidoc-macros = "0.1"
 linkme = "0.3"        # マクロ展開が linkme のパスを直接参照するため、利用側は直接依存が必要
 serde_json = "1"      # api.json 出力用
 ```
+
+> `apidoc-mock`（Mock エンジン）はフレームワーク内部の依存で、アダプタ経由で自動的に導入されるため、通常は利用側が直接使う必要はありません。
 
 ### 2. 注釈の記述
 
@@ -175,14 +190,41 @@ cargo run --example demo -p apidoc
 }
 ```
 
+### 5. オンラインデバッグと Mock（M4）
+
+ドキュメントページを開く → インターフェースを選択 → 右側の「オンラインデバッグ」パネルが mock ルールに従ってパラメータを事前入力 → Base URL を対象サービスのアドレスに指定（デフォルトは `location.origin`、クロスオリジン直結）→ 送信をクリックすると実際のレスポンス（ステータスコード / 所要時間 / pretty JSON）が得られます。デバッグパネルはデフォルトで `not_debug` エンドポイントを非表示にし、「not_debug インターフェースを表示」にチェックすると表示されます。
+
+**CORS 要件**：オンラインデバッグはブラウザから対象インターフェースに直接接続するため、対象サービスはアダプタが提供する `cors_layer` をマウントしてクロスオリジンリクエストを許可する必要があります。CORS 失敗時はパネルに黄色の警告が表示されます。
+
+Mock ルールの構文（3 つの優先度）：
+
+```rust
+#[apidoc::param(name = "email", ty = "string", desc = "邮箱", mock = "fake:email")]  // fake 规则生成
+#[apidoc::param(name = "status", ty = "string", desc = "状态", mock = "1")]          // 非空 mock 原样直出
+#[apidoc::param(name = "name", ty = "string", desc = "用户名")]                       // 无 mock：按 ty 自动生成
+#[apidoc::returned(
+    name = "data",
+    ty = "object",
+    children = [
+        { name = "id", ty = "int", required },       // 无 mock → "1"
+        { name = "email", ty = "string", mock = "fake:email" },  // children 递归嵌套
+    ]
+)]
+fn create_user() -> String {
+    unimplemented!()
+}
+```
+
+組み込みの 15 個の fake ルール：`name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`；不明な名前はデフォルト値にフォールバックします。mock なしの自動生成ルール：int→`"1"`、float→`"0.5"`、bool→`"true"`、object→`"{}"`、string→`"string"`；array は固定 2 項目です。
+
 ## 開発ロードマップ
 
 | フェーズ | 内容 | ステータス |
 |------|------|------|
 | M1 | workspace の骨組み + データモデル + マクロ MVP + linkme 登録 | ✅ 完了 |
-| M2 | axum アダプタ + 組み込みドキュメント UI + グループ別ディレクトリ | ⏳ 計画中 |
-| M3 | 注釈の拡充（tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref） | 計画中 |
-| M4 | オンラインデバッグ + Mock エンジン | 計画中 |
+| M2 | axum アダプタ + 組み込みドキュメント UI + グループ別ディレクトリ | ✅ 完了 |
+| M3 | 注釈の拡充（tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref） | ✅ 完了 |
+| M4 | オンラインデバッグ + Mock エンジン | ✅ 完了 |
 | M5 | markdown / typescript / swagger.json のエクスポート | 計画中 |
 | M6 | パスワード認証、複数アプリ・複数バージョン、リリース | 計画中 |
 

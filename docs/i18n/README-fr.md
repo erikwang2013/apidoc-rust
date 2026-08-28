@@ -35,19 +35,27 @@ apidoc-rust est un **générateur de documentation d'API générique et modulair
 
 ## Fonctionnalités
 
-### Implémenté (M1)
+### Implémenté (M1-M3)
 
 - **Documentation par annotations** : sept macros d'attributs `title` / `desc` / `method` / `url` / `param` / `query` / `returned`, appliquées annotation par annotation (équivalent de la syntaxe des attributs PHP), avec paramètres imbriqués `required` / `default` / `desc` / `mock` / `children`
 - **Validation à la compilation** : l'url doit commencer par `/`, méthode soumise à une liste blanche, `name` de paramètre obligatoire, etc. ; toute annotation invalide déclenche une erreur de compilation (span précis)
 - **Collecte automatique** : enregistrement statique via linkme `distributed_slice`, sans liste manuelle d'interfaces ; `DocRegistry::collect()` fusionne par id et restaure l'ordre de déclaration par seq, avec collecte automatique inter-crates
 - **Sortie api.json** : sérialisation serde du modèle de données unifié de la documentation (config + endpoints), champs alignés sur la sémantique PHP
+- **Adaptateur axum + UI de documentation intégrée** : monter la route suffit pour obtenir la page de documentation, navigation par répertoires groupés (M2)
+- **Complément d'annotations** : 12 nouvelles annotations `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` (M3)
+
+### Implémenté (M4)
+
+- **Débogage en ligne** : la page de documentation intègre un panneau « Débogage en ligne » — Base URL préremplie avec `location.origin` pour une connexion directe inter-domaines au service cible, préremplissage du formulaire de paramètres avec les valeurs Mock, remplacement des placeholders de route `{name}` / `:name`, paramètres GET/HEAD fusionnés dans la query string, corps JSON assemblé pour les autres méthodes, édition des en-têtes de requête + en-têtes personnalisés, affichage de la réponse (statut / temps / pretty JSON), avertissement jaune en cas d'échec CORS
+- **Moteur Mock** (`crates/apidoc-mock`, dépend du crate fake, 15 règles : name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). Priorité des règles : `mock="fake:xxx"` suit la table des règles fake (nom inconnu → valeur par défaut) → les autres valeurs mock non vides sont renvoyées telles quelles (p. ex. `mock="1"`, `mock="erik"`) → sans mock, génération automatique selon `ty` (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`) ; les children sont imbriqués récursivement, les array ont fixé 2 éléments
+- **Interface mock** : l'adaptateur axum ajoute `GET /apidoc/mock?url=&method=`, correspondance exacte url + method, 404 si aucune correspondance ; le panneau de débogage masque par défaut les endpoints `not_debug`, qui n'apparaissent qu'en cochant « Afficher les interfaces not_debug »
+- **Connexion CORS directe** : le débogage en ligne connecte le navigateur directement à l'interface cible, le `cors_layer` de l'adaptateur autorise la traversée (proxy inverse côté serveur réservé à v2)
 
 ### Prévu
 
-- Débogage en ligne (connexion CORS directe du navigateur à l'interface cible), données Mock (génération via règles fake)
 - Multi-applications / multi-versions / mot de passe d'accès
-- Export Markdown / TypeScript / Swagger (OpenAPI3)
-- Adaptation multi-frameworks (apidoc-axum / apidoc-actix)
+- Export Markdown / TypeScript / Swagger (OpenAPI3) (M5)
+- Adaptation multi-frameworks (apidoc-axum terminé, apidoc-actix à faire)
 - v2 : générateur de code, référencement des champs de tables de données, liens de partage, événements de débogage
 
 ## Architecture
@@ -67,14 +75,19 @@ apidoc-rust est un **générateur de documentation d'API générique et modulair
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuration du workspace (resolver 2)
+├── VERSION                    # version du projet (v1.0.0, séparée de la version du framework 0.1.0)
 ├── crates/
 │   ├── apidoc/                # cœur à l'exécution (indépendant du framework)
 │   │   ├── src/lib.rs         # modèle de données + agrégation DocRegistry + api.json
 │   │   ├── tests/             # tests d'intégration (expansion des macros/agrégation/sérialisation/inter-crates)
 │   │   └── examples/demo.rs   # exemple : annotations + sortie api.json
-│   ├── apidoc-macros/         # proc-macro : 7 macros d'attributs
+│   ├── apidoc-macros/         # proc-macro : 19 macros d'attributs
 │   │   └── src/lib.rs         # définitions des macros + analyse des paramètres + validation à la compilation
-│   └── apidoc-test-fixtures/  # fixtures de test d'enregistrement inter-crates
+│   ├── apidoc-mock/           # moteur Mock (génération de données Mock par règles fake)
+│   ├── apidoc-test-fixtures/  # fixtures de test d'enregistrement inter-crates
+│   └── apidoc-axum/           # adaptateur axum (routes de documentation + cors_layer + /apidoc/mock)
+├── .github/
+│   └── workflows/release.yml  # workflow de publication (lit VERSION, crée tag + release de façon incrémentale)
 └── docs/
     ├── images/                # schémas d'architecture/fonctionnalités/cycle de vie (SVG)
     └── i18n/                  # documentation multilingue (12 langues)
@@ -175,14 +188,41 @@ Sortie (extrait) :
 }
 ```
 
+### 5. Débogage en ligne et Mock (M4)
+
+Ouvrez la page de documentation → sélectionnez une interface → le panneau « Débogage en ligne » à droite préremplit les paramètres selon les règles Mock → pointez la Base URL vers l'adresse du service cible (par défaut `location.origin`, connexion directe inter-domaines) → cliquez sur Envoyer pour obtenir la réponse réelle (code de statut / temps / pretty JSON). Le panneau de débogage masque par défaut les endpoints `not_debug`, qui n'apparaissent qu'après avoir coché « Afficher les interfaces not_debug ».
+
+**Exigence CORS** : le débogage en ligne connecte le navigateur directement à l'interface cible ; le service cible doit monter le `cors_layer` fourni par l'adaptateur pour autoriser les requêtes inter-domaines ; en cas d'échec CORS, le panneau affiche un avertissement jaune.
+
+Syntaxe des règles Mock (trois niveaux de priorité) :
+
+```rust
+#[apidoc::param(name = "email", ty = "string", desc = "邮箱", mock = "fake:email")]  // généré par la règle fake
+#[apidoc::param(name = "status", ty = "string", desc = "状态", mock = "1")]          // mock non vide renvoyé tel quel
+#[apidoc::param(name = "name", ty = "string", desc = "用户名")]                       // sans mock : génération automatique selon ty
+#[apidoc::returned(
+    name = "data",
+    ty = "object",
+    children = [
+        { name = "id", ty = "int", required },       // sans mock → "1"
+        { name = "email", ty = "string", mock = "fake:email" },  // imbrication récursive des children
+    ]
+)]
+fn create_user() -> String {
+    unimplemented!()
+}
+```
+
+15 règles fake intégrées : `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date` ; un nom de règle inconnu revient à la valeur par défaut. Génération automatique sans mock : int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"` ; les array ont fixé 2 éléments.
+
 ## Feuille de route
 
 | Phase | Contenu | Statut |
 |------|------|------|
 | M1 | squelette du workspace + modèle de données + MVP des macros + enregistrement linkme | ✅ Terminé |
-| M2 | adaptateur axum + UI de documentation intégrée + répertoires groupés | ⏳ Prévu |
-| M3 | complément d'annotations (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | Prévu |
-| M4 | débogage en ligne + moteur Mock | Prévu |
+| M2 | adaptateur axum + UI de documentation intégrée + répertoires groupés | ✅ Terminé |
+| M3 | complément d'annotations (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ Terminé |
+| M4 | débogage en ligne + moteur Mock | ✅ Terminé |
 | M5 | export markdown / typescript / swagger.json | Prévu |
 | M6 | authentification par mot de passe, multi-applications multi-versions, publication | Prévu |
 

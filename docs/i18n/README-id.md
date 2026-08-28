@@ -35,19 +35,27 @@ apidoc-rust adalah **pembuat dokumentasi API plugin-umum** yang diimplementasika
 
 ## Fitur
 
-### Sudah Diimplementasikan (M1)
+### Sudah Diimplementasikan (M1–M3)
 
 - **Dokumentasi berbasis anotasi**: tujuh makro atribut `title` / `desc` / `method` / `url` / `param` / `query` / `returned`, anotasi satu per satu (setara dengan penulisan PHP attributes), parameter mendukung nesting `required` / `default` / `desc` / `mock` / `children`
 - **Validasi waktu kompilasi**: url harus diawali `/`, whitelist method, param name wajib diisi, dll.; anotasi tidak valid menghasilkan error saat kompilasi (span presisi)
 - **Pengumpulan otomatis**: registrasi statis linkme `distributed_slice`, tanpa daftar API manual; `DocRegistry::collect()` menggabungkan berdasarkan id, mengembalikan urutan deklarasi berdasarkan seq, pengumpulan otomatis antar-crate
 - **Output api.json**: serde melakukan serialisasi model data dokumentasi terpadu (config + endpoints), field selaras dengan semantik PHP
+- **Adaptor axum + UI dokumentasi tertanam**: pasang rute langsung dapat halaman dokumentasi, penelusuran direktori berkelompok (M2)
+- **Pelengkapan anotasi**: 12 anotasi baru `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` (M3)
+
+### Sudah Diimplementasikan (M4)
+
+- **Debugging online**: panel «Debugging Online» bawaan di halaman dokumentasi — Base URL terisi otomatis `location.origin` untuk koneksi langsung lintas-domain ke layanan target, form parameter terisi otomatis dengan mock, penggantian placeholder rute `{name}` / `:name`, parameter GET/HEAD digabung ke query, method lainnya dirangkai sebagai JSON body, edit header permintaan + header kustom, tampilan respons (status / durasi / pretty JSON), peringatan kuning saat CORS gagal
+- **Mesin Mock** (`crates/apidoc-mock`, bergantung pada crate fake, 15 aturan: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). Prioritas aturan: `mock="fake:xxx"` memakai tabel aturan fake (nama tidak dikenal kembali ke nilai default) ← mock non-kosong lainnya langsung dikeluarkan apa adanya (mis. `mock="1"`, `mock="erik"`) ← tanpa mock dibuat otomatis sesuai `ty` (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); children bersarang rekursif, array tetap 2 item
+- **Antarmuka mock**: adaptor axum menambah `GET /apidoc/mock?url=&method=`, pencocokan presisi url + method, tidak cocok mengembalikan 404; panel debugging menyembunyikan endpoint `not_debug` secara default, baru tampil setelah mencentang «Tampilkan antarmuka not_debug»
+- **Koneksi langsung CORS**: debugging online dijalankan browser langsung ke antarmuka target, `cors_layer` dari adaptor yang mengizinkan (proksi balik sisi server disisakan untuk v2)
 
 ### Dalam Rencana
 
-- Debugging online (koneksi langsung CORS dari browser ke API target), data Mock (pembuatan dengan aturan fake)
 - Multi-aplikasi / multi-versi / kata sandi akses
-- Ekspor Markdown / TypeScript / Swagger (OpenAPI3)
-- Adaptasi multi-kerangka kerja (apidoc-axum / apidoc-actix)
+- Ekspor Markdown / TypeScript / Swagger (OpenAPI3) (M5)
+- Adaptasi multi-kerangka kerja (apidoc-axum selesai, apidoc-actix belum dikerjakan)
 - v2: generator kode, referensi field tabel data, tautan berbagi, peristiwa debugging
 
 ## Arsitektur
@@ -67,14 +75,19 @@ apidoc-rust adalah **pembuat dokumentasi API plugin-umum** yang diimplementasika
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Konfigurasi workspace (resolver 2)
+├── VERSION                    # Versi proyek (v1.0.0, terpisah dari versi kerangka 0.1.0)
 ├── crates/
 │   ├── apidoc/                # Inti runtime (independen kerangka kerja)
 │   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json
 │   │   ├── tests/             # Tes integrasi (ekspansi makro/agregasi/serialisasi/antar-crate)
 │   │   └── examples/demo.rs   # Contoh: anotasi + output api.json
-│   ├── apidoc-macros/         # proc-macro: 7 makro atribut
+│   ├── apidoc-macros/         # proc-macro: 19 makro atribut
 │   │   └── src/lib.rs         # Definisi makro + parsing parameter + validasi waktu kompilasi
-│   └── apidoc-test-fixtures/  # Fixture pengujian registrasi antar-crate
+│   ├── apidoc-mock/           # Mesin Mock (pembuatan data mock dengan aturan fake)
+│   ├── apidoc-test-fixtures/  # Fixture pengujian registrasi antar-crate
+│   └── apidoc-axum/           # Adaptor axum (rute dokumentasi + cors_layer + /apidoc/mock)
+├── .github/
+│   └── workflows/release.yml  # Workflow rilis (membaca VERSION, membuat tag+release inkremental)
 └── docs/
     ├── images/                # Diagram arsitektur/fitur/siklus hidup (SVG)
     └── i18n/                  # Dokumentasi multibahasa (12 bahasa)
@@ -91,6 +104,8 @@ apidoc-macros = "0.1"
 linkme = "0.3"        # ekspansi makro merujuk langsung ke path linkme, konsumen wajib dependensi langsung
 serde_json = "1"      # untuk output api.json
 ```
+
+> `apidoc-mock` (mesin Mock) adalah dependensi internal kerangka kerja, ditambahkan otomatis melalui adaptor, umumnya konsumen tidak perlu menggunakannya langsung.
 
 ### 2. Menulis Anotasi
 
@@ -175,14 +190,41 @@ Output (cuplikan):
 }
 ```
 
+### 5. Debugging Online dan Mock (M4)
+
+Buka halaman dokumentasi → pilih antarmuka → panel «Debugging Online» di kanan terisi otomatis sesuai aturan mock → arahkan Base URL ke alamat layanan target (default `location.origin`, koneksi langsung lintas-domain) → klik Kirim, dapatkan respons asli (kode status / durasi / pretty JSON). Panel debugging menyembunyikan endpoint `not_debug` secara default, baru ditampilkan setelah mencentang «Tampilkan antarmuka not_debug».
+
+**Persyaratan CORS**: debugging online dijalankan browser langsung ke antarmuka target, sehingga layanan target perlu memasang `cors_layer` yang disediakan adaptor untuk mengizinkan permintaan lintas-domain; saat CORS gagal, panel menampilkan peringatan kuning.
+
+Sintaks aturan Mock (tiga prioritas):
+
+```rust
+#[apidoc::param(name = "email", ty = "string", desc = "Email", mock = "fake:email")]  // dihasilkan aturan fake
+#[apidoc::param(name = "status", ty = "string", desc = "Status", mock = "1")]          // mock non-kosong langsung apa adanya
+#[apidoc::param(name = "name", ty = "string", desc = "Nama Pengguna")]                  // tanpa mock: otomatis sesuai ty
+#[apidoc::returned(
+    name = "data",
+    ty = "object",
+    children = [
+        { name = "id", ty = "int", required },       // tanpa mock → "1"
+        { name = "email", ty = "string", mock = "fake:email" },  // children bersarang rekursif
+    ]
+)]
+fn create_user() -> String {
+    unimplemented!()
+}
+```
+
+15 aturan fake bawaan: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`; nama tidak dikenal kembali ke nilai default. Aturan pembuatan otomatis tanpa mock: int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`; array tetap 2 item.
+
 ## Rencana Pengembangan
 
 | Tahap | Konten | Status |
 |------|------|------|
 | M1 | Kerangka workspace + model data + MVP makro + registrasi linkme | ✅ Selesai |
-| M2 | Adaptor axum + UI dokumentasi tertanam + direktori berkelompok | ⏳ Dalam rencana |
-| M3 | Melengkapi anotasi (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | Dalam rencana |
-| M4 | Debugging online + mesin Mock | Dalam rencana |
+| M2 | Adaptor axum + UI dokumentasi tertanam + direktori berkelompok | ✅ Selesai |
+| M3 | Melengkapi anotasi (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ Selesai |
+| M4 | Debugging online + mesin Mock | ✅ Selesai |
 | M5 | Ekspor markdown / typescript / swagger.json | Dalam rencana |
 | M6 | Otentikasi kata sandi, multi-aplikasi multi-versi, rilis | Dalam rencana |
 

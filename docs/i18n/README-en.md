@@ -35,19 +35,27 @@ apidoc-rust is a **general-purpose pluggable API documentation generator** imple
 
 ## Features
 
-### Implemented (M1)
+### Implemented (M1-M3)
 
 - **Annotation-based documentation**: seven attribute macros — `title` / `desc` / `method` / `url` / `param` / `query` / `returned` — annotated one by one (mirroring the PHP attributes style); parameters support nested `required` / `default` / `desc` / `mock` / `children`
 - **Compile-time validation**: url must start with `/`, method whitelist, param name is required, etc.; invalid annotations fail at compile time with precise spans
 - **Automatic collection**: static registration via linkme `distributed_slice`, no manual endpoint manifest needed; `DocRegistry::collect()` merges fragments by id and restores declaration order by seq, collecting automatically across crates
 - **api.json output**: serde serializes the unified document data model (config + endpoints), with fields aligned to PHP semantics
+- **axum adapter + embedded docs UI**: mount the routes to get a documentation page with grouped catalog browsing (M2)
+- **Extended annotations**: 12 new annotations — `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` (M3)
+
+### Implemented (M4)
+
+- **Online debugging**: the docs page embeds an "Online Debugging" panel — Base URL prefilled with `location.origin` for cross-origin direct connection to the target service, parameter form prefilled from mock rules, `{name}` / `:name` route placeholder replacement, GET/HEAD params merged into the query string, other methods assembled as a JSON body, request header editing + custom headers, response display (status / elapsed time / pretty JSON), yellow hint on CORS failure
+- **Mock engine** (`crates/apidoc-mock`, depends on the fake crate, 15 rules: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). Rule priority: `mock="fake:xxx"` resolves via the fake rule table (unknown names fall back to defaults) → other non-empty mock values pass through as-is (e.g. `mock="1"`, `mock="erik"`) → no mock: auto-generated from `ty` (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); children are nested recursively, arrays are fixed at 2 items
+- **Mock endpoint**: the axum adapter adds `GET /apidoc/mock?url=&method=` — exact match on url + method, 404 when unmatched; the debug panel hides `not_debug` endpoints by default, they only appear after checking "Show not_debug endpoints"
+- **CORS direct connection**: online debugging connects from the browser directly to the target endpoint, allowed by the adapter's `cors_layer` (server-side reverse proxy deferred to v2)
 
 ### Planned
 
-- Online debugging (browser CORS direct connection to target endpoints), Mock data (fake-rule generation)
 - Multi-app / multi-version / access password
-- Export to Markdown / TypeScript / Swagger (OpenAPI3)
-- Multi-framework adapters (apidoc-axum / apidoc-actix)
+- Export to Markdown / TypeScript / Swagger (OpenAPI3) (M5)
+- Multi-framework adapters (apidoc-axum done, apidoc-actix not yet)
 - v2: code generator, data-table field references, share links, debug events
 
 ## Architecture
@@ -67,14 +75,19 @@ apidoc-rust is a **general-purpose pluggable API documentation generator** imple
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace config (resolver 2)
+├── VERSION                    # project version (v1.0.0, separate from the framework version 0.1.0)
 ├── crates/
 │   ├── apidoc/                # runtime core (framework-agnostic)
 │   │   ├── src/lib.rs         # data model + DocRegistry aggregation + api.json
 │   │   ├── tests/             # integration tests (macro expansion/aggregation/serialization/cross-crate)
 │   │   └── examples/demo.rs   # example: annotations + api.json output
-│   ├── apidoc-macros/         # proc-macro: 7 attribute macros
+│   ├── apidoc-macros/         # proc-macro: 19 attribute macros
 │   │   └── src/lib.rs         # macro definitions + argument parsing + compile-time validation
-│   └── apidoc-test-fixtures/  # cross-crate registration test fixtures
+│   ├── apidoc-mock/           # Mock engine (generates mock data via fake rules)
+│   ├── apidoc-test-fixtures/  # cross-crate registration test fixtures
+│   └── apidoc-axum/           # axum adapter (docs routes + cors_layer + /apidoc/mock)
+├── .github/
+│   └── workflows/release.yml  # release workflow (reads VERSION, incrementally creates tag+release)
 └── docs/
     ├── images/                # architecture/features/lifecycle diagrams (SVG)
     └── i18n/                  # multilingual documentation (12 languages)
@@ -91,6 +104,8 @@ apidoc-macros = "0.1"
 linkme = "0.3"        # macro expansion references the linkme path directly; consumers must depend on it
 serde_json = "1"      # for api.json output
 ```
+
+> `apidoc-mock` (Mock engine) is an internal framework dependency, pulled in automatically by the adapter; consumers generally don't need to use it directly.
 
 ### 2. Write annotations
 
@@ -175,14 +190,41 @@ Output (excerpt):
 }
 ```
 
+### 5. Online Debugging & Mock (M4)
+
+Open the docs page → select an endpoint → the "Online Debugging" panel on the right prefills parameters from the mock rules → point the Base URL at the target service (default `location.origin`, cross-origin direct connection) → click Send to get the real response (status code / elapsed time / pretty JSON). The debug panel hides `not_debug` endpoints by default; they only appear after checking "Show not_debug endpoints".
+
+**CORS requirement**: online debugging connects from the browser directly to the target endpoint, so the target service must mount the adapter-provided `cors_layer` to allow cross-origin requests; the panel shows a yellow hint when CORS fails.
+
+Mock rule syntax (three priority levels):
+
+```rust
+#[apidoc::param(name = "email", ty = "string", desc = "邮箱", mock = "fake:email")]  // fake rule generation
+#[apidoc::param(name = "status", ty = "string", desc = "状态", mock = "1")]          // non-empty mock passes through as-is
+#[apidoc::param(name = "name", ty = "string", desc = "用户名")]                       // no mock: auto-generated from ty
+#[apidoc::returned(
+    name = "data",
+    ty = "object",
+    children = [
+        { name = "id", ty = "int", required },       // no mock → "1"
+        { name = "email", ty = "string", mock = "fake:email" },  // children nested recursively
+    ]
+)]
+fn create_user() -> String {
+    unimplemented!()
+}
+```
+
+The 15 built-in fake rules: `name` / `company` / `email` / `phone` / `url` / `ip` / `city` / `country` / `text` / `number` / `int` / `float` / `bool` / `uuid` / `date`; unknown rule names fall back to default values. Auto-generation rules without mock: int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`; arrays are fixed at 2 items.
+
 ## Roadmap
 
 | Phase | Content | Status |
 |-------|---------|--------|
 | M1 | workspace skeleton + data model + macro MVP + linkme registration | ✅ Done |
-| M2 | axum adapter + embedded docs UI + grouped catalog | ⏳ Planned |
-| M3 | annotation completion (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | Planned |
-| M4 | online debugging + Mock engine | Planned |
+| M2 | axum adapter + embedded docs UI + grouped catalog | ✅ Done |
+| M3 | annotation completion (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) | ✅ Done |
+| M4 | online debugging + Mock engine | ✅ Done |
 | M5 | export markdown / typescript / swagger.json | Planned |
 | M6 | password auth, multi-app multi-version, release | Planned |
 
