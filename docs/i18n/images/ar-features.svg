@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 815" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="560" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="815" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="815" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">وظائف مشروع apidoc-rust (اكتمل M1–M4)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">وظائف مشروع apidoc-rust (اكتمل M1–M6)</text>
 
   <!-- البطاقة 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -41,10 +41,10 @@
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">تم تنفيذه M2</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">محول axum + واجهة الوثائق</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">محولا axum / actix + واجهة الوثائق</text>
   <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (الواجهة) · /apidoc/api.json · /apidoc/mock</text>
-  <text x="500" y="300" font-size="13" fill="#333">لوحة تصحيح أونلاين مدمجة في واجهة الوثائق (صفحة Html ثابتة بلا تبعيات خارجية)</text>
-  <text x="500" y="320" font-size="13" fill="#333">دعم طبقة CORS: المتصفح يصل مباشرة بالواجهة الهدف عبر النطاقات</text>
+  <text x="500" y="300" font-size="13" fill="#333">apidoc-actix: تغليف رقيق، 4 مسارات تشمل /apidoc/export (M5)</text>
+  <text x="500" y="320" font-size="13" fill="#333">لوحة تصحيح أونلاين مدمجة في واجهة الوثائق (صفحة Html ثابتة بلا تبعيات خارجية)</text>
 
   <!-- البطاقة 5 -->
   <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -56,13 +56,42 @@
   <text x="60" y="470" font-size="13" fill="#333">15 قاعدة: اسم/بريد/هاتف/IP/URL/UUID/تاريخ/رقم/عائم/منطقي/نص…</text>
 
   <!-- البطاقة 6 -->
-  <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">قيد التخطيط</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">تصدير + تطبيقات متعددة + actix</text>
-  <text x="500" y="430" font-size="13" fill="#333">M5 تصدير: Markdown / TypeScript / Swagger(OpenAPI3)</text>
-  <text x="500" y="450" font-size="13" fill="#333">M6 تطبيقات متعددة / إصدارات متعددة / كلمة مرور للوصول</text>
-  <text x="500" y="470" font-size="13" fill="#333">محول apidoc-actix (تغليف رقيق، النواة بلا تعديل)</text>
+  <rect x="480" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">تم تنفيذه M5</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">تصدير بثلاثة تنسيقات (M5)</text>
+  <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI 3.0)</text>
+  <text x="500" y="450" font-size="13" fill="#333">info.version من ملف VERSION (تسلسل مسبق وقت البناء)</text>
+  <text x="500" y="470" font-size="13" fill="#333">الواجهة / api.json / التصدير تشترك في نموذج البيانات نفسه</text>
 
-  <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <!-- البطاقة 7: مصادقة كلمة المرور M6a -->
+  <rect x="40" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">تم تنفيذه M6a</text>
+  <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">مصادقة كلمة المرور</text>
+  <text x="60" y="580" font-size="13" fill="#333">GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; للحصول على token</text>
+  <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock تتطلب ?token=؛ الغائب/المنتهي/الخاطئ يرجع 401</text>
+  <text x="60" y="620" font-size="13" fill="#333">تشفير authcode (متغير RC4 + مجاميع md5، MAC بزمن ثابت)</text>
+  <text x="60" y="640" font-size="13" fill="#333">password / secret_key لا تُسلسل أبدًا · كلمة مرور التطبيق لها الأولوية على العامة</text>
+
+  <!-- البطاقة 8: تطبيقات وإصدارات متعددة M6b -->
+  <rect x="480" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">تم تنفيذه M6b</text>
+  <text x="500" y="556" font-size="17" font-weight="bold" fill="#1e8449">تطبيقات وإصدارات متعددة</text>
+  <text x="500" y="580" font-size="13" fill="#333">#[apidoc::app("key")] لتركيب الواجهات · شجرة إعدادات ApidocConfig.apps</text>
+  <text x="500" y="600" font-size="13" fill="#333">api.json يخرج شجرة doc.apps (key / title / items بشكل متكرر)</text>
+  <text x="500" y="620" font-size="13" fill="#333">منتقي التطبيق/الإصدار أعلى الواجهة · تخزين token حسب appKey في localStorage</text>
+  <text x="500" y="640" font-size="13" fill="#333">الواجهات غير المثبتة على تطبيق تقع في التطبيق الافتراضي · بدون إعداد مطابقة M5 بايت ببايت</text>
+
+  <!-- البطاقة 9: تخطيط v2 -->
+  <rect x="40" y="670" width="860" height="120" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="740" y="660" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="815" y="676" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">قيد التخطيط</text>
+  <text x="60" y="706" font-size="17" font-weight="bold" fill="#566573">تخطيط v2</text>
+  <text x="60" y="730" font-size="13" fill="#333">مولّد أكواد · مراجع حقول الجداول · روابط مشاركة · أحداث التصحيح</text>
+  <text x="60" y="750" font-size="13" fill="#333">المحولات: axum / actix كلاهما مغطى (وظائف 1:1)</text>
+  <text x="60" y="770" font-size="13" fill="#333">اكتمل M1–M6 بالكامل (بما في ذلك مصادقة كلمة المرور · تطبيقات وإصدارات متعددة)</text>
+
+  <text x="470" y="805" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

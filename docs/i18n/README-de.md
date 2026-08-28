@@ -59,9 +59,14 @@ apidoc-rust ist ein in Rust implementierter **universeller Plugin-API-Dokumentat
 - **actix-web-Adapter** (`crates/apidoc-actix`): funktional 1:1 zum axum-Adapter — `apidoc_routes(ApidocConfig) -> Scope` bindet /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export ein, `cors_layer(CorsConfig)` erlaubt Cross-Origin
 - **UI gemeinsam genutzt**: Die Dokumentations-UI (`src/ui.html`) wurde in das Kern-Crate verlagert und als `pub const UI_HTML` exportiert; beide Adapter verweisen auf dieselbe Kopie (sicher fürs Veröffentlichen)
 
-### Geplant
+### Umgesetzt (M6)
 
-- Mehrere Anwendungen / mehrere Versionen / Zugriffspasswort
+- **Passwort-Authentifizierung (M6a)**: Mit aktiviertem `AuthConfig { enable, password, secret_key, expire }` tauscht der Client `GET /apidoc/auth?password=<md5(Passwort)>&appKey=<key>` gegen ein Token; die Datenrouten `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` benötigen `?token=xxx`, ein fehlendes/abgelaufenes/falsches Token liefert 401, und die Dokumentations-UI zeigt ein Passwort-Overlay; das Token wird mit der authcode-Verschlüsselung ausgestellt (Zeile für Zeile von Discuz authcode portiert: RC4-Variante + md5-Prüfsumme + Base64 ohne Padding), Payload `{key: md5(md5(Passwort im Klartext)), expire: now+expire}`, MAC-Vergleich in konstanter Zeit
+- **Sicherheits-Rotlinien der Authentifizierung**: `password` / `secret_key` werden nie serialisiert — die api.json-Ausgabe ist byte-identisch zum Zustand ohne aktivierte Authentifizierung; bei deaktivierter Auth liefert `/apidoc/auth` 404 und die Datenrouten sind direkt durchlässig; hat eine App-Konfiguration ein eigenes Passwort, hat das App-Passwort Vorrang vor dem globalen; `secret_key` hat als Standard `"apidoc#hgcode"` (bei aktivierter, aber nicht konfigurierter Auth einmalige stderr-Warnung), `expire` hat als Standard 86400 Sekunden
+- **Mehrere Anwendungen und Versionen (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / rekursive Unterversionen in `items` / `password`) konfiguriert den App-Baum; `#[apidoc::app("key")]` hängt Schnittstellen an eine bestimmte App-Key, Schnittstellen ohne Key landen in der Standard-App; die api.json-Ausgabe erhält den `doc.apps`-Baum, oben in der UI erscheint ein App-/Versions-Auswahlfeld, und Tokens werden je appKey getrennt im localStorage gespeichert (verschiedene Apps können unabhängige Passwörter haben)
+
+### Geplant (v2)
+
 - v2: Code-Generator, Referenzen auf Datenbankfelder, Teilen-Links, Debug-Events
 
 ## Architektur
@@ -85,11 +90,12 @@ apidoc-rust/
 ├── crates/
 │   ├── apidoc/                # Laufzeitkern (frameworkunabhängig)
 │   │   ├── src/lib.rs         # Datenmodell + DocRegistry-Aggregation + api.json + UI_HTML
+│   │   ├── src/auth.rs        # M6a-Passwort-Authentifizierung (authcode-Token-Ausstellung/-Prüfung + Routenwächter)
 │   │   ├── src/export/        # M5-Exporte: markdown / typescript / swagger
 │   │   ├── src/ui.html        # gemeinsame Dokumentations-UI (vom Kern-Crate exportiert, beide Adapter verweisen darauf)
 │   │   ├── tests/             # Integrationstests (Makroexpansion/Aggregation/Serialisierung/über crates hinweg)
 │   │   └── examples/demo.rs   # Beispiel: Annotationen + Ausgabe von api.json
-│   ├── apidoc-macros/         # proc-macro: 19 Attributmakros
+│   ├── apidoc-macros/         # proc-macro: 20 Attributmakros
 │   │   └── src/lib.rs         # Makrodefinitionen + Parameterparsing + Validierung zur Kompilierzeit
 │   ├── apidoc-mock/           # Mock-Engine (erzeugt Mock-Daten nach fake-Regeln)
 │   ├── apidoc-test-fixtures/  # Test-Fixtures für die Registrierung über crates hinweg
@@ -147,14 +153,12 @@ fn get_user_info() -> String {
 
 ```rust
 fn main() {
-    let endpoints = DocRegistry::collect();
-    let doc = ApiDoc {
-        config: ApidocConfig {
-            title: "我的 API".to_string(),
-            description: None,
-        },
-        endpoints,
-    };
+    let doc = DocRegistry::collect_doc(ApidocConfig {
+        title: "我的 API".to_string(),
+        description: None,
+        auth: None,    // M6a-Passwort-Authentifizierung, siehe „8. Passwort-Authentifizierung"
+        apps: vec![],  // M6b mehrere Anwendungen und Versionen, siehe „9. Mehrere Anwendungen und Versionen"
+    });
     println!("{}", serde_json::to_string_pretty(&doc).unwrap());
 }
 ```
@@ -260,6 +264,8 @@ async fn main() -> std::io::Result<()> {
             .service(apidoc_routes(ApidocConfig {
                 title: "我的 API".to_string(),
                 description: None,
+                auth: None,    // M6a-Passwort-Authentifizierung, siehe „8. Passwort-Authentifizierung"
+                apps: vec![],  // M6b mehrere Anwendungen und Versionen, siehe „9. Mehrere Anwendungen und Versionen"
             }))
             .wrap(cors_layer(CorsConfig::default()))   // M4: Cross-Origin-Freigabe für Online-Debugging
     })
@@ -271,6 +277,70 @@ async fn main() -> std::io::Result<()> {
 
 Nach dem Einhängen sind `/apidoc` (Dokumentations-UI), `/apidoc/api.json` (Daten), `/apidoc/mock` (Mock) und `/apidoc/export` (Export) erreichbar. Eine leere CORS-Konfiguration erlaubt das literale `*` (ohne Anmeldedaten); mit einer `allow_origins`-Whitelist wird der Origin per exakter Übereinstimmung reflektiert — in beiden Modi werden keine Anmeldedaten aktiviert.
 
+### 8. Passwort-Authentifizierung (M6a)
+
+Mit aktiviertem `auth` benötigt die Dokumentation ein Passwort (angelehnt an die Auth.php des Upstreams apidoc-php; das Token ist eine Zeile-für-Zeile-Portierung der Discuz-authcode-Verschlüsselung):
+
+```rust
+use apidoc::auth::AuthConfig;
+
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: Some(AuthConfig {
+        enable: true,
+        password: "your-password".to_string(),
+        secret_key: "your-secret-key".to_string(), // Standard „apidoc#hgcode" (einmalige stderr-Warnung bei aktivierter, aber nicht konfigurierter Auth)
+        expire: 86400,                             // Sekunden; Standard 86400
+    }),
+    apps: vec![],
+});
+```
+
+**Ablauf**:
+
+1. Der Client ruft `GET /apidoc/auth?password=<md5(Passwort)>&appKey=<key>` auf und erhält ein Token (bei Erfolg `{"token":"..."}`, bei falschem Passwort 401); bei deaktivierter Auth liefert diese Route 404 und die Datenrouten sind direkt durchlässig
+2. Die Datenrouten `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` benötigen `?token=xxx` (bei ausgewählter App zusätzlich `&appKey=`); ein fehlendes/abgelaufenes/falsches Token liefert 401, die Dokumentations-UI öffnet automatisch das Passwort-Overlay, und nach Eingabe des Passworts hasht das Frontend es lokal per md5 und tauscht es gegen ein Token
+3. Die Token-Payload ist `{key: md5(md5(Passwort im Klartext)), expire: now+expire}`, per `secret_key` mit authcode verschlüsselt (RC4-Variante + md5-Prüfsumme + Base64 ohne Padding, MAC-Vergleich in konstanter Zeit gegen Timing-Seitenkanäle)
+4. `password` / `secret_key` werden nie serialisiert — die api.json-Ausgabe ist byte-identisch zum Zustand ohne aktivierte Authentifizierung; hat eine App-Konfiguration ein eigenes `password`, hat das App-Passwort Vorrang vor dem globalen
+
+### 9. Mehrere Anwendungen und Versionen (M6b)
+
+Ein Projekt lässt sich in mehrere Apps/Versionen aufteilen, jeweils mit eigener Anzeige und Zugriffskontrolle:
+
+```rust
+#[apidoc::title("获取用户信息")]
+#[apidoc::app("demo")]   // an die App mit key="demo" hängen; Schnittstellen ohne app-Annotation landen in der Standard-App
+fn get_user_info() -> String {
+    unimplemented!()
+}
+```
+
+```rust
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: None,
+    apps: vec![
+        AppConfig {
+            key: "demo".to_string(),
+            title: "演示应用".to_string(),
+            items: vec![AppConfig {
+                key: "v1".to_string(),
+                title: "v1".to_string(),
+                items: vec![],
+                password: None,
+            }],
+            password: None, // unabhängiges Zugriffspasswort der App, Vorrang vor dem globalen, wird nie serialisiert
+        },
+    ],
+});
+```
+
+- `AppConfig { key, title, items, password }`: `key` ist die eindeutige Kennung, auf die die `#[apidoc::app("key")]`-Annotation verweist, `items` verschachtelt rekursiv Unterversionen/Unter-Apps, `password` ist das unabhängige Zugriffspasswort der App (mit unabhängigem Passwort wird nur das App-Token geprüft)
+- Die api.json-Ausgabe erhält den `doc.apps`-Baum (key / title / items / endpoints); oben in der UI erscheint ein App-/Versions-Auswahlfeld — beim Wechsel werden die Schnittstellen dieses Knotens gerendert und die Daten neu geladen, Tokens werden je appKey getrennt im localStorage gespeichert
+- Verweist die `app`-Annotation auf einen nicht in `apps` konfigurierten Key, erfolgt eine stderr-Warnung und die Schnittstelle landet in der Standard-App; ohne `app`-Annotationen oder ohne konfiguriertes `apps` ist die Ausgabe byte-identisch zu M5
+
 ## Entwicklungsplan
 
 | Phase | Inhalt | Status |
@@ -281,7 +351,8 @@ Nach dem Einhängen sind `/apidoc` (Dokumentations-UI), `/apidoc/api.json` (Date
 | M4 | Online-Debugging + Mock-Engine | ✅ Abgeschlossen |
 | M5 | Export als markdown / typescript / swagger.json (OpenAPI3) | ✅ Abgeschlossen |
 | —  | actix-web-Adapter (funktional 1:1 zu axum) | ✅ Abgeschlossen |
-| M6 | Passwort-Authentifizierung, mehrere Anwendungen und Versionen, Veröffentlichung | Geplant |
+| M6a | Passwort-Authentifizierung (authcode-Token + Passwort-Overlay, App-Passwort hat Vorrang) | ✅ Abgeschlossen |
+| M6b | Mehrere Anwendungen und Versionen (apps-Konfigurationsbaum + app-Annotation + UI-Auswahl) | ✅ Abgeschlossen |
 
 ## Mehrsprachige Dokumentation
 

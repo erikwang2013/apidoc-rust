@@ -59,9 +59,14 @@ apidoc-rust adalah **pembuat dokumentasi API plugin-umum** yang diimplementasika
 - **Adaptor actix-web** (`crates/apidoc-actix`): fungsionalitas 1:1 dengan adaptor axum — `apidoc_routes(ApidocConfig) -> Scope` memasang /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` mengizinkan lintas-domain
 - **Berbagi UI**: UI dokumentasi (`src/ui.html`) dipindahkan ke atas ke crate inti, diekspor sebagai `pub const UI_HTML`, kedua adaptor merujuk salinan yang sama (aman saat packaging rilis)
 
-### Dalam Rencana
+### Sudah Diimplementasikan (M6)
 
-- Multi-aplikasi / multi-versi / kata sandi akses
+- **Otentikasi Kata Sandi (M6a)**: dengan `AuthConfig { enable, password, secret_key, expire }` diaktifkan, klien memanggil `GET /apidoc/auth?password=<md5(kata sandi)>&appKey=<key>` untuk mendapatkan token; rute data `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` wajib menyertakan `?token=xxx`; token hilang/kedaluwarsa/salah mengembalikan 401 dan UI dokumentasi menampilkan masker kata sandi; token diterbitkan dengan enkripsi authcode (porting baris per baris dari authcode Discuz: varian RC4 + checksum md5 + base64 tanpa padding), payload `{key: md5(md5(kata sandi asli)), expire: now+expire}`, perbandingan MAC waktu konstan
+- **Garis merah keamanan autentikasi**: `password` / `secret_key` tidak pernah diserialisasi; output api.json identik byte demi byte dengan saat autentikasi nonaktif; saat auth nonaktif, `/apidoc/auth` mengembalikan 404 dan rute data langsung diizinkan; saat aplikasi mengonfigurasi `password` sendiri, kata sandi aplikasi diutamakan dari kata sandi global; `secret_key` default `"apidoc#hgcode"` (peringatan stderr sekali jika diaktifkan tanpa konfigurasi), `expire` default 86400 detik
+- **Multi-Aplikasi Multi-Versi (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / `items` sub-versi rekursif / `password`) mengonfigurasi pohon aplikasi; `#[apidoc::app("key")]` menggantung antarmuka ke aplikasi dengan key tersebut dan antarmuka tanpa key masuk ke aplikasi default; output api.json menambah pohon `doc.apps`; muncul pemilih aplikasi/versi di bagian atas UI dan token disimpan terpisah di localStorage per appKey (aplikasi berbeda dapat memiliki kata sandi independen)
+
+### Dalam Rencana (v2)
+
 - v2: generator kode, referensi field tabel data, tautan berbagi, peristiwa debugging
 
 ## Arsitektur
@@ -85,11 +90,12 @@ apidoc-rust/
 ├── crates/
 │   ├── apidoc/                # Inti runtime (independen kerangka kerja)
 │   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json + UI_HTML
+│   │   ├── src/auth.rs        # otentikasi M6a (penerbitan/validasi token authcode + pengawal rute)
 │   │   ├── src/export/        # Ekspor M5: markdown / typescript / swagger
 │   │   ├── src/ui.html        # UI dokumentasi bersama (diekspor crate inti, dirujuk kedua adaptor)
 │   │   ├── tests/             # Tes integrasi (ekspansi makro/agregasi/serialisasi/antar-crate)
 │   │   └── examples/demo.rs   # Contoh: anotasi + output api.json
-│   ├── apidoc-macros/         # proc-macro: 19 makro atribut
+│   ├── apidoc-macros/         # proc-macro: 20 makro atribut
 │   │   └── src/lib.rs         # Definisi makro + parsing parameter + validasi waktu kompilasi
 │   ├── apidoc-mock/           # Mesin Mock (pembuatan data mock dengan aturan fake)
 │   ├── apidoc-test-fixtures/  # Fixture pengujian registrasi antar-crate
@@ -147,14 +153,12 @@ fn get_user_info() -> String {
 
 ```rust
 fn main() {
-    let endpoints = DocRegistry::collect();
-    let doc = ApiDoc {
-        config: ApidocConfig {
-            title: "API Saya".to_string(),
-            description: None,
-        },
-        endpoints,
-    };
+    let doc = DocRegistry::collect_doc(ApidocConfig {
+        title: "API Saya".to_string(),
+        description: None,
+        auth: None,    // M6a otentikasi kata sandi, lihat «8. Otentikasi Kata Sandi»
+        apps: vec![],  // M6b multi-aplikasi multi-versi, lihat «9. Multi-Aplikasi Multi-Versi»
+    });
     println!("{}", serde_json::to_string_pretty(&doc).unwrap());
 }
 ```
@@ -260,6 +264,8 @@ async fn main() -> std::io::Result<()> {
             .service(apidoc_routes(ApidocConfig {
                 title: "API Saya".to_string(),
                 description: None,
+                auth: None,    // M6a otentikasi kata sandi, lihat «8. Otentikasi Kata Sandi»
+                apps: vec![],  // M6b multi-aplikasi multi-versi, lihat «9. Multi-Aplikasi Multi-Versi»
             }))
             .wrap(cors_layer(CorsConfig::default()))   // M4 izin lintas-domain debug online
     })
@@ -271,6 +277,70 @@ async fn main() -> std::io::Result<()> {
 
 Setelah dipasang bisa mengakses `/apidoc` (UI dokumentasi), `/apidoc/api.json` (data), `/apidoc/mock` (Mock), `/apidoc/export` (ekspor). Konfigurasi CORS kosong mengizinkan literal `*` (tanpa membawa kredensial), jika mengonfigurasi whitelist `allow_origins` maka mencocokkan Origin yang dipantulkan secara presisi, kedua mode tidak membuka kredensial.
 
+### 8. Otentikasi Kata Sandi (M6a)
+
+Setelah `auth` diaktifkan, dokumentasi memerlukan kata sandi untuk diakses (selaras dengan Auth.php apidoc-php, token merupakan porting baris per baris enkripsi authcode Discuz):
+
+```rust
+use apidoc::auth::AuthConfig;
+
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "API Saya".to_string(),
+    description: None,
+    auth: Some(AuthConfig {
+        enable: true,
+        password: "your-password".to_string(),
+        secret_key: "your-secret-key".to_string(), // default "apidoc#hgcode" (peringatan stderr sekali jika diaktifkan tanpa konfigurasi)
+        expire: 86400,                             // detik; default 86400
+    }),
+    apps: vec![],
+});
+```
+
+**Alur**:
+
+1. Klien memanggil `GET /apidoc/auth?password=<md5(kata sandi)>&appKey=<key>` untuk mendapatkan token (sukses → `{"token":"..."}`, kata sandi salah → 401); saat auth nonaktif rute ini mengembalikan 404 dan rute data langsung diizinkan
+2. Rute data `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` wajib menyertakan `?token=xxx` (serta `&appKey=` bila aplikasi tertentu dipilih); token hilang/kedaluwarsa/salah mengembalikan 401 dan UI dokumentasi otomatis menampilkan masker kata sandi; setelah memasukkan kata sandi, frontend menghitung md5 lokal lalu mengirim untuk mendapatkan token
+3. Payload token adalah `{key: md5(md5(kata sandi asli)), expire: now+expire}`, dienkripsi oleh `secret_key` melalui authcode (varian RC4 + checksum md5 + base64 tanpa padding, perbandingan MAC waktu konstan mencegah side-channel waktu)
+4. `password` / `secret_key` tidak pernah diserialisasi; output api.json identik byte demi byte dengan saat autentikasi nonaktif; saat aplikasi mengonfigurasi `password` sendiri, kata sandi aplikasi diutamakan dari kata sandi global
+
+### 9. Multi-Aplikasi Multi-Versi (M6b)
+
+Satu proyek dapat dipecah menjadi beberapa aplikasi/versi, masing-masing dengan tampilan dan kontrol akses independen:
+
+```rust
+#[apidoc::title("Mendapatkan Info Pengguna")]
+#[apidoc::app("demo")]   // menggantung ke aplikasi key="demo"; antarmuka tanpa app masuk ke aplikasi default
+fn get_user_info() -> String {
+    unimplemented!()
+}
+```
+
+```rust
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "API Saya".to_string(),
+    description: None,
+    auth: None,
+    apps: vec![
+        AppConfig {
+            key: "demo".to_string(),
+            title: "Aplikasi Demo".to_string(),
+            items: vec![AppConfig {
+                key: "v1".to_string(),
+                title: "v1".to_string(),
+                items: vec![],
+                password: None,
+            }],
+            password: None, // kata sandi akses independen aplikasi, diutamakan dari kata sandi global, tidak pernah diserialisasi
+        },
+    ],
+});
+```
+
+- `AppConfig { key, title, items, password }`: `key` adalah identitas unik yang dirujuk anotasi `#[apidoc::app("key")]`; `items` menyarangkan sub-versi/sub-aplikasi secara rekursif; `password` adalah kata sandi akses independen aplikasi (dengan kata sandi independen hanya token aplikasi yang divalidasi)
+- Output api.json menambah pohon `doc.apps` (key / title / items / endpoints); muncul pemilih aplikasi/versi di bagian atas UI; setelah berpindah, antarmuka dirender sesuai node tersebut dan data ditarik ulang; token disimpan terpisah di localStorage per appKey
+- Bila anotasi `app` merujuk key yang tidak dikonfigurasi di `apps`, peringatan stderr dan jatuh ke aplikasi default; tanpa anotasi `app` atau tanpa konfigurasi `apps`, output identik byte demi byte dengan M5
+
 ## Rencana Pengembangan
 
 | Tahap | Konten | Status |
@@ -281,7 +351,8 @@ Setelah dipasang bisa mengakses `/apidoc` (UI dokumentasi), `/apidoc/api.json` (
 | M4 | Debugging online + mesin Mock | ✅ Selesai |
 | M5 | Ekspor markdown / typescript / swagger.json (OpenAPI3) | ✅ Selesai |
 | —  | Adaptor actix-web (fungsionalitas 1:1 dengan axum) | ✅ Selesai |
-| M6 | Otentikasi kata sandi, multi-aplikasi multi-versi, rilis | Dalam rencana |
+| M6a | Otentikasi kata sandi (token authcode + masker kata sandi, kata sandi aplikasi diutamakan) | ✅ Selesai |
+| M6b | Multi-aplikasi multi-versi (pohon konfigurasi apps + anotasi app + pemilih UI) | ✅ Selesai |
 
 ## Dokumentasi Multibahasa
 

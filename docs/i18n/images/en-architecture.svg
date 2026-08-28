@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 600" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 720" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="600" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="600" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="720" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="720" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Overall Architecture (M4 Complete)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Overall Architecture (M6 Complete)</text>
 
   <!-- User code layer -->
   <rect x="120" y="62" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
@@ -16,10 +16,10 @@
 
   <!-- Compile time -->
   <rect x="120" y="138" width="700" height="72" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
-  <rect x="730" y="144" width="76" height="22" rx="11" fill="#6c5ce7"/>
-  <text x="768" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1 + M3</text>
+  <rect x="724" y="144" width="96" height="22" rx="11" fill="#6c5ce7"/>
+  <text x="772" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1+M3+M6</text>
   <text x="140" y="164" font-size="17" font-weight="bold" fill="#3d2f9e">Compile Time · apidoc-macros (proc-macro)</text>
-  <text x="140" y="188" font-size="12" fill="#333">19 attribute macros: 7 base (M1: title/desc/method/url/param/query/returned) + 12 extended (M3: tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref)</text>
+  <text x="140" y="188" font-size="12" fill="#333">20 attribute macros: 7 base (M1: title/desc/method/url/param/query/returned) + 12 extended (M3: tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) + M6 app mounting</text>
   <text x="140" y="204" font-size="12" fill="#555">All with compile-time parameter validation (url starts with /, method whitelist, param name required); invalid annotations fail the build</text>
 
   <!-- Registration -->
@@ -31,44 +31,53 @@
 
   <!-- Runtime core -->
   <rect x="120" y="280" width="700" height="58" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
-  <rect x="730" y="285" width="62" height="20" rx="10" fill="#2980b9"/>
-  <text x="761" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <rect x="730" y="285" width="64" height="20" rx="10" fill="#2980b9"/>
+  <text x="762" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1+M6</text>
   <text x="140" y="308" font-size="17" font-weight="bold" fill="#1a5276">Runtime Core · apidoc (framework-agnostic)</text>
   <text x="140" y="330" font-size="13" fill="#333">DocRegistry::collect() merges fragments by id, restores declaration order by seq → ApiDoc data model</text>
-  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serde serialization, shared by UI and export)</text>
+  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serde serialization, shared by UI and export; M6b includes doc.apps tree) → export: md / ts / swagger (OpenAPI3)</text>
+
+  <!-- Auth (M6a) -->
+  <rect x="120" y="350" width="700" height="40" rx="8" fill="#fdedec" stroke="#c0392b" stroke-width="2"/>
+  <rect x="730" y="354" width="62" height="20" rx="10" fill="#c0392b"/>
+  <text x="761" y="368" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M6a</text>
+  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; exchanges for a token (authcode sealed envelope; password/secret_key are never serialized)</text>
 
   <!-- Adapter layer done -->
-  <rect x="120" y="350" width="700" height="62" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="656" y="355" width="76" height="22" rx="11" fill="#27ae60"/>
-  <text x="694" y="370" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2 + M4</text>
-  <text x="140" y="376" font-size="16" font-weight="bold" fill="#1e8449">Adapter Layer (Done) · apidoc-axum: route mounting + CORS, zero core changes</text>
-  <text x="140" y="398" font-size="13" fill="#333">/apidoc (UI debug panel) · /apidoc/api.json (doc data) · /apidoc/mock (Mock engine)</text>
-  <!-- actix planned -->
-  <rect x="656" y="384" width="148" height="24" rx="6" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="730" y="400" text-anchor="middle" font-size="12" fill="#566573">apidoc-actix (planned)</text>
+  <rect x="120" y="402" width="700" height="76" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="708" y="407" width="112" height="22" rx="11" fill="#27ae60"/>
+  <text x="764" y="422" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2+M4+M5+M6</text>
+  <text x="140" y="428" font-size="16" font-weight="bold" fill="#1e8449">Adapter Layer (Done) · apidoc-axum + apidoc-actix: route mounting + CORS</text>
+  <!-- actix done -->
+  <rect x="656" y="434" width="148" height="24" rx="6" fill="#27ae60" stroke="#27ae60" stroke-width="2"/>
+  <text x="730" y="450" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">apidoc-actix (Done)</text>
+  <text x="140" y="452" font-size="13" fill="#333">/apidoc (UI) · /apidoc/api.json · /apidoc/mock · /apidoc/export · /apidoc/auth (M6a token exchange)</text>
+  <text x="140" y="470" font-size="13" fill="#333">api.json / export / mock require ?token=; missing/expired/invalid returns 401; when auth is disabled: 404, data routes pass through</text>
 
   <!-- Presentation layer done -->
-  <rect x="120" y="424" width="700" height="50" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="730" y="429" width="62" height="20" rx="10" fill="#27ae60"/>
-  <text x="761" y="443" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
-  <text x="140" y="449" font-size="16" font-weight="bold" fill="#1e8449">Presentation Layer (Done) · docs UI debug panel (embedded Html, zero external deps)</text>
-  <text x="140" y="467" font-size="13" fill="#333">Catalog browsing / online debugging (CORS direct) / Mock prefill</text>
+  <rect x="120" y="490" width="700" height="64" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="708" y="495" width="84" height="20" rx="10" fill="#27ae60"/>
+  <text x="750" y="509" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
+  <text x="140" y="515" font-size="16" font-weight="bold" fill="#1e8449">Presentation Layer (Done) · docs UI debug panel (embedded Html, zero external deps)</text>
+  <text x="140" y="537" font-size="13" fill="#333">Catalog browsing / online debugging (CORS direct) / Mock prefill</text>
+  <text x="140" y="553" font-size="13" fill="#333">M6: password mask (front-end md5 submits the token) · app/version selector · tokens stored in localStorage per appKey</text>
 
   <!-- Data flow -->
-  <rect x="120" y="486" width="700" height="44" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
-  <rect x="730" y="491" width="62" height="20" rx="10" fill="#b58900"/>
-  <text x="761" y="505" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
-  <text x="140" y="508" font-size="13" fill="#333" font-family="monospace">browser → /apidoc (debug panel) → CORS direct → target endpoint (real request)</text>
-  <text x="140" y="524" font-size="13" fill="#333" font-family="monospace">browser → /apidoc/mock → Mock data (fake crate · 15 rules)</text>
+  <rect x="120" y="566" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <rect x="708" y="571" width="84" height="20" rx="10" fill="#b58900"/>
+  <text x="750" y="585" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
+  <text x="140" y="588" font-size="13" fill="#333" font-family="monospace">browser → /apidoc (debug panel) → CORS direct → target endpoint (real request)</text>
+  <text x="140" y="606" font-size="13" fill="#333" font-family="monospace">browser → /apidoc/mock → Mock data (fake crate · 15 rules)</text>
+  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">browser → /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token, data routes accessed with ?token=</text>
 
   <!-- workspace -->
-  <rect x="120" y="542" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
-  <text x="470" y="560" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (core) · apidoc-macros (macros) · apidoc-axum (adapter) · apidoc-mock (Mock·fake) · apidoc-test-fixtures (test fixtures)</text>
+  <rect x="120" y="642" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
+  <text x="470" y="660" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (core·auth.rs) · macros (macros) · axum (adapter) · actix (adapter) · mock (Mock) · test-fixtures (test fixtures)</text>
 
   <!-- Legend -->
-  <rect x="120" y="578" width="24" height="12" fill="#27ae60"/>
-  <text x="152" y="589" font-size="13" fill="#333">Implemented (M1–M4)</text>
-  <rect x="310" y="578" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="342" y="589" font-size="13" fill="#333">Planned (M5 export / M6 multi-app multi-version / actix)</text>
-  <text x="700" y="589" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <rect x="120" y="678" width="24" height="12" fill="#27ae60"/>
+  <text x="152" y="689" font-size="13" fill="#333">Implemented (M1–M6)</text>
+  <rect x="310" y="678" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="342" y="689" font-size="13" fill="#333">Planned (v2: code generator / share links etc.)</text>
+  <text x="700" y="689" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

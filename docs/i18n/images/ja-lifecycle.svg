@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 400" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 480" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
@@ -7,10 +7,10 @@
       <path d="M0,0 L0,6 L9,3 z" fill="#555"/>
     </marker>
   </defs>
-  <rect width="940" height="400" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="400" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="480" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="480" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust ドキュメントライフサイクル（M1–M4 完了）</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust ドキュメントライフサイクル（M1–M6 完了）</text>
 
   <!-- ステップ 1 -->
   <circle cx="85" cy="150" r="34" fill="#b58900"/>
@@ -20,67 +20,98 @@
   <text x="85" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">#[apidoc::*]</text>
   <text x="85" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="119" y1="150" x2="181" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="125" y1="150" x2="160" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- ステップ 2 -->
-  <circle cx="215" cy="150" r="34" fill="#6c5ce7"/>
-  <text x="215" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">2</text>
-  <text x="215" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">マクロ展開</text>
-  <text x="215" y="235" text-anchor="middle" font-size="12" fill="#555">コンパイル期生成</text>
-  <text x="215" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">DocFragmentEntry</text>
-  <text x="215" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="200" cy="150" r="34" fill="#6c5ce7"/>
+  <text x="200" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">2</text>
+  <text x="200" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">マクロ展開</text>
+  <text x="200" y="235" text-anchor="middle" font-size="12" fill="#555">コンパイル期生成</text>
+  <text x="200" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">DocFragmentEntry</text>
+  <text x="200" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="249" y1="150" x2="311" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="240" y1="150" x2="275" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- ステップ 3 -->
-  <circle cx="345" cy="150" r="34" fill="#f39c12"/>
-  <text x="345" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">3</text>
-  <text x="345" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">linkme 登録</text>
-  <text x="345" y="235" text-anchor="middle" font-size="12" fill="#555">静的分散スライス</text>
-  <text x="345" y="252" text-anchor="middle" font-size="12" fill="#555">実行時コストゼロ</text>
-  <text x="345" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="315" cy="150" r="34" fill="#f39c12"/>
+  <text x="315" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">3</text>
+  <text x="315" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">linkme 登録</text>
+  <text x="315" y="235" text-anchor="middle" font-size="12" fill="#555">静的分散スライス</text>
+  <text x="315" y="252" text-anchor="middle" font-size="12" fill="#555">実行時コストゼロ</text>
+  <text x="315" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="379" y1="150" x2="441" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="355" y1="150" x2="390" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- ステップ 4 -->
-  <circle cx="475" cy="150" r="34" fill="#2980b9"/>
-  <text x="475" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">4</text>
-  <text x="475" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">collect() 集約</text>
-  <text x="475" y="235" text-anchor="middle" font-size="12" fill="#555">id でマージ</text>
-  <text x="475" y="252" text-anchor="middle" font-size="12" fill="#555">seq で宣言順を復元</text>
-  <text x="475" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="430" cy="150" r="34" fill="#2980b9"/>
+  <text x="430" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">4</text>
+  <text x="430" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">collect() 集約</text>
+  <text x="430" y="235" text-anchor="middle" font-size="12" fill="#555">id でマージ</text>
+  <text x="430" y="252" text-anchor="middle" font-size="12" fill="#555">seq で宣言順を復元</text>
+  <text x="430" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="509" y1="150" x2="571" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="470" y1="150" x2="505" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- ステップ 5 -->
-  <circle cx="605" cy="150" r="34" fill="#27ae60"/>
-  <text x="605" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
-  <text x="605" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
-  <text x="605" y="235" text-anchor="middle" font-size="12" fill="#555">統一ドキュメントデータモデル</text>
-  <text x="605" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints</text>
-  <text x="605" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="545" cy="150" r="34" fill="#27ae60"/>
+  <text x="545" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
+  <text x="545" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
+  <text x="545" y="235" text-anchor="middle" font-size="12" fill="#555">統一ドキュメントデータモデル</text>
+  <text x="545" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints + apps</text>
+  <text x="545" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1·M6</text>
 
-  <line x1="639" y1="150" x2="701" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <!-- ターン矢印 5 → 6 -->
+  <line x1="579" y1="150" x2="856" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- ステップ 6: 完了 -->
-  <circle cx="735" cy="150" r="34" fill="#16a085"/>
-  <text x="735" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
-  <text x="735" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI デバッグパネル</text>
-  <text x="735" y="235" text-anchor="middle" font-size="12" fill="#555">ディレクトリ閲覧 / オンラインデバッグ</text>
-  <text x="735" y="252" text-anchor="middle" font-size="12" fill="#555">Mock 事前入力 / CORS 直結</text>
-  <text x="735" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+  <!-- ステップ 6：M6a 認証して token 取得 -->
+  <circle cx="890" cy="310" r="34" fill="#c0392b"/>
+  <text x="890" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
+  <text x="890" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">認証して token 取得</text>
+  <text x="890" y="395" text-anchor="middle" font-size="12" fill="#555">フロントエンドで md5 送信</text>
+  <text x="890" y="412" text-anchor="middle" font-size="12" fill="#555">データルートは ?token= 必須（401）</text>
+  <text x="890" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M6a</text>
 
-  <line x1="769" y1="150" x2="831" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="850" y1="310" x2="815" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- ステップ 7: 完了 -->
-  <circle cx="865" cy="150" r="34" fill="#e67e22"/>
-  <text x="865" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
-  <text x="865" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">デバッグデータフロー</text>
-  <text x="865" y="235" text-anchor="middle" font-size="12" fill="#555">CORS 直結で対象 API へ</text>
-  <text x="865" y="252" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock → mock</text>
-  <text x="865" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
+  <!-- ステップ 7：M6b アプリごとにレンダリング -->
+  <circle cx="775" cy="310" r="34" fill="#34495e"/>
+  <text x="775" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
+  <text x="775" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">アプリごとにレンダリング</text>
+  <text x="775" y="395" text-anchor="middle" font-size="12" fill="#555">UI のアプリ/バージョンセレクタ</text>
+  <text x="775" y="412" text-anchor="middle" font-size="12" fill="#555">token は appKey ごとに保存</text>
+  <text x="775" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M6b</text>
+
+  <line x1="735" y1="310" x2="700" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- ステップ 8 実装済み -->
+  <circle cx="660" cy="310" r="34" fill="#16a085"/>
+  <text x="660" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">8</text>
+  <text x="660" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI デバッグパネル</text>
+  <text x="660" y="395" text-anchor="middle" font-size="12" fill="#555">ディレクトリ閲覧 / オンラインデバッグ</text>
+  <text x="660" y="412" text-anchor="middle" font-size="12" fill="#555">Mock 事前入力 / CORS 直結</text>
+  <text x="660" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+
+  <line x1="620" y1="310" x2="585" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- ステップ 9 実装済み -->
+  <circle cx="545" cy="310" r="34" fill="#e67e22"/>
+  <text x="545" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">9</text>
+  <text x="545" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">デバッグデータフロー</text>
+  <text x="545" y="395" text-anchor="middle" font-size="12" fill="#555">CORS 直結で対象 API へ</text>
+  <text x="545" y="412" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock → mock</text>
+  <text x="545" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
+
+  <line x1="505" y1="310" x2="470" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- ステップ 10 実装済み -->
+  <circle cx="430" cy="310" r="34" fill="#8e44ad"/>
+  <text x="430" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">10</text>
+  <text x="430" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">3 形式エクスポート</text>
+  <text x="430" y="395" text-anchor="middle" font-size="12" fill="#555">md / ts / swagger</text>
+  <text x="430" y="412" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">OpenAPI 3.0</text>
+  <text x="430" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M5</text>
 
   <!-- 凡例 -->
-  <text x="470" y="331" text-anchor="middle" font-size="13" fill="#333">フェーズ表記：M1 注釈 / 収集 / 集約 / 出力 · M2 アダプタと UI · M4 デバッグパネル / Mock / CORS 直結（すべて実装済み、計画中なし）</text>
-  <text x="700" y="355" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <text x="470" y="455" text-anchor="middle" font-size="13" fill="#333">フェーズ表記：M1 注釈 / 収集 / 集約 / 出力 · M2 アダプタと UI · M4 デバッグパネル / Mock / CORS 直結 · M5 3 形式エクスポート · M6a パスワード認証 · M6b 複数アプリ・複数バージョン（すべて実装済み、計画中なし）</text>
+  <text x="700" y="472" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

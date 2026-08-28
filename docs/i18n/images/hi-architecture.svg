@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 600" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 720" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="600" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="600" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="720" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="720" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust समग्र वास्तुकला (M4 पूर्ण)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust समग्र वास्तुकला (M6 पूर्ण)</text>
 
   <!-- उपयोगकर्ता कोड परत -->
   <rect x="120" y="62" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
@@ -16,10 +16,10 @@
 
   <!-- संकलन समय -->
   <rect x="120" y="138" width="700" height="72" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
-  <rect x="730" y="144" width="76" height="22" rx="11" fill="#6c5ce7"/>
-  <text x="768" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1 + M3</text>
+  <rect x="724" y="144" width="96" height="22" rx="11" fill="#6c5ce7"/>
+  <text x="772" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1+M3+M6</text>
   <text x="140" y="164" font-size="17" font-weight="bold" fill="#3d2f9e">संकलन समय · apidoc-macros (proc-macro)</text>
-  <text x="140" y="188" font-size="12" fill="#333">19 एट्रिब्यूट मैक्रो: M1 की 7 आधार (title/desc/method/url/param/query/returned) + M3 की 12 विस्तार (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref)</text>
+  <text x="140" y="188" font-size="12" fill="#333">20 एट्रिब्यूट मैक्रो: M1 की 7 आधार (title/desc/method/url/param/query/returned) + M3 की 12 विस्तार (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) + M6 app माउंटिंग</text>
   <text x="140" y="204" font-size="12" fill="#555">सभी में संकलन-समय पैरामीटर सत्यापन (url / से शुरू, method श्वेतसूची, param name अनिवार्य); अवैध एनोटेशन सीधे संकलन त्रुटि देते हैं</text>
 
   <!-- पंजीकरण -->
@@ -31,44 +31,53 @@
 
   <!-- रनटाइम कोर -->
   <rect x="120" y="280" width="700" height="58" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
-  <rect x="730" y="285" width="62" height="20" rx="10" fill="#2980b9"/>
-  <text x="761" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <rect x="730" y="285" width="64" height="20" rx="10" fill="#2980b9"/>
+  <text x="762" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1+M6</text>
   <text x="140" y="308" font-size="17" font-weight="bold" fill="#1a5276">रनटाइम कोर · apidoc (फ्रेमवर्क-स्वतंत्र)</text>
   <text x="140" y="330" font-size="13" fill="#333">DocRegistry::collect() id से टुकड़ों को मर्ज करता है, seq से घोषणा क्रम पुनर्स्थापित करता है → ApiDoc डेटा मॉडल</text>
-  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serde क्रमांकन, UI और निर्यात के लिए साझा)</text>
+  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serde क्रमांकन, UI और निर्यात के लिए साझा; M6b में doc.apps ट्री) → निर्यात: md / ts / swagger (OpenAPI3)</text>
+
+  <!-- प्रमाणीकरण (M6a) -->
+  <rect x="120" y="350" width="700" height="40" rx="8" fill="#fdedec" stroke="#c0392b" stroke-width="2"/>
+  <rect x="730" y="354" width="62" height="20" rx="10" fill="#c0392b"/>
+  <text x="761" y="368" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M6a</text>
+  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token (authcode एन्क्रिप्शन लिफाफा, password/secret_key कभी क्रमांकित नहीं)</text>
 
   <!-- अडैप्टर परत, पूर्ण -->
-  <rect x="120" y="350" width="700" height="62" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="656" y="355" width="76" height="22" rx="11" fill="#27ae60"/>
-  <text x="694" y="370" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2 + M4</text>
-  <text x="140" y="376" font-size="16" font-weight="bold" fill="#1e8449">अडैप्टर परत (पूर्ण) · apidoc-axum: रूट माउंटिंग + CORS, कोर में कोई बदलाव नहीं</text>
-  <text x="140" y="398" font-size="13" fill="#333">/apidoc (UI डिबग पैनल) · /apidoc/api.json (दस्तावेज़ डेटा) · /apidoc/mock (मॉक इंजन)</text>
-  <!-- actix नियोजित -->
-  <rect x="656" y="384" width="148" height="24" rx="6" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="730" y="400" text-anchor="middle" font-size="12" fill="#566573">apidoc-actix (नियोजित)</text>
+  <rect x="120" y="402" width="700" height="76" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="708" y="407" width="112" height="22" rx="11" fill="#27ae60"/>
+  <text x="764" y="422" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2+M4+M5+M6</text>
+  <text x="140" y="428" font-size="16" font-weight="bold" fill="#1e8449">अडैप्टर परत (पूर्ण) · apidoc-axum + apidoc-actix: रूट माउंटिंग + CORS</text>
+  <!-- actix पूर्ण -->
+  <rect x="656" y="434" width="148" height="24" rx="6" fill="#27ae60" stroke="#27ae60" stroke-width="2"/>
+  <text x="730" y="450" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">apidoc-actix (पूर्ण)</text>
+  <text x="140" y="452" font-size="13" fill="#333">/apidoc (UI) · /apidoc/api.json · /apidoc/mock · /apidoc/export · /apidoc/auth (M6a token लेना)</text>
+  <text x="140" y="470" font-size="13" fill="#333">api.json / export / mock को ?token= चाहिए, अनुपस्थित/समाप्त/गलत पर 401; auth सक्षम न होने पर 404 और डेटा रूट सीधे खुले</text>
 
   <!-- प्रदर्शन परत, पूर्ण -->
-  <rect x="120" y="424" width="700" height="50" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="730" y="429" width="62" height="20" rx="10" fill="#27ae60"/>
-  <text x="761" y="443" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
-  <text x="140" y="449" font-size="16" font-weight="bold" fill="#1e8449">प्रदर्शन परत (पूर्ण) · दस्तावेज़ UI डिबग पैनल (एम्बेडेड Html, शून्य बाहरी निर्भरता)</text>
-  <text x="140" y="467" font-size="13" fill="#333">कैटलॉग ब्राउज़िंग / ऑनलाइन डिबगिंग (सीधा CORS) / मॉक प्री-फिल</text>
+  <rect x="120" y="490" width="700" height="64" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="708" y="495" width="84" height="20" rx="10" fill="#27ae60"/>
+  <text x="750" y="509" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
+  <text x="140" y="515" font-size="16" font-weight="bold" fill="#1e8449">प्रदर्शन परत (पूर्ण) · दस्तावेज़ UI डिबग पैनल (एम्बेडेड Html, शून्य बाहरी निर्भरता)</text>
+  <text x="140" y="537" font-size="13" fill="#333">कैटलॉग ब्राउज़िंग / ऑनलाइन डिबगिंग (सीधा CORS) / मॉक प्री-फिल</text>
+  <text x="140" y="553" font-size="13" fill="#333">M6: पासवर्ड मास्क (फ्रंटएंड md5 से token प्राप्त) · ऐप/संस्करण चयनकर्ता · token appKey के अनुसार localStorage में</text>
 
   <!-- डेटा फ़्लो -->
-  <rect x="120" y="486" width="700" height="44" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
-  <rect x="730" y="491" width="62" height="20" rx="10" fill="#b58900"/>
-  <text x="761" y="505" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
-  <text x="140" y="508" font-size="13" fill="#333" font-family="monospace">ब्राउज़र → /apidoc (डिबग पैनल) → CORS सीधा कनेक्शन → लक्ष्य इंटरफ़ेस (वास्तविक अनुरोध)</text>
-  <text x="140" y="524" font-size="13" fill="#333" font-family="monospace">ब्राउज़र → /apidoc/mock → मॉक डेटा (fake crate · 15 नियम)</text>
+  <rect x="120" y="566" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <rect x="708" y="571" width="84" height="20" rx="10" fill="#b58900"/>
+  <text x="750" y="585" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
+  <text x="140" y="588" font-size="13" fill="#333" font-family="monospace">ब्राउज़र → /apidoc (डिबग पैनल) → CORS सीधा कनेक्शन → लक्ष्य इंटरफ़ेस (वास्तविक अनुरोध)</text>
+  <text x="140" y="606" font-size="13" fill="#333" font-family="monospace">ब्राउज़र → /apidoc/mock → मॉक डेटा (fake crate · 15 नियम)</text>
+  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">ब्राउज़र → /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token, डेटा रूट ?token= के साथ एक्सेस</text>
 
   <!-- workspace -->
-  <rect x="120" y="542" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
-  <text x="470" y="560" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (कोर) · apidoc-macros (मैक्रो) · apidoc-axum (अडैप्टर) · apidoc-mock (मॉक·fake) · apidoc-test-fixtures (टेस्ट फिक्स्चर)</text>
+  <rect x="120" y="642" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
+  <text x="470" y="660" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (कोर·auth.rs) · macros (मैक्रो) · axum (अडैप्टर) · actix (अडैप्टर) · mock (मॉक) · test-fixtures (टेस्ट फिक्स्चर)</text>
 
   <!-- लीजेंड -->
-  <rect x="120" y="578" width="24" height="12" fill="#27ae60"/>
-  <text x="152" y="589" font-size="13" fill="#333">कार्यान्वित (M1–M4)</text>
-  <rect x="310" y="578" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="342" y="589" font-size="13" fill="#333">नियोजित (M5 निर्यात / M6 एकाधिक ऐप-संस्करण / actix)</text>
-  <text x="700" y="589" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <rect x="120" y="678" width="24" height="12" fill="#27ae60"/>
+  <text x="152" y="689" font-size="13" fill="#333">कार्यान्वित (M1–M6)</text>
+  <rect x="310" y="678" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="342" y="689" font-size="13" fill="#333">नियोजित (v2: कोड जनरेटर / शेयर लिंक आदि)</text>
+  <text x="700" y="689" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

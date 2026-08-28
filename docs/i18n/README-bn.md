@@ -59,9 +59,14 @@ apidoc-rust হল একটি রাস্টে বাস্তবায়�
 - **actix-web অ্যাডাপ্টার** (`crates/apidoc-actix`): axum অ্যাডাপ্টারের সাথে 1:1 ফাংশনালিটি—`apidoc_routes(ApidocConfig) -> Scope` /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export মাউন্ট করে, `cors_layer(CorsConfig)` ক্রস-অরিজিন পারমিশন দেয়
 - **UI শেয়ারিং**: ডকুমেন্ট UI (`src/ui.html`) কোর ক্রেটে স্থানান্তরিত, `pub const UI_HTML` এক্সপোর্ট হয়, দুই অ্যাডাপ্টারই একই কপি রেফার করে (রিলিজ প্যাকেজিংয়ে নিরাপদ)
 
-### পরিকল্পনাধীন
+### বাস্তবায়িত (M6)
 
-- মাল্টি-অ্যাপ / মাল্টি-ভার্সন / অ্যাক্সেস পাসওয়ার্ড
+- **পাসওয়ার্ড অথেনটিকেশন (M6a)**: `AuthConfig { enable, password, secret_key, expire }` চালু করলে ক্লায়েন্ট `GET /apidoc/auth?password=<md5(পাসওয়ার্ড)>&appKey=<key>` দিয়ে token নেয়; ডেটা রাউট `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock`-এ `?token=xxx` লাগে, token না থাকলে/মেয়াদ শেষ হলে/ভুল হলে 401 রিটার্ন হয় এবং ডকুমেন্ট UI পাসওয়ার্ড মাস্ক দেখায়; token authcode এনক্রিপশন দিয়ে ইস্যু হয় (Discuz authcode লাইন বাই লাইন পোর্ট: RC4 ভ্যারিয়েন্ট + md5 চেকসাম + প্যাডিংবিহীন base64), পেলোড `{key: md5(md5(আসল পাসওয়ার্ড)), expire: now+expire}`, MAC তুলনা ধ্রুবক সময়ে
+- **অথেনটিকেশন নিরাপত্তা লালরেখা**: `password` / `secret_key` কখনো সিরিয়ালাইজ হয় না — api.json আউটপুট অথেনটিকেশন বন্ধ অবস্থার সাথে বাইট-মিল; অথেনটিকেশন বন্ধ থাকলে `/apidoc/auth` 404 রিটার্ন করে এবং ডেটা রাউট সরাসরি পাস করে; কোনো অ্যাপ কনফিগে আলাদা পাসওয়ার্ড থাকলে অ্যাপ পাসওয়ার্ড গ্লোবালের চেয়ে প্রাধান্য পায়; `secret_key` ডিফল্ট `"apidoc#hgcode"` (চালু থাকা অবস্থায় কনফিগ না থাকলে একবার stderr সতর্কতা), `expire` ডিফল্ট ৮৬৪০০ সেকেন্ড
+- **মাল্টি-অ্যাপ মাল্টি-ভার্সন (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / `items` রিকার্সিভ সাব-ভার্সন / `password`) অ্যাপ ট্রি কনফিগার করে, `#[apidoc::app("key")]` ইন্টারফেসগুলো নির্দিষ্ট অ্যাপ key-তে ঝুলিয়ে দেয়, key ছাড়া ইন্টারফেস ডিফল্ট অ্যাপে পড়ে; api.json আউটপুটে নতুন `doc.apps` ট্রি, UI-র উপরে অ্যাপ/ভার্সন সিলেক্টর, token প্রতি appKey আলাদা করে localStorage-এ (ভিন্ন অ্যাপের আলাদা পাসওয়ার্ড থাকতে পারে)
+
+### পরিকল্পনাধীন (v2)
+
 - v2: কোড জেনারেটর, ডেটা টেবিল ফিল্ড রেফারেন্স, শেয়ার লিংক, ডিবাগ ইভেন্ট
 
 ## আর্কিটেকচার
@@ -85,11 +90,12 @@ apidoc-rust/
 ├── crates/
 │   ├── apidoc/                # রানটাইম কোর (ফ্রেমওয়ার্ক-নিরপেক্ষ)
 │   │   ├── src/lib.rs         # ডেটা মডেল + DocRegistry অ্যাগ্রিগেশন + api.json + UI_HTML
+│   │   ├── src/auth.rs        # M6a পাসওয়ার্ড অথেনটিকেশন (authcode token ইস্যু/যাচাই + রাউট গার্ড)
 │   │   ├── src/export/        # M5 এক্সপোর্ট: markdown / typescript / swagger
 │   │   ├── src/ui.html        # শেয়ারড ডকুমেন্ট UI (কোর ক্রেট এক্সপোর্ট, দুই অ্যাডাপ্টার রেফার করে)
 │   │   ├── tests/             # ইন্টিগ্রেশন টেস্ট (ম্যাক্রো এক্সপানশন/অ্যাগ্রিগেশন/সিরিয়ালাইজেশন/ক্রস-crate)
 │   │   └── examples/demo.rs   # উদাহরণ: অ্যানোটেশন + api.json আউটপুট
-│   ├── apidoc-macros/         # proc-macro: ১৯টি অ্যাট্রিবিউট ম্যাক্রো
+│   ├── apidoc-macros/         # proc-macro: ২০টি অ্যাট্রিবিউট ম্যাক্রো
 │   │   └── src/lib.rs         # ম্যাক্রো সংজ্ঞা + প্যারামিটার পার্সিং + কম্পাইল-টাইম ভ্যালিডেশন
 │   ├── apidoc-mock/           # Mock ইঞ্জিন (fake রুল দিয়ে mock ডেটা জেনারেশন)
 │   ├── apidoc-test-fixtures/  # ক্রস-crate রেজিস্ট্রেশন টেস্ট ফিক্সচার
@@ -147,14 +153,12 @@ fn get_user_info() -> String {
 
 ```rust
 fn main() {
-    let endpoints = DocRegistry::collect();
-    let doc = ApiDoc {
-        config: ApidocConfig {
-            title: "我的 API".to_string(),
-            description: None,
-        },
-        endpoints,
-    };
+    let doc = DocRegistry::collect_doc(ApidocConfig {
+        title: "我的 API".to_string(),
+        description: None,
+        auth: None,    // M6a পাসওয়ার্ড অথেনটিকেশন, দেখুন «৮. পাসওয়ার্ড অথেনটিকেশন»
+        apps: vec![],  // M6b মাল্টি-অ্যাপ মাল্টি-ভার্সন, দেখুন «৯. মাল্টি-অ্যাপ মাল্টি-ভার্সন»
+    });
     println!("{}", serde_json::to_string_pretty(&doc).unwrap());
 }
 ```
@@ -260,6 +264,8 @@ async fn main() -> std::io::Result<()> {
             .service(apidoc_routes(ApidocConfig {
                 title: "我的 API".to_string(),
                 description: None,
+                auth: None,    // M6a পাসওয়ার্ড অথেনটিকেশন, দেখুন «৮. পাসওয়ার্ড অথেনটিকেশন»
+                apps: vec![],  // M6b মাল্টি-অ্যাপ মাল্টি-ভার্সন, দেখুন «৯. মাল্টি-অ্যাপ মাল্টি-ভার্সন»
             }))
             .wrap(cors_layer(CorsConfig::default()))   // M4 在线调试跨域放行
     })
@@ -271,6 +277,70 @@ async fn main() -> std::io::Result<()> {
 
 মাউন্ট করার পর `/apidoc` (ডকুমেন্ট UI), `/apidoc/api.json` (ডেটা), `/apidoc/mock` (Mock), `/apidoc/export` (এক্সপোর্ট) অ্যাক্সেস করা যায়। CORS খালি কনফিগ লিটারাল `*` পারমিশন দেয় (ক্রেডেনশিয়াল ছাড়া), `allow_origins` হোয়াইটলিস্ট কনফিগ করলে রিফ্লেক্টেড Origin-কে এক্সাক্ট ম্যাচ করে, দুই মোডেই ক্রেডেনশিয়াল খোলা হয় না।
 
+### ৮. পাসওয়ার্ড অথেনটিকেশন (M6a)
+
+`auth` চালু করলে ডকুমেন্টেশনে পাসওয়ার্ড ছাড়া প্রবেশ করা যায় না (আপস্ট্রিম apidoc-php-এর Auth.php-এর সাথে সামঞ্জস্যপূর্ণ, token হলো Discuz authcode এনক্রিপশনের লাইন বাই লাইন পোর্ট):
+
+```rust
+use apidoc::auth::AuthConfig;
+
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: Some(AuthConfig {
+        enable: true,
+        password: "your-password".to_string(),
+        secret_key: "your-secret-key".to_string(), // ডিফল্ট "apidoc#hgcode" (চালু থাকা অবস্থায় কনফিগ না থাকলে একবার stderr সতর্কতা)
+        expire: 86400,                             // সেকেন্ড; ডিফল্ট 86400
+    }),
+    apps: vec![],
+});
+```
+
+**প্রক্রিয়া**:
+
+১. ক্লায়েন্ট `GET /apidoc/auth?password=<md5(পাসওয়ার্ড)>&appKey=<key>` কল করে token নেয় (সফল হলে `{"token":"..."}` রিটার্ন, পাসওয়ার্ড ভুল হলে 401); অথেনটিকেশন বন্ধ থাকলে এই রাউট 404 রিটার্ন করে এবং ডেটা রাউট সরাসরি পাস করে
+২. ডেটা রাউট `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock`-এ `?token=xxx` লাগে (নির্দিষ্ট অ্যাপ নির্বাচন করলে সাথে `&appKey=`); token না থাকলে/মেয়াদ শেষ হলে/ভুল হলে 401 রিটার্ন হয়, ডকুমেন্ট UI স্বয়ংক্রিয়ভাবে পাসওয়ার্ড মাস্ক খোলে, এবং পাসওয়ার্ড দেওয়ার পর ফ্রন্টএন্ড লোকালি md5 হ্যাশ করে token নেয়
+৩. token পেলোড `{key: md5(md5(আসল পাসওয়ার্ড)), expire: now+expire}`, `secret_key` দিয়ে authcode-তে এনক্রিপ্ট (RC4 ভ্যারিয়েন্ট + md5 চেকসাম + প্যাডিংবিহীন base64, টাইমিং সাইড-চ্যানেল রোধে ধ্রুবক সময়ে MAC তুলনা)
+৪. `password` / `secret_key` কখনো সিরিয়ালাইজ হয় না — api.json আউটপুট অথেনটিকেশন বন্ধ অবস্থার সাথে বাইট-মিল; কোনো অ্যাপ কনফিগে নিজস্ব `password` থাকলে অ্যাপ পাসওয়ার্ড গ্লোবালের চেয়ে প্রাধান্য পায়
+
+### ৯. মাল্টি-অ্যাপ মাল্টি-ভার্সন (M6b)
+
+একটি প্রজেক্টকে একাধিক অ্যাপ/ভার্সনে ভাগ করা যায়, প্রতিটির নিজস্ব ডিসপ্লে ও অ্যাক্সেস নিয়ন্ত্রণ:
+
+```rust
+#[apidoc::title("获取用户信息")]
+#[apidoc::app("demo")]   // key="demo" অ্যাপে ঝুলানো হয়; app অ্যানোটেশন ছাড়া ইন্টারফেস ডিফল্ট অ্যাপে পড়ে
+fn get_user_info() -> String {
+    unimplemented!()
+}
+```
+
+```rust
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: None,
+    apps: vec![
+        AppConfig {
+            key: "demo".to_string(),
+            title: "演示应用".to_string(),
+            items: vec![AppConfig {
+                key: "v1".to_string(),
+                title: "v1".to_string(),
+                items: vec![],
+                password: None,
+            }],
+            password: None, // অ্যাপের স্বাধীন অ্যাক্সেস পাসওয়ার্ড, গ্লোবালের চেয়ে প্রাধান্য পায়, কখনো সিরিয়ালাইজ হয় না
+        },
+    ],
+});
+```
+
+- `AppConfig { key, title, items, password }`: `key` হলো সেই ইউনিক আইডেন্টিফায়ার যাকে `#[apidoc::app("key")]` অ্যানোটেশন রেফার করে, `items` রিকার্সিভভাবে সাব-ভার্সন/সাব-অ্যাপ নেস্ট করে, `password` হলো অ্যাপের স্বাধীন অ্যাক্সেস পাসওয়ার্ড (স্বাধীন পাসওয়ার্ড থাকলে শুধু অ্যাপ token যাচাই হয়)
+- api.json আউটপুটে নতুন `doc.apps` ট্রি (key / title / items / endpoints); UI-র উপরে অ্যাপ/ভার্সন সিলেক্টর — স্যুইচ করলে সেই নোডের ইন্টারফেস রেন্ডার হয় ও ডেটা নতুন করে আনা হয়, token প্রতি appKey আলাদা করে localStorage-এ থাকে
+- `app` অ্যানোটেশন `apps`-এ কনফিগ না করা key রেফার করলে stderr সতর্কতা দিয়ে ইন্টারফেসটি ডিফল্ট অ্যাপে পড়ে; `app` অ্যানোটেশন ছাড়া বা `apps` কনফিগ না থাকলে আউটপুট M5-এর সাথে বাইট-মিল
+
 ## উন্নয়ন পরিকল্পনা
 
 | পর্যায় | বিষয়বস্তু | অবস্থা |
@@ -281,7 +351,8 @@ async fn main() -> std::io::Result<()> {
 | M4 | অনলাইন ডিবাগিং + Mock ইঞ্জিন | ✅ সম্পন্ন |
 | M5 | markdown / typescript / swagger.json (OpenAPI3) এক্সপোর্ট | ✅ সম্পন্ন |
 | —  | actix-web অ্যাডাপ্টার (axum-এর সাথে 1:1 ফাংশনালিটি) | ✅ সম্পন্ন |
-| M6 | পাসওয়ার্ড অথেনটিকেশন, মাল্টি-অ্যাপ মাল্টি-ভার্সন, রিলিজ | পরিকল্পনাধীন |
+| M6a | পাসওয়ার্ড অথেনটিকেশন (authcode token + পাসওয়ার্ড মাস্ক, অ্যাপ পাসওয়ার্ডের প্রাধান্য) | ✅ সম্পন্ন |
+| M6b | মাল্টি-অ্যাপ মাল্টি-ভার্সন (apps কনফিগ ট্রি + app অ্যানোটেশন + UI সিলেক্টর) | ✅ সম্পন্ন |
 
 ## বহুভাষিক ডকুমেন্টেশন
 

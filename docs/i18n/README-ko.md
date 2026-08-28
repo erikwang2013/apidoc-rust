@@ -59,9 +59,14 @@ apidoc-rust는 Rust로 구현된 **범용 플러그형 API 인터페이스 문�
 - **actix-web 어댑터**(`crates/apidoc-actix`): axum 어댑터와 기능 1:1 — `apidoc_routes(ApidocConfig) -> Scope`로 /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export 마운트, `cors_layer(CorsConfig)`로 크로스 오리진 허용
 - **UI 공유**: 문서 UI(`src/ui.html`)를 코어 crate로 이동해 `pub const UI_HTML`로 내보내며, 두 어댑터가 동일한 파일 참조(배포 패키징 안전)
 
-### 계획 중
+### 구현됨 (M6)
 
-- 다중 앱 / 다중 버전 / 접근 비밀번호
+- **비밀번호 인증(M6a)**: `AuthConfig { enable, password, secret_key, expire }` 활성화 시 클라이언트가 `GET /apidoc/auth?password=<md5(비밀번호)>&appKey=<key>`로 token 교환; 데이터 라우트 `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock`에는 `?token=xxx`를 첨부해야 하며, token이 없거나/만료/오류면 401 반환, 문서 UI에 비밀번호 마스크 팝업; token은 authcode 암호화 스위트로 서명(Discuz authcode를 줄 단위로 이식: RC4 변형 + md5 체크섬 + 패딩 없는 base64), 페이로드는 `{key: md5(md5(원본 비밀번호)), expire: now+expire}`, MAC 비교는 상수 시간
+- **인증 보안 레드라인**: `password` / `secret_key`는 절대 직렬화되지 않으며, api.json 출력은 인증 미활성화 시와 바이트 수준 동일; auth 미활성화 시 `/apidoc/auth`는 404 반환, 데이터 라우트는 그냥 통과; 앱 설정에 독립 password가 있으면 앱 비밀번호가 전역 비밀번호보다 우선; `secret_key` 기본값 `"apidoc#hgcode"`(활성화 시 미설정이면 stderr 경고 1회), `expire` 기본값 86400초
+- **다중 앱·다중 버전(M6b)**: `ApidocConfig.apps: Vec<AppConfig>`(`key` / `title` / `items` 재귀 하위 버전 / `password`)로 앱 트리 설정, `#[apidoc::app("key")]`로 인터페이스를 지정 앱 key에 연결, key 미지정 인터페이스는 기본 앱에 포함; api.json 출력에 `doc.apps` 트리 추가, UI 상단에 앱/버전 선택기 등장, token은 appKey별로 localStorage에 분리 저장(앱마다 독립 비밀번호 가능)
+
+### 계획 중 (v2)
+
 - v2: 코드 생성기, 데이터 테이블 필드 참조, 공유 링크, 디버깅 이벤트
 
 ## 아키텍처
@@ -85,11 +90,12 @@ apidoc-rust/
 ├── crates/
 │   ├── apidoc/                # 런타임 코어(프레임워크 무관)
 │   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML
+│   │   ├── src/auth.rs        # M6a 비밀번호 인증(authcode token 발급/검증 + 라우트 가드)
 │   │   ├── src/export/        # M5 내보내기: markdown / typescript / swagger
 │   │   ├── src/ui.html        # 공유 문서 UI(코어 crate에서 내보내며, 두 어댑터가 참조)
 │   │   ├── tests/             # 통합 테스트(매크로 확장/집계/직렬화/크로스 crate)
 │   │   └── examples/demo.rs   # 예제: 주석 + api.json 출력
-│   ├── apidoc-macros/         # proc-macro: 19개 속성 매크로
+│   ├── apidoc-macros/         # proc-macro: 20개 속성 매크로
 │   │   └── src/lib.rs         # 매크로 정의 + 파라미터 파싱 + 컴파일 타임 검증
 │   ├── apidoc-mock/           # Mock 엔진(fake 규칙으로 mock 데이터 생성)
 │   ├── apidoc-test-fixtures/  # 크로스 crate 등록 테스트 픽스처
@@ -147,14 +153,12 @@ fn get_user_info() -> String {
 
 ```rust
 fn main() {
-    let endpoints = DocRegistry::collect();
-    let doc = ApiDoc {
-        config: ApidocConfig {
-            title: "내 API".to_string(),
-            description: None,
-        },
-        endpoints,
-    };
+    let doc = DocRegistry::collect_doc(ApidocConfig {
+        title: "내 API".to_string(),
+        description: None,
+        auth: None,    // M6a 비밀번호 인증, 「8. 비밀번호 인증」참조
+        apps: vec![],  // M6b 다중 앱·다중 버전, 「9. 다중 앱·다중 버전」참조
+    });
     println!("{}", serde_json::to_string_pretty(&doc).unwrap());
 }
 ```
@@ -260,6 +264,8 @@ async fn main() -> std::io::Result<()> {
             .service(apidoc_routes(ApidocConfig {
                 title: "내 API".to_string(),
                 description: None,
+                auth: None,    // M6a 비밀번호 인증, 「8. 비밀번호 인증」참조
+                apps: vec![],  // M6b 다중 앱·다중 버전, 「9. 다중 앱·다중 버전」참조
             }))
             .wrap(cors_layer(CorsConfig::default()))   // M4 온라인 디버깅 크로스 오리진 허용
     })
@@ -271,6 +277,70 @@ async fn main() -> std::io::Result<()> {
 
 마운트 후 `/apidoc`(문서 UI), `/apidoc/api.json`(데이터), `/apidoc/mock`(Mock), `/apidoc/export`(내보내기)에 접근할 수 있습니다. CORS 빈 설정은 리터럴 `*`를 허용(자격 증명 미포함), `allow_origins` 화이트리스트를 설정하면 정확 일치로 Origin을 반사하며, 두 모드 모두 자격 증명을 열지 않습니다.
 
+### 8. 비밀번호 인증(M6a)
+
+`auth`를 활성화하면 문서에 비밀번호가 필요합니다(상위 apidoc-php의 Auth.php에 맞춰 token은 Discuz authcode 암호화 스위트를 줄 단위로 이식):
+
+```rust
+use apidoc::auth::AuthConfig;
+
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "내 API".to_string(),
+    description: None,
+    auth: Some(AuthConfig {
+        enable: true,
+        password: "your-password".to_string(),
+        secret_key: "your-secret-key".to_string(), // 기본값 "apidoc#hgcode"(활성화 시 미설정이면 stderr 경고 1회)
+        expire: 86400,                             // 초; 기본값 86400
+    }),
+    apps: vec![],
+});
+```
+
+**흐름**:
+
+1. 클라이언트가 `GET /apidoc/auth?password=<md5(비밀번호)>&appKey=<key>`로 token 교환(성공 시 `{"token":"..."}` 반환, 비밀번호 오류는 401); auth 미활성화 시 이 라우트는 404 반환, 데이터 라우트는 그냥 통과
+2. 데이터 라우트 `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock`에는 `?token=xxx` 첨부 필요(특정 앱 선택 시 동시에 `&appKey=` 첨부); token이 없거나/만료/오류면 401 반환, 문서 UI가 자동으로 비밀번호 마스크 팝업, 비밀번호 입력 후 프론트엔드에서 md5로 제출해 token 교환
+3. token 페이로드는 `{key: md5(md5(원본 비밀번호)), expire: now+expire}`, `secret_key`로 authcode 암호화(RC4 변형 + md5 체크섬 + 패딩 없는 base64, MAC 비교 상수 시간으로 타이밍 사이드 채널 방지)
+4. `password` / `secret_key`는 절대 직렬화되지 않으며, api.json 출력은 인증 미활성화 시와 바이트 수준 동일; 앱에 독립 `password`를 설정하면 앱 비밀번호가 전역 비밀번호보다 우선
+
+### 9. 다중 앱·다중 버전(M6b)
+
+하나의 프로젝트를 여러 앱/버전으로 나눌 수 있으며, 각각 독립적으로 표시하고 접근을 제어합니다:
+
+```rust
+#[apidoc::title("获取用户信息")]
+#[apidoc::app("demo")]   // key="demo" 앱에 연결; app 미지정 인터페이스는 기본 앱에 포함
+fn get_user_info() -> String {
+    unimplemented!()
+}
+```
+
+```rust
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "내 API".to_string(),
+    description: None,
+    auth: None,
+    apps: vec![
+        AppConfig {
+            key: "demo".to_string(),
+            title: "演示应用".to_string(),
+            items: vec![AppConfig {
+                key: "v1".to_string(),
+                title: "v1".to_string(),
+                items: vec![],
+                password: None,
+            }],
+            password: None, // 앱 독립 접근 비밀번호, 전역 비밀번호보다 우선, 절대 직렬화되지 않음
+        },
+    ],
+});
+```
+
+- `AppConfig { key, title, items, password }`: `key`는 `#[apidoc::app("key")]` 주석이 참조하는 고유 식별자, `items`는 하위 버전/하위 앱을 재귀 중첩, `password`는 앱 독립 접근 비밀번호(독립 비밀번호가 있으면 앱 token만 검증)
+- api.json 출력에 `doc.apps` 트리(key / title / items / endpoints) 추가; UI 상단에 앱/버전 선택기가 등장하며, 전환 시 해당 노드 기준으로 인터페이스를 렌더링하고 데이터를 다시 가져옴, token은 appKey별로 localStorage에 분리 저장
+- `app` 주석이 `apps`에 설정되지 않은 key를 참조하면 stderr 경고 후 기본 앱에 포함; `app` 주석이 없거나 `apps` 미설정이면 M5와 바이트 수준 동일한 출력
+
 ## 개발 계획
 
 | 단계 | 내용 | 상태 |
@@ -281,7 +351,8 @@ async fn main() -> std::io::Result<()> {
 | M4 | 온라인 디버깅 + Mock 엔진 | ✅ 완료 |
 | M5 | markdown / typescript / swagger.json 내보내기(OpenAPI3) | ✅ 완료 |
 | —  | actix-web 어댑터(axum과 기능 1:1) | ✅ 완료 |
-| M6 | 비밀번호 인증, 다중 앱·다중 버전, 릴리스 | 계획 중 |
+| M6a | 비밀번호 인증(authcode token + 비밀번호 마스크, 앱 비밀번호 우선) | ✅ 완료 |
+| M6b | 다중 앱·다중 버전(apps 설정 트리 + app 주석 + UI 선택기) | ✅ 완료 |
 
 ## 다국어 문서
 

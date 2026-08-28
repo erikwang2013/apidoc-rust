@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 815" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="560" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="815" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="815" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Fitur Proyek apidoc-rust (M1–M4 Selesai)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Fitur Proyek apidoc-rust (M1–M6 Selesai)</text>
 
   <!-- Kartu 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -41,10 +41,10 @@
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M2</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Adaptor axum + UI Dokumentasi</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Adaptor axum / actix + UI Dokumentasi</text>
   <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (UI) · /apidoc/api.json · /apidoc/mock</text>
-  <text x="500" y="300" font-size="13" fill="#333">Panel debugging UI dokumentasi tertanam (halaman statis Html, tanpa dependensi eksternal)</text>
-  <text x="500" y="320" font-size="13" fill="#333">Dukungan lapisan CORS: browser dapat terhubung langsung lintas-domain ke API target</text>
+  <text x="500" y="300" font-size="13" fill="#333">apidoc-actix: pembungkus tipis, 4 rute termasuk /apidoc/export (M5)</text>
+  <text x="500" y="320" font-size="13" fill="#333">Panel debugging UI dokumentasi tertanam (halaman statis Html, tanpa dependensi eksternal)</text>
 
   <!-- Kartu 5 -->
   <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -56,13 +56,42 @@
   <text x="60" y="470" font-size="13" fill="#333">15 aturan: nama/email/telepon/IP/URL/UUID/tanggal/angka/float/boolean/teks…</text>
 
   <!-- Kartu 6 -->
-  <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Dalam Rencana</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Ekspor + multi-aplikasi + actix</text>
-  <text x="500" y="430" font-size="13" fill="#333">M5 ekspor: Markdown / TypeScript / Swagger(OpenAPI3)</text>
-  <text x="500" y="450" font-size="13" fill="#333">M6 multi-aplikasi / multi-versi / kata sandi akses</text>
-  <text x="500" y="470" font-size="13" fill="#333">Adaptor apidoc-actix (pembungkus tipis, inti tanpa perubahan)</text>
+  <rect x="480" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M5</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">Ekspor Tiga Format (M5)</text>
+  <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI 3.0)</text>
+  <text x="500" y="450" font-size="13" fill="#333">info.version diambil dari file VERSION (pra-serialisasi saat build)</text>
+  <text x="500" y="470" font-size="13" fill="#333">UI / api.json / ekspor berbagi model data yang sama</text>
 
-  <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <!-- Kartu 7: M6a otentikasi kata sandi -->
+  <rect x="40" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M6a</text>
+  <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">Otentikasi Kata Sandi</text>
+  <text x="60" y="580" font-size="13" fill="#333">GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; untuk token</text>
+  <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock wajib membawa ?token=, tidak ada/kadaluarsa/salah mengembalikan 401</text>
+  <text x="60" y="620" font-size="13" fill="#333">Amplop enkripsi authcode untuk penerbitan (varian RC4 + checksum md5, MAC waktu konstan)</text>
+  <text x="60" y="640" font-size="13" fill="#333">password / secret_key tidak pernah diserialisasi · kata sandi aplikasi diutamakan dari global</text>
+
+  <!-- Kartu 8: M6b multi-aplikasi multi-versi -->
+  <rect x="480" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M6b</text>
+  <text x="500" y="556" font-size="17" font-weight="bold" fill="#1e8449">Multi-Aplikasi Multi-Versi</text>
+  <text x="500" y="580" font-size="13" fill="#333">#[apidoc::app("key")] memasang API · pohon konfigurasi ApidocConfig.apps</text>
+  <text x="500" y="600" font-size="13" fill="#333">api.json mengeluarkan pohon doc.apps (key / title / items rekursif)</text>
+  <text x="500" y="620" font-size="13" fill="#333">Pemilih aplikasi/versi di bagian atas UI · token disimpan di localStorage per appKey</text>
+  <text x="500" y="640" font-size="13" fill="#333">API tanpa app masuk ke aplikasi default · tanpa konfigurasi, identik bit-per-bit dengan M5</text>
+
+  <!-- Kartu 9: rencana v2 -->
+  <rect x="40" y="670" width="860" height="120" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="740" y="660" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="815" y="676" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Dalam Rencana</text>
+  <text x="60" y="706" font-size="17" font-weight="bold" fill="#566573">Rencana v2</text>
+  <text x="60" y="730" font-size="13" fill="#333">Generator kode · referensi kolom tabel data · tautan berbagi · event debugging</text>
+  <text x="60" y="750" font-size="13" fill="#333">Adaptor: axum / actix sudah tercover (fitur 1:1)</text>
+  <text x="60" y="770" font-size="13" fill="#333">M1–M6 semua selesai (termasuk otentikasi kata sandi · multi-aplikasi multi-versi)</text>
+
+  <text x="470" y="805" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

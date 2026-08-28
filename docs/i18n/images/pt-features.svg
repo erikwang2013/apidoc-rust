@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 815" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="560" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="815" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="815" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Recursos do projeto apidoc-rust (M1–M4 concluído)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Recursos do projeto apidoc-rust (M1–M6 concluído)</text>
 
   <!-- Card 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -41,10 +41,10 @@
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M2</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Adaptador axum + UI de documentação</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Adaptadores axum / actix + UI de documentação</text>
   <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (UI) · /apidoc/api.json · /apidoc/mock</text>
-  <text x="500" y="300" font-size="13" fill="#333">Painel de depuração da UI embutido (página Html estática, zero dependência externa)</text>
-  <text x="500" y="320" font-size="13" fill="#333">Camada CORS: o navegador pode conectar-se diretamente ao endpoint de destino entre domínios</text>
+  <text x="500" y="300" font-size="13" fill="#333">apidoc-actix: encapsulamento fino, 4 rotas incl. /apidoc/export (M5)</text>
+  <text x="500" y="320" font-size="13" fill="#333">Painel de depuração da UI embutido (página Html estática, zero dependência externa)</text>
 
   <!-- Card 5 -->
   <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -56,13 +56,42 @@
   <text x="60" y="470" font-size="13" fill="#333">15 regras: nome / email / telefone / IP / URL / UUID / data / número / flutuante / booleano / texto…</text>
 
   <!-- Card 6 -->
-  <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Planejado</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">Export + múltiplos aplicativos + actix</text>
-  <text x="500" y="430" font-size="13" fill="#333">Export M5: Markdown / TypeScript / Swagger (OpenAPI3)</text>
-  <text x="500" y="450" font-size="13" fill="#333">M6 múltiplos aplicativos / múltiplas versões / senha de acesso</text>
-  <text x="500" y="470" font-size="13" fill="#333">Adaptador apidoc-actix (encapsulamento fino, núcleo sem alterações)</text>
+  <rect x="480" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M5</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">Exportação em três formatos (M5)</text>
+  <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI 3.0)</text>
+  <text x="500" y="450" font-size="13" fill="#333">info.version vem do arquivo VERSION (pré-serializado no build)</text>
+  <text x="500" y="470" font-size="13" fill="#333">UI / api.json / exportação compartilham o mesmo modelo de dados</text>
 
-  <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <!-- Card 7: M6a autenticação por senha -->
+  <rect x="40" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M6a</text>
+  <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">Autenticação por senha</text>
+  <text x="60" y="580" font-size="13" fill="#333">GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; troca por token</text>
+  <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock exigem ?token=; ausente/expirado/errado retorna 401</text>
+  <text x="60" y="620" font-size="13" fill="#333">Suíte de criptografia authcode (variante RC4 + checksum md5, MAC em tempo constante)</text>
+  <text x="60" y="640" font-size="13" fill="#333">password / secret_key nunca serializados · senha do aplicativo precede a global</text>
+
+  <!-- Card 8: M6b múltiplos aplicativos e versões -->
+  <rect x="480" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M6b</text>
+  <text x="500" y="556" font-size="17" font-weight="bold" fill="#1e8449">Múltiplos aplicativos e versões</text>
+  <text x="500" y="580" font-size="13" fill="#333">#[apidoc::app("key")] monta endpoints · árvore de configuração ApidocConfig.apps</text>
+  <text x="500" y="600" font-size="13" fill="#333">api.json emite árvore doc.apps (key / title / items recursivos)</text>
+  <text x="500" y="620" font-size="13" fill="#333">Seletor de aplicativo/versão no topo da UI · token armazenado por appKey no localStorage</text>
+  <text x="500" y="640" font-size="13" fill="#333">Endpoints sem app vão para o aplicativo padrão · sem configuração, idêntico ao M5 em nível de byte</text>
+
+  <!-- Card 9: plano v2 -->
+  <rect x="40" y="670" width="860" height="120" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="740" y="660" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="815" y="676" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Planejado</text>
+  <text x="60" y="706" font-size="17" font-weight="bold" fill="#566573">Plano v2</text>
+  <text x="60" y="730" font-size="13" fill="#333">Gerador de código · referência de campos de tabela · links de compartilhamento · eventos de depuração</text>
+  <text x="60" y="750" font-size="13" fill="#333">Adaptadores: axum / actix cobertos (recursos 1:1)</text>
+  <text x="60" y="770" font-size="13" fill="#333">M1–M6 totalmente concluídos (incl. autenticação por senha · múltiplos aplicativos e versões)</text>
+
+  <text x="470" y="805" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

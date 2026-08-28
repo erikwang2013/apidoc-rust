@@ -59,9 +59,14 @@ apidoc-rust 是一个用 Rust 实现的**通用插件式 API 接口文档生成�
 - **actix-web 适配器**（`crates/apidoc-actix`）：与 axum 适配器功能 1:1——`apidoc_routes(ApidocConfig) -> Scope` 挂载 /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export，`cors_layer(CorsConfig)` 放行跨域
 - **UI 共享**：文档 UI（`src/ui.html`）上移至核心 crate，导出 `pub const UI_HTML`，两适配器引用同一份（发布打包安全）
 
-### 规划中
+### 已实现（M6）
 
-- 多应用 / 多版本 / 访问密码
+- **密码鉴权（M6a）**：`AuthConfig { enable, password, secret_key, expire }` 开启后，客户端 `GET /apidoc/auth?password=<md5(密码)>&appKey=<key>` 换取 token；数据路由 `/apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` 需附带 `?token=xxx`，token 缺失/过期/错误返回 401，文档 UI 弹出密码遮罩；token 为 authcode 加密封套签发（Discuz authcode 逐行移植：RC4 变体 + md5 校验和 + 无 padding base64），载荷 `{key: md5(md5(原始密码)), expire: now+expire}`，MAC 比对恒定时间
+- **鉴权安全红线**：`password` / `secret_key` 永不序列化，api.json 输出与未启用鉴权时字节级一致；auth 未启用时 `/apidoc/auth` 返回 404、数据路由直接放行；应用配置独立 password 时应用密码优先于全局密码；`secret_key` 缺省 `"apidoc#hgcode"`（启用且未配时 stderr 警告一次）、`expire` 缺省 86400 秒
+- **多应用多版本（M6b）**：`ApidocConfig.apps: Vec<AppConfig>`（`key` / `title` / `items` 递归子版本 / `password`）配置应用树，`#[apidoc::app("key")]` 把接口挂到指定应用 key，未挂 key 的接口落默认应用；api.json 输出新增 `doc.apps` 树，UI 顶部出现应用/版本选择器，token 按 appKey 分开存 localStorage（不同应用可有独立密码）
+
+### 规划中（v2）
+
 - v2：代码生成器、数据表字段引用、分享链接、调试事件
 
 ## 架构
@@ -85,11 +90,12 @@ apidoc-rust/
 ├── crates/
 │   ├── apidoc/                # 运行时核心（框架无关）
 │   │   ├── src/lib.rs         # 数据模型 + DocRegistry 聚合 + api.json + UI_HTML
+│   │   ├── src/auth.rs        # M6a 密码鉴权（authcode token 签发/校验 + 路由守卫）
 │   │   ├── src/export/        # M5 导出：markdown / typescript / swagger
 │   │   ├── src/ui.html        # 共享文档 UI（核心 crate 导出，两适配器引用）
 │   │   ├── tests/             # 集成测试（宏展开/聚合/序列化/跨 crate）
 │   │   └── examples/demo.rs   # 示例：注解 + 输出 api.json
-│   ├── apidoc-macros/         # proc-macro：19 个属性宏
+│   ├── apidoc-macros/         # proc-macro：20 个属性宏
 │   │   └── src/lib.rs         # 宏定义 + 参数解析 + 编译期校验
 │   ├── apidoc-mock/           # Mock 引擎（fake 规则生成 mock 数据）
 │   ├── apidoc-test-fixtures/  # 跨 crate 注册测试夹具
@@ -196,14 +202,12 @@ fn get_user_detail() -> String {
 
 ```rust
 fn main() {
-    let endpoints = DocRegistry::collect();
-    let doc = ApiDoc {
-        config: ApidocConfig {
-            title: "我的 API".to_string(),
-            description: None,
-        },
-        endpoints,
-    };
+    let doc = DocRegistry::collect_doc(ApidocConfig {
+        title: "我的 API".to_string(),
+        description: None,
+        auth: None,    // M6a 密码鉴权，见「8. 密码鉴权」
+        apps: vec![],  // M6b 多应用多版本，见「9. 多应用与多版本」
+    });
     println!("{}", serde_json::to_string_pretty(&doc).unwrap());
 }
 ```
@@ -309,6 +313,8 @@ async fn main() -> std::io::Result<()> {
             .service(apidoc_routes(ApidocConfig {
                 title: "我的 API".to_string(),
                 description: None,
+                auth: None,    // M6a 密码鉴权，见「8. 密码鉴权」
+                apps: vec![],  // M6b 多应用多版本，见「9. 多应用与多版本」
             }))
             .wrap(cors_layer(CorsConfig::default()))   // M4 在线调试跨域放行
     })
@@ -320,6 +326,70 @@ async fn main() -> std::io::Result<()> {
 
 挂载后即可访问 `/apidoc`（文档 UI）、`/apidoc/api.json`（数据）、`/apidoc/mock`（Mock）、`/apidoc/export`（导出）。CORS 空配置放行字面 `*`（不携带凭据），配置 `allow_origins` 白名单则精确匹配反射 Origin，两种模式均不开凭据。
 
+### 8. 密码鉴权（M6a）
+
+开启 `auth` 后文档需要密码才能访问（对齐上游 apidoc-php 的 Auth.php，token 为 Discuz authcode 加密封套逐行移植）：
+
+```rust
+use apidoc::auth::AuthConfig;
+
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: Some(AuthConfig {
+        enable: true,
+        password: "your-password".to_string(),
+        secret_key: "your-secret-key".to_string(), // 缺省 "apidoc#hgcode"（启用且未配时 stderr 警告一次）
+        expire: 86400,                             // 秒；缺省 86400
+    }),
+    apps: vec![],
+});
+```
+
+**流程**：
+
+1. 客户端 `GET /apidoc/auth?password=<md5(密码)>&appKey=<key>` 换取 token（成功返回 `{"token":"..."}`，密码错误返回 401）；auth 未启用时该路由返回 404，数据路由直接放行
+2. 数据路由 `GET /apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` 需附带 `?token=xxx`（选择了具体应用时同时带 `&appKey=`）；token 缺失/过期/错误返回 401，文档 UI 自动弹出密码遮罩，输入密码后前端本地 md5 提交换取 token
+3. token 载荷为 `{key: md5(md5(原始密码)), expire: now+expire}`，由 `secret_key` 经 authcode 加密（RC4 变体 + md5 校验和 + 无 padding base64，MAC 比对恒定时间防时序侧信道）
+4. `password` / `secret_key` 永不序列化，api.json 输出与未启用鉴权时字节级一致；应用配置了独立 `password` 时应用密码优先于全局密码
+
+### 9. 多应用与多版本（M6b）
+
+一个项目可拆成多个应用/版本，各自独立展示与访问控制：
+
+```rust
+#[apidoc::title("获取用户信息")]
+#[apidoc::app("demo")]   // 挂到 key="demo" 的应用；未挂 app 的接口落默认应用
+fn get_user_info() -> String {
+    unimplemented!()
+}
+```
+
+```rust
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: None,
+    apps: vec![
+        AppConfig {
+            key: "demo".to_string(),
+            title: "演示应用".to_string(),
+            items: vec![AppConfig {
+                key: "v1".to_string(),
+                title: "v1".to_string(),
+                items: vec![],
+                password: None,
+            }],
+            password: None, // 应用独立访问密码，优先于全局密码，永不序列化
+        },
+    ],
+});
+```
+
+- `AppConfig { key, title, items, password }`：`key` 为 `#[apidoc::app("key")]` 注解引用的唯一标识，`items` 递归嵌套子版本/子应用，`password` 为应用独立访问密码（有独立密码时只校验应用 token）
+- api.json 输出新增 `doc.apps` 树（key / title / items / endpoints）；UI 顶部出现应用/版本选择器，切换后按该节点渲染接口并重拉数据，token 按 appKey 分开存 localStorage
+- `app` 注解引用了未在 `apps` 中配置的 key 时 stderr 警告并落默认应用；无 `app` 注解或未配置 `apps` 时输出与 M5 字节级一致
+
 ## 开发计划
 
 | 阶段 | 内容 | 状态 |
@@ -330,7 +400,8 @@ async fn main() -> std::io::Result<()> {
 | M4 | 在线调试 + Mock 引擎 | ✅ 已完成 |
 | M5 | 导出 markdown / typescript / swagger.json（OpenAPI3） | ✅ 已完成 |
 | —  | actix-web 适配器（与 axum 功能 1:1） | ✅ 已完成 |
-| M6 | 密码鉴权、多应用多版本、发布 | 规划中 |
+| M6a | 密码鉴权（authcode token + 密码遮罩，应用密码优先） | ✅ 已完成 |
+| M6b | 多应用多版本（apps 配置树 + app 注解 + UI 选择器） | ✅ 已完成 |
 
 ## 多语言文档
 

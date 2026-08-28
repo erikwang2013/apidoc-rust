@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 400" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 480" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
@@ -7,10 +7,10 @@
       <path d="M0,0 L0,6 L9,3 z" fill="#555"/>
     </marker>
   </defs>
-  <rect width="940" height="400" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="400" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="480" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="480" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust दस्तावेज़ जीवनचक्र (M1–M4 पूर्ण)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust दस्तावेज़ जीवनचक्र (M1–M6 पूर्ण)</text>
 
   <!-- चरण 1 -->
   <circle cx="85" cy="150" r="34" fill="#b58900"/>
@@ -20,67 +20,98 @@
   <text x="85" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">#[apidoc::*]</text>
   <text x="85" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="119" y1="150" x2="181" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="125" y1="150" x2="160" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- चरण 2 -->
-  <circle cx="215" cy="150" r="34" fill="#6c5ce7"/>
-  <text x="215" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">2</text>
-  <text x="215" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">मैक्रो विस्तार</text>
-  <text x="215" y="235" text-anchor="middle" font-size="12" fill="#555">संकलन-समय उत्पन्न</text>
-  <text x="215" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">DocFragmentEntry</text>
-  <text x="215" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="200" cy="150" r="34" fill="#6c5ce7"/>
+  <text x="200" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">2</text>
+  <text x="200" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">मैक्रो विस्तार</text>
+  <text x="200" y="235" text-anchor="middle" font-size="12" fill="#555">संकलन-समय उत्पन्न</text>
+  <text x="200" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">DocFragmentEntry</text>
+  <text x="200" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="249" y1="150" x2="311" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="240" y1="150" x2="275" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- चरण 3 -->
-  <circle cx="345" cy="150" r="34" fill="#f39c12"/>
-  <text x="345" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">3</text>
-  <text x="345" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">linkme पंजीकरण</text>
-  <text x="345" y="235" text-anchor="middle" font-size="12" fill="#555">स्थैतिक वितरित स्लाइस</text>
-  <text x="345" y="252" text-anchor="middle" font-size="12" fill="#555">शून्य रनटाइम लागत</text>
-  <text x="345" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="315" cy="150" r="34" fill="#f39c12"/>
+  <text x="315" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">3</text>
+  <text x="315" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">linkme पंजीकरण</text>
+  <text x="315" y="235" text-anchor="middle" font-size="12" fill="#555">स्थैतिक वितरित स्लाइस</text>
+  <text x="315" y="252" text-anchor="middle" font-size="12" fill="#555">शून्य रनटाइम लागत</text>
+  <text x="315" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="379" y1="150" x2="441" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="355" y1="150" x2="390" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- चरण 4 -->
-  <circle cx="475" cy="150" r="34" fill="#2980b9"/>
-  <text x="475" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">4</text>
-  <text x="475" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">collect() एकत्रीकरण</text>
-  <text x="475" y="235" text-anchor="middle" font-size="12" fill="#555">id से टुकड़े मर्ज</text>
-  <text x="475" y="252" text-anchor="middle" font-size="12" fill="#555">seq से घोषणा क्रम पुनर्स्थापित</text>
-  <text x="475" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="430" cy="150" r="34" fill="#2980b9"/>
+  <text x="430" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">4</text>
+  <text x="430" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">collect() एकत्रीकरण</text>
+  <text x="430" y="235" text-anchor="middle" font-size="12" fill="#555">id से टुकड़े मर्ज</text>
+  <text x="430" y="252" text-anchor="middle" font-size="12" fill="#555">seq से घोषणा क्रम पुनर्स्थापित</text>
+  <text x="430" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
-  <line x1="509" y1="150" x2="571" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="470" y1="150" x2="505" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- चरण 5 -->
-  <circle cx="605" cy="150" r="34" fill="#27ae60"/>
-  <text x="605" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
-  <text x="605" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
-  <text x="605" y="235" text-anchor="middle" font-size="12" fill="#555">एकीकृत दस्तावेज़ डेटा मॉडल</text>
-  <text x="605" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints</text>
-  <text x="605" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <circle cx="545" cy="150" r="34" fill="#27ae60"/>
+  <text x="545" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
+  <text x="545" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
+  <text x="545" y="235" text-anchor="middle" font-size="12" fill="#555">एकीकृत दस्तावेज़ डेटा मॉडल</text>
+  <text x="545" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints + apps</text>
+  <text x="545" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1·M6</text>
 
-  <line x1="639" y1="150" x2="701" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <!-- मोड़ तीर 5 → 6 -->
+  <line x1="579" y1="150" x2="856" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- चरण 6, कार्यान्वित -->
-  <circle cx="735" cy="150" r="34" fill="#16a085"/>
-  <text x="735" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
-  <text x="735" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI डिबग पैनल</text>
-  <text x="735" y="235" text-anchor="middle" font-size="12" fill="#555">कैटलॉग ब्राउज़िंग / ऑनलाइन डिबगिंग</text>
-  <text x="735" y="252" text-anchor="middle" font-size="12" fill="#555">मॉक प्री-फिल / CORS सीधा</text>
-  <text x="735" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+  <!-- चरण 6: M6a प्रमाणीकरण, token प्राप्त करें -->
+  <circle cx="890" cy="310" r="34" fill="#c0392b"/>
+  <text x="890" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
+  <text x="890" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">प्रमाणीकरण: token प्राप्त करें</text>
+  <text x="890" y="395" text-anchor="middle" font-size="12" fill="#555">फ्रंटएंड md5 सबमिट</text>
+  <text x="890" y="412" text-anchor="middle" font-size="12" fill="#555">डेटा रूट को ?token= चाहिए (401)</text>
+  <text x="890" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M6a</text>
 
-  <line x1="769" y1="150" x2="831" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="850" y1="310" x2="815" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- चरण 7, कार्यान्वित -->
-  <circle cx="865" cy="150" r="34" fill="#e67e22"/>
-  <text x="865" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
-  <text x="865" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">डिबग डेटा फ़्लो</text>
-  <text x="865" y="235" text-anchor="middle" font-size="12" fill="#555">CORS सीधा लक्ष्य इंटरफ़ेस</text>
-  <text x="865" y="252" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock → mock</text>
-  <text x="865" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
+  <!-- चरण 7: M6b ऐप अनुसार रेंडर -->
+  <circle cx="775" cy="310" r="34" fill="#34495e"/>
+  <text x="775" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
+  <text x="775" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">ऐप अनुसार रेंडर</text>
+  <text x="775" y="395" text-anchor="middle" font-size="12" fill="#555">UI ऐप/संस्करण चयनकर्ता</text>
+  <text x="775" y="412" text-anchor="middle" font-size="12" fill="#555">token appKey अनुसार संग्रहीत</text>
+  <text x="775" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M6b</text>
+
+  <line x1="735" y1="310" x2="700" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- चरण 8, कार्यान्वित -->
+  <circle cx="660" cy="310" r="34" fill="#16a085"/>
+  <text x="660" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">8</text>
+  <text x="660" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI डिबग पैनल</text>
+  <text x="660" y="395" text-anchor="middle" font-size="12" fill="#555">कैटलॉग ब्राउज़िंग / ऑनलाइन डिबगिंग</text>
+  <text x="660" y="412" text-anchor="middle" font-size="12" fill="#555">मॉक प्री-फिल / CORS सीधा</text>
+  <text x="660" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+
+  <line x1="620" y1="310" x2="585" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- चरण 9, कार्यान्वित -->
+  <circle cx="545" cy="310" r="34" fill="#e67e22"/>
+  <text x="545" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">9</text>
+  <text x="545" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">डिबग डेटा फ़्लो</text>
+  <text x="545" y="395" text-anchor="middle" font-size="12" fill="#555">CORS सीधा लक्ष्य इंटरफ़ेस</text>
+  <text x="545" y="412" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock → mock</text>
+  <text x="545" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
+
+  <line x1="505" y1="310" x2="470" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- चरण 10, कार्यान्वित -->
+  <circle cx="430" cy="310" r="34" fill="#8e44ad"/>
+  <text x="430" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">10</text>
+  <text x="430" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">तीन प्रारूप निर्यात</text>
+  <text x="430" y="395" text-anchor="middle" font-size="12" fill="#555">md / ts / swagger</text>
+  <text x="430" y="412" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">OpenAPI 3.0</text>
+  <text x="430" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M5</text>
 
   <!-- लीजेंड -->
-  <text x="470" y="331" text-anchor="middle" font-size="13" fill="#333">चरण: M1 एनोटेशन / संग्रह / एकत्रीकरण / आउटपुट · M2 अडैप्टर और UI · M4 डिबग पैनल / मॉक / CORS सीधा (सभी कार्यान्वित, कोई नियोजित नहीं)</text>
-  <text x="700" y="355" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <text x="470" y="455" text-anchor="middle" font-size="13" fill="#333">चरण: M1 एनोटेशन / संग्रह / एकत्रीकरण / आउटपुट · M2 अडैप्टर और UI · M4 डिबग पैनल / मॉक / CORS सीधा · M5 तीन प्रारूप निर्यात · M6a पासवर्ड प्रमाणीकरण · M6b एकाधिक ऐप-संस्करण (सभी कार्यान्वित, कोई नियोजित नहीं)</text>
+  <text x="700" y="472" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

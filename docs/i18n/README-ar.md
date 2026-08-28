@@ -59,9 +59,14 @@ apidoc-rust هو **مولّد وثائق API عام وقابل للتوسع عب
 - **محول actix-web** (`crates/apidoc-actix`): وظائف متطابقة 1:1 مع محول axum — `apidoc_routes(ApidocConfig) -> Scope` يركّب /apidoc و/apidoc/api.json و/apidoc/mock و/apidoc/export، و`cors_layer(CorsConfig)` يسمح بالطلبات عبر النطاقات
 - **مشاركة الواجهة**: واجهة الوثائق (`src/ui.html`) نُقلت للأعلى إلى النواة، وتُصدَّر باسم `pub const UI_HTML`، والمحولان يشيران إلى النسخة نفسها (آمن عند نشر الحزمة)
 
-### قيد التخطيط
+### تم تنفيذه (M6)
 
-- تطبيقات متعددة / إصدارات متعددة / كلمة مرور للوصول
+- **مصادقة كلمة المرور (M6a)**: عند تفعيل `AuthConfig { enable, password, secret_key, expire }`، يحصل العميل عبر `GET /apidoc/auth?password=<md5(كلمة المرور)>&appKey=<key>` على token؛ مسارات البيانات `/apidoc/api.json` و`/apidoc/export` و`/apidoc/mock` تتطلب `?token=xxx`، وإذا كان token مفقودًا/منتهيًا/خاطئًا يُعاد 401 مع ظهور قناع كلمة مرور في واجهة الوثائق؛ يُصدر token عبر تشفير authcode (منقول سطرًا بسطر من Discuz authcode: متغير RC4 + مجموع تحقق md5 + base64 بلا padding)، الحمولة `{key: md5(md5(كلمة المرور الأصلية)), expire: now+expire}`، ومقارنة MAC في زمن ثابت
+- **الخطوط الحمراء لأمان المصادقة**: `password` / `secret_key` لا يُسلسلان أبدًا — إخراج api.json مطابق بايتًا ببايت لحالة عدم تفعيل المصادقة؛ عند عدم تفعيل المصادقة يعيد `/apidoc/auth` 404 وتُمرَّر مسارات البيانات مباشرة؛ إذا كان لإعداد تطبيق كلمة مرور مستقلة فلها الأولوية على كلمة المرور العامة؛ القيمة الافتراضية لـ `secret_key` هي `"apidoc#hgcode"` (تحذير stderr لمرة واحدة عند التفعيل دون إعداد)، والقيمة الافتراضية لـ `expire` هي 86400 ثانية
+- **تطبيقات وإصدارات متعددة (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / `items` إصدارات فرعية متكررة / `password`) يهيئ شجرة التطبيقات، و`#[apidoc::app("key")]` يعلّق الواجهات على مفتاح تطبيق معين، والواجهات بدون مفتاح تقع في التطبيق الافتراضي؛ إخراج api.json يضيف شجرة `doc.apps`، ويظهر منتقي تطبيق/إصدار أعلى الواجهة، وتُخزَّن الـ tokens منفصلة في localStorage حسب appKey (يمكن لتطبيقات مختلفة امتلاك كلمات مرور مستقلة)
+
+### قيد التخطيط (v2)
+
 - v2: مولّد كود، مراجع لحقول جداول البيانات، روابط مشاركة، أحداث تصحيح
 
 ## البنية
@@ -85,11 +90,12 @@ apidoc-rust/
 ├── crates/
 │   ├── apidoc/                # النواة في زمن التشغيل (مستقلة عن الإطار)
 │   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json + UI_HTML
+│   │   ├── src/auth.rs        # M6a مصادقة كلمة المرور (إصدار/تحقق token عبر authcode + حارس المسارات)
 │   │   ├── src/export/        # تصدير M5: markdown / typescript / swagger
 │   │   ├── src/ui.html        # واجهة الوثائق المشتركة (تصدّرها النواة، ويشير إليها المحولان)
 │   │   ├── tests/             # اختبارات التكامل (توسيع الماكرو / التجميع / التسلسل / عبر crates)
 │   │   └── examples/demo.rs   # مثال: تعليقات توضيحية + إخراج api.json
-│   ├── apidoc-macros/         # proc-macro: 19 ماكروات سمات
+│   ├── apidoc-macros/         # proc-macro: 20 ماكروات سمات
 │   │   └── src/lib.rs         # تعريفات الماكرو + تحليل المعاملات + التحقق في زمن الترجمة
 │   ├── apidoc-mock/           # محرك Mock (توليد بيانات mock وفق قواعد fake)
 │   ├── apidoc-test-fixtures/  # نماذج اختبار التسجيل عبر crates
@@ -147,14 +153,12 @@ fn get_user_info() -> String {
 
 ```rust
 fn main() {
-    let endpoints = DocRegistry::collect();
-    let doc = ApiDoc {
-        config: ApidocConfig {
-            title: "API الخاص بي".to_string(),
-            description: None,
-        },
-        endpoints,
-    };
+    let doc = DocRegistry::collect_doc(ApidocConfig {
+        title: "API الخاص بي".to_string(),
+        description: None,
+        auth: None,    // M6a مصادقة كلمة المرور، انظر «8. مصادقة كلمة المرور»
+        apps: vec![],  // M6b تطبيقات وإصدارات متعددة، انظر «9. تطبيقات وإصدارات متعددة»
+    });
     println!("{}", serde_json::to_string_pretty(&doc).unwrap());
 }
 ```
@@ -260,6 +264,8 @@ async fn main() -> std::io::Result<()> {
             .service(apidoc_routes(ApidocConfig {
                 title: "API الخاص بي".to_string(),
                 description: None,
+                auth: None,    // M6a مصادقة كلمة المرور، انظر «8. مصادقة كلمة المرور»
+                apps: vec![],  // M6b تطبيقات وإصدارات متعددة، انظر «9. تطبيقات وإصدارات متعددة»
             }))
             .wrap(cors_layer(CorsConfig::default()))   // M4 التصحيح أونلاين عبر النطاقات
     })
@@ -271,6 +277,70 @@ async fn main() -> std::io::Result<()> {
 
 بعد التركيب يمكن الوصول إلى `/apidoc` (واجهة الوثائق) و`/apidoc/api.json` (البيانات) و`/apidoc/mock` (Mock) و`/apidoc/export` (التصدير). إعداد CORS الفارغ يسمح حرفيًا `*` (دون حمل اعتمادات)، وعند إعداد القائمة البيضاء `allow_origins` فيطابق تلقائيًا Origin المُعاد توجيهه بدقة، وكلا الوضعين لا يفتحان الاعتمادات.
 
+### 8. مصادقة كلمة المرور (M6a)
+
+عند تفعيل `auth` تصبح الوثائق بحاجة إلى كلمة مرور للوصول (بما يطابق Auth.php في apidoc-php الأصلي، والـ token هو تشفير Discuz authcode منقول سطرًا بسطر):
+
+```rust
+use apidoc::auth::AuthConfig;
+
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "API الخاص بي".to_string(),
+    description: None,
+    auth: Some(AuthConfig {
+        enable: true,
+        password: "your-password".to_string(),
+        secret_key: "your-secret-key".to_string(), // الافتراضي "apidoc#hgcode" (تحذير stderr لمرة واحدة عند التفعيل دون إعداد)
+        expire: 86400,                             // بالثواني؛ الافتراضي 86400
+    }),
+    apps: vec![],
+});
+```
+
+**الخطوات**:
+
+1. يستدعي العميل `GET /apidoc/auth?password=<md5(كلمة المرور)>&appKey=<key>` ليحصل على token (عند النجاح يُعاد `{"token":"..."}`، وعند خطأ كلمة المرور يُعاد 401)؛ عند عدم تفعيل المصادقة يعيد هذا المسار 404 وتُمرَّر مسارات البيانات مباشرة
+2. مسارات البيانات `GET /apidoc/api.json` و`/apidoc/export` و`/apidoc/mock` تتطلب `?token=xxx` (مع `&appKey=` أيضًا عند اختيار تطبيق معين)؛ وإذا كان token مفقودًا/منتهيًا/خاطئًا يُعاد 401، وتفتح واجهة الوثائق تلقائيًا قناع كلمة المرور، وبعد إدخال كلمة المرور يحوّلها الطرف الأمامي محليًا إلى md5 ويستبدلها بالـ token
+3. حمولة الـ token هي `{key: md5(md5(كلمة المرور الأصلية)), expire: now+expire}`، مشفرة عبر `secret_key` بـ authcode (متغير RC4 + مجموع تحقق md5 + base64 بلا padding، ومقارنة MAC في زمن ثابت لمنع هجمات التوقيت الجانبية)
+4. `password` / `secret_key` لا يُسلسلان أبدًا — إخراج api.json مطابق بايتًا ببايت لحالة عدم تفعيل المصادقة؛ وإذا كان لإعداد تطبيق `password` مستقلة فلها الأولوية على كلمة المرور العامة
+
+### 9. تطبيقات وإصدارات متعددة (M6b)
+
+يمكن تقسيم المشروع إلى تطبيقات/إصدارات متعددة، لكل منها عرض وتحكم بالوصول مستقل:
+
+```rust
+#[apidoc::title("获取用户信息")]
+#[apidoc::app("demo")]   // تُعلق على التطبيق ذي key="demo"؛ الواجهات بدون app تقع في التطبيق الافتراضي
+fn get_user_info() -> String {
+    unimplemented!()
+}
+```
+
+```rust
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "API الخاص بي".to_string(),
+    description: None,
+    auth: None,
+    apps: vec![
+        AppConfig {
+            key: "demo".to_string(),
+            title: "演示应用".to_string(),
+            items: vec![AppConfig {
+                key: "v1".to_string(),
+                title: "v1".to_string(),
+                items: vec![],
+                password: None,
+            }],
+            password: None, // كلمة مرور وصول مستقلة للتطبيق، لها الأولوية على العامة، لا تُسلسل أبدًا
+        },
+    ],
+});
+```
+
+- `AppConfig { key, title, items, password }`: `key` هو المعرّف الفريد الذي تشير إليه تعليقة `#[apidoc::app("key")]`، و`items` يتداخل بشكل متكرر لإصدارات/تطبيقات فرعية، و`password` هي كلمة مرور الوصول المستقلة للتطبيق (عند وجود كلمة مرور مستقلة يُتحقق من token التطبيق فقط)
+- إخراج api.json يضيف شجرة `doc.apps` (key / title / items / endpoints)؛ يظهر منتقي تطبيق/إصدار أعلى الواجهة — عند التبديل تُعرض واجهات ذلك العقدة وتُعاد جلب البيانات، وتُخزَّن الـ tokens منفصلة في localStorage حسب appKey
+- عندما تشير تعليقة `app` إلى مفتاح غير مهيأ في `apps` يُصدر تحذير stderr وتقع الواجهة في التطبيق الافتراضي؛ بدون تعليقات `app` أو بدون تهيئة `apps` يكون الإخراج مطابقًا بايتًا ببايت لـ M5
+
 ## خطة التطوير
 
 | المرحلة | المحتوى | الحالة |
@@ -281,7 +351,8 @@ async fn main() -> std::io::Result<()> {
 | M4 | تصحيح أونلاين + محرك Mock | ✅ مكتمل |
 | M5 | تصدير markdown / typescript / swagger.json (OpenAPI3) | ✅ مكتمل |
 | —  | محول actix-web (وظائف متطابقة 1:1 مع axum) | ✅ مكتمل |
-| M6 | مصادقة بكلمة مرور، تطبيقات وإصدارات متعددة، إصدار عام | قيد التخطيط |
+| M6a | مصادقة كلمة المرور (token authcode + قناع كلمة المرور، كلمة مرور التطبيق لها الأولوية) | ✅ مكتمل |
+| M6b | تطبيقات وإصدارات متعددة (شجرة إعداد apps + تعليقة app + منتقي الواجهة) | ✅ مكتمل |
 
 ## وثائق متعددة اللغات
 

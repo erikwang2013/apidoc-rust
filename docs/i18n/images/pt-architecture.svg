@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 600" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 720" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="600" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="600" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="720" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="720" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Arquitetura geral do apidoc-rust (M4 concluído)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Arquitetura geral do apidoc-rust (M6 concluído)</text>
 
   <!-- Camada de código do usuário -->
   <rect x="120" y="62" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
@@ -16,10 +16,10 @@
 
   <!-- Tempo de compilação -->
   <rect x="120" y="138" width="700" height="72" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
-  <rect x="730" y="144" width="76" height="22" rx="11" fill="#6c5ce7"/>
-  <text x="768" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1 + M3</text>
+  <rect x="724" y="144" width="96" height="22" rx="11" fill="#6c5ce7"/>
+  <text x="772" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1+M3+M6</text>
   <text x="140" y="164" font-size="17" font-weight="bold" fill="#3d2f9e">Tempo de compilação · apidoc-macros (proc-macro)</text>
-  <text x="140" y="188" font-size="12" fill="#333">19 macros de atributo: 7 básicas de M1 (title/desc/method/url/param/query/returned) + 12 de extensão de M3 (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref)</text>
+  <text x="140" y="188" font-size="12" fill="#333">20 macros de atributo: 7 básicas de M1 (title/desc/method/url/param/query/returned) + 12 de extensão de M3 (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) + montagem app do M6</text>
   <text x="140" y="204" font-size="12" fill="#555">Todas com validação de parâmetros em tempo de compilação (url começando com /, method em lista de permissão, param name obrigatório); anotações inválidas geram erro direto na compilação</text>
 
   <!-- Registro -->
@@ -31,44 +31,53 @@
 
   <!-- Núcleo em tempo de execução -->
   <rect x="120" y="280" width="700" height="58" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
-  <rect x="730" y="285" width="62" height="20" rx="10" fill="#2980b9"/>
-  <text x="761" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <rect x="730" y="285" width="64" height="20" rx="10" fill="#2980b9"/>
+  <text x="762" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1+M6</text>
   <text x="140" y="308" font-size="17" font-weight="bold" fill="#1a5276">Núcleo em tempo de execução · apidoc (independente de framework)</text>
   <text x="140" y="330" font-size="13" fill="#333">DocRegistry::collect() mescla fragmentos por id e restaura a ordem de declaração por seq → modelo de dados ApiDoc</text>
-  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serialização serde; compartilhado pela UI e exportação)</text>
+  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serialização serde; compartilhado pela UI e exportação; M6b inclui árvore doc.apps) → exportação: md / ts / swagger (OpenAPI3)</text>
+
+  <!-- Autenticação (M6a) -->
+  <rect x="120" y="350" width="700" height="40" rx="8" fill="#fdedec" stroke="#c0392b" stroke-width="2"/>
+  <rect x="730" y="354" width="62" height="20" rx="10" fill="#c0392b"/>
+  <text x="761" y="368" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M6a</text>
+  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; troca por token (suíte de criptografia authcode; password/secret_key nunca serializados)</text>
 
   <!-- Camada de adaptadores, concluída -->
-  <rect x="120" y="350" width="700" height="62" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="656" y="355" width="76" height="22" rx="11" fill="#27ae60"/>
-  <text x="694" y="370" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2 + M4</text>
-  <text x="140" y="376" font-size="16" font-weight="bold" fill="#1e8449">Camada de adaptadores (concluída) · apidoc-axum: montagem de rotas + CORS, núcleo sem alterações</text>
-  <text x="140" y="398" font-size="13" fill="#333">/apidoc (painel de depuração da UI) · /apidoc/api.json (dados da documentação) · /apidoc/mock (mecanismo Mock)</text>
-  <!-- actix planejado -->
-  <rect x="656" y="384" width="148" height="24" rx="6" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="730" y="400" text-anchor="middle" font-size="12" fill="#566573">apidoc-actix (planejado)</text>
+  <rect x="120" y="402" width="700" height="76" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="708" y="407" width="112" height="22" rx="11" fill="#27ae60"/>
+  <text x="764" y="422" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2+M4+M5+M6</text>
+  <text x="140" y="428" font-size="16" font-weight="bold" fill="#1e8449">Camada de adaptadores (concluída) · apidoc-axum + apidoc-actix: montagem de rotas + CORS</text>
+  <!-- actix concluído -->
+  <rect x="656" y="434" width="148" height="24" rx="6" fill="#27ae60" stroke="#27ae60" stroke-width="2"/>
+  <text x="730" y="450" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">apidoc-actix (concluído)</text>
+  <text x="140" y="452" font-size="13" fill="#333">/apidoc (UI) · /apidoc/api.json · /apidoc/mock · /apidoc/export · /apidoc/auth (M6a troca por token)</text>
+  <text x="140" y="470" font-size="13" fill="#333">api.json / export / mock exigem ?token=; ausente/expirado/errado retorna 401; sem auth 404, rotas de dados liberadas</text>
 
   <!-- Camada de apresentação, concluída -->
-  <rect x="120" y="424" width="700" height="50" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="730" y="429" width="62" height="20" rx="10" fill="#27ae60"/>
-  <text x="761" y="443" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
-  <text x="140" y="449" font-size="16" font-weight="bold" fill="#1e8449">Camada de apresentação (concluída) · painel de depuração da UI de documentação (Html integrado, zero dependência externa)</text>
-  <text x="140" y="467" font-size="13" fill="#333">Navegação de diretórios / depuração on-line (CORS direto) / pré-preenchimento Mock</text>
+  <rect x="120" y="490" width="700" height="64" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="708" y="495" width="84" height="20" rx="10" fill="#27ae60"/>
+  <text x="750" y="509" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
+  <text x="140" y="515" font-size="16" font-weight="bold" fill="#1e8449">Camada de apresentação (concluída) · painel de depuração da UI de documentação (Html integrado, zero dependência externa)</text>
+  <text x="140" y="537" font-size="13" fill="#333">Navegação de diretórios / depuração on-line (CORS direto) / pré-preenchimento Mock</text>
+  <text x="140" y="553" font-size="13" fill="#333">M6: máscara de senha (md5 no frontend para trocar por token) · seletor de aplicativo/versão · token armazenado por appKey no localStorage</text>
 
   <!-- Fluxo de dados -->
-  <rect x="120" y="486" width="700" height="44" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
-  <rect x="730" y="491" width="62" height="20" rx="10" fill="#b58900"/>
-  <text x="761" y="505" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
-  <text x="140" y="508" font-size="13" fill="#333" font-family="monospace">Navegador → /apidoc (painel de depuração) → conexão CORS direta → endpoint de destino (requisição real)</text>
-  <text x="140" y="524" font-size="13" fill="#333" font-family="monospace">Navegador → /apidoc/mock → dados Mock (crate fake · 15 regras)</text>
+  <rect x="120" y="566" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <rect x="708" y="571" width="84" height="20" rx="10" fill="#b58900"/>
+  <text x="750" y="585" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
+  <text x="140" y="588" font-size="13" fill="#333" font-family="monospace">Navegador → /apidoc (painel de depuração) → conexão CORS direta → endpoint de destino (requisição real)</text>
+  <text x="140" y="606" font-size="13" fill="#333" font-family="monospace">Navegador → /apidoc/mock → dados Mock (crate fake · 15 regras)</text>
+  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">Navegador → /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token; rotas de dados acessadas com ?token=</text>
 
   <!-- workspace -->
-  <rect x="120" y="542" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
-  <text x="470" y="560" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (núcleo) · apidoc-macros (macros) · apidoc-axum (adaptador) · apidoc-mock (Mock·fake) · apidoc-test-fixtures (fixtures de teste)</text>
+  <rect x="120" y="642" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
+  <text x="470" y="660" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (núcleo·auth.rs) · macros (macros) · axum (adaptador) · actix (adaptador) · mock (Mock) · test-fixtures (fixtures de teste)</text>
 
   <!-- Legenda -->
-  <rect x="120" y="578" width="24" height="12" fill="#27ae60"/>
-  <text x="152" y="589" font-size="13" fill="#333">Implementado (M1–M4)</text>
-  <rect x="310" y="578" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="342" y="589" font-size="13" fill="#333">Planejado (export M5 / múltiplos aplicativos e versões M6 / actix)</text>
-  <text x="700" y="589" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <rect x="120" y="678" width="24" height="12" fill="#27ae60"/>
+  <text x="152" y="689" font-size="13" fill="#333">Implementado (M1–M6)</text>
+  <rect x="310" y="678" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="342" y="689" font-size="13" fill="#333">Planejado (v2: gerador de código / links de compartilhamento etc.)</text>
+  <text x="700" y="689" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

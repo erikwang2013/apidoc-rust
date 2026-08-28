@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 560" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 815" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="560" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="560" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="815" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="815" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust প্রজেক্ট কার্যকারিতা (M1–M4 সম্পন্ন)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust প্রজেক্ট কার্যকারিতা (M1–M6 সম্পন্ন)</text>
 
   <!-- কার্ড 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -41,10 +41,10 @@
   <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M2</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">axum অ্যাডাপ্টার + ডকুমেন্ট UI</text>
+  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">axum / actix অ্যাডাপ্টার + ডকুমেন্ট UI</text>
   <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (UI) · /apidoc/api.json · /apidoc/mock</text>
-  <text x="500" y="300" font-size="13" fill="#333">এমবেডেড ডকুমেন্ট UI ডিবাগ প্যানেল (Html স্ট্যাটিক পেজ, বাহ্যিক নির্ভরতা শূন্য)</text>
-  <text x="500" y="320" font-size="13" fill="#333">CORS লেয়ার সাপোর্ট: ব্রাউজার ক্রস-অরিজিনে সরাসরি টার্গেট ইন্টারফেসে সংযোগ</text>
+  <text x="500" y="300" font-size="13" fill="#333">apidoc-actix: পাতলা র্যাপার, /apidoc/export (M5) সহ ৪টি রুট</text>
+  <text x="500" y="320" font-size="13" fill="#333">এমবেডেড ডকুমেন্ট UI ডিবাগ প্যানেল (Html স্ট্যাটিক পেজ, বাহ্যিক নির্ভরতা শূন্য)</text>
 
   <!-- কার্ড 5 -->
   <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -56,13 +56,42 @@
   <text x="60" y="470" font-size="13" fill="#333">১৫টি রুল: নাম/ইমেইল/ফোন/IP/URL/UUID/তারিখ/সংখ্যা/ফ্লোট/বুলিয়ান/টেক্সট…</text>
 
   <!-- কার্ড 6 -->
-  <rect x="480" y="370" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="740" y="360" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">পরিকল্পনাধীন</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#566573">এক্সপোর্ট + মাল্টি-অ্যাপ + actix</text>
-  <text x="500" y="430" font-size="13" fill="#333">M5 এক্সপোর্ট: Markdown / TypeScript / Swagger(OpenAPI3)</text>
-  <text x="500" y="450" font-size="13" fill="#333">M6 মাল্টি-অ্যাপ / মাল্টি-ভার্সন / অ্যাক্সেস পাসওয়ার্ড</text>
-  <text x="500" y="470" font-size="13" fill="#333">apidoc-actix অ্যাডাপ্টার (পাতলা র্যাপার, কোর অপরিবর্তিত)</text>
+  <rect x="480" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M5</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">তিন ফরম্যাটে এক্সপোর্ট (M5)</text>
+  <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI 3.0)</text>
+  <text x="500" y="450" font-size="13" fill="#333">info.version VERSION ফাইল থেকে (বিল্ড-টাইম প্রি-সিরিয়ালাইজেশন)</text>
+  <text x="500" y="470" font-size="13" fill="#333">UI / api.json / এক্সপোর্ট একই ডেটা মডেল শেয়ার করে</text>
 
-  <text x="470" y="530" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <!-- কার্ড 7: M6a পাসওয়ার্ড অথেনটিকেশন -->
+  <rect x="40" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M6a</text>
+  <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">পাসওয়ার্ড অথেনটিকেশন</text>
+  <text x="60" y="580" font-size="13" fill="#333">GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; দিয়ে token নিন</text>
+  <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock-এর জন্য ?token= আবশ্যক; অনুপস্থিত/মেয়াদোত্তীর্ণ/ভুল → 401</text>
+  <text x="60" y="620" font-size="13" fill="#333">authcode এনক্রিপশন (RC4 ভ্যারিয়েন্ট + md5 চেকসাম, MAC কনস্ট্যান্ট-টাইম)</text>
+  <text x="60" y="640" font-size="13" fill="#333">password / secret_key কখনো সিরিয়ালাইজ হয় না · অ্যাপ পাসওয়ার্ড গ্লোবালের চেয়ে প্রাধান্য পায়</text>
+
+  <!-- কার্ড 8: M6b মাল্টি-অ্যাপ মাল্টি-ভার্সন -->
+  <rect x="480" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M6b</text>
+  <text x="500" y="556" font-size="17" font-weight="bold" fill="#1e8449">মাল্টি-অ্যাপ মাল্টি-ভার্সন</text>
+  <text x="500" y="580" font-size="13" fill="#333">#[apidoc::app("key")] ইন্টারফেস মাউন্ট করে · ApidocConfig.apps কনফিগ ট্রি</text>
+  <text x="500" y="600" font-size="13" fill="#333">api.json-এ doc.apps ট্রি (key / title / items রিকার্সিভ)</text>
+  <text x="500" y="620" font-size="13" fill="#333">UI-র উপরে অ্যাপ/ভার্সন সিলেক্টর · token প্রতি appKey-তে localStorage-এ</text>
+  <text x="500" y="640" font-size="13" fill="#333">অ্যাপ ছাড়া ইন্টারফেস ডিফল্ট অ্যাপে পড়ে · কনফিগ না থাকলে M5-এর সাথে বাইট-মিল</text>
+
+  <!-- কার্ড 9: v2 পরিকল্পনা -->
+  <rect x="40" y="670" width="860" height="120" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="740" y="660" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="815" y="676" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">পরিকল্পনাধীন</text>
+  <text x="60" y="706" font-size="17" font-weight="bold" fill="#566573">v2 পরিকল্পনা</text>
+  <text x="60" y="730" font-size="13" fill="#333">কোড জেনারেটর · টেবিল ফিল্ড রেফারেন্স · শেয়ার লিংক · ডিবাগ ইভেন্ট</text>
+  <text x="60" y="750" font-size="13" fill="#333">অ্যাডাপ্টার: axum / actix দুটোই কভার্ড (ফিচার 1:1)</text>
+  <text x="60" y="770" font-size="13" fill="#333">M1–M6 সম্পূর্ণ (পাসওয়ার্ড অথেনটিকেশন · মাল্টি-অ্যাপ মাল্টি-ভার্সনসহ)</text>
+
+  <text x="470" y="805" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

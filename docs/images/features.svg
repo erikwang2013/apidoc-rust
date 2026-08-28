@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 680" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 815" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="680" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="680" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="815" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="815" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 项目功能（M1–M5 已完成）</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 项目功能（M1–M6 已完成）</text>
 
   <!-- 卡片 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -64,14 +64,34 @@
   <text x="500" y="450" font-size="13" fill="#333">info.version 取自 VERSION 文件（构建期预序列化）</text>
   <text x="500" y="470" font-size="13" fill="#333">UI / api.json / 导出共用同一数据模型</text>
 
-  <!-- 卡片 7 -->
-  <rect x="40" y="520" width="420" height="130" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="300" y="510" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">规划中</text>
-  <text x="60" y="556" font-size="17" font-weight="bold" fill="#566573">M6 多应用多版本 + v2 规划</text>
-  <text x="60" y="580" font-size="13" fill="#333">M6：多应用 / 多版本 / 访问密码</text>
-  <text x="60" y="600" font-size="13" fill="#333">v2：规划中（尚未定稿）</text>
-  <text x="60" y="620" font-size="13" fill="#333">适配器：axum / actix 均已覆盖</text>
+  <!-- 卡片 7：M6a 密码鉴权 -->
+  <rect x="40" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M6a</text>
+  <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">密码鉴权</text>
+  <text x="60" y="580" font-size="13" fill="#333">GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; 换 token</text>
+  <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock 需带 ?token=，缺失/过期/错误返回 401</text>
+  <text x="60" y="620" font-size="13" fill="#333">authcode 加密封套签发（RC4 变体 + md5 校验和，MAC 恒定时间）</text>
+  <text x="60" y="640" font-size="13" fill="#333">password / secret_key 永不序列化 · 应用密码优先于全局</text>
 
-  <text x="470" y="660" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <!-- 卡片 8：M6b 多应用多版本 -->
+  <rect x="480" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M6b</text>
+  <text x="500" y="556" font-size="17" font-weight="bold" fill="#1e8449">多应用多版本</text>
+  <text x="500" y="580" font-size="13" fill="#333">#[apidoc::app("key")] 挂载接口 · ApidocConfig.apps 配置树</text>
+  <text x="500" y="600" font-size="13" fill="#333">api.json 输出 doc.apps 树（key / title / items 递归）</text>
+  <text x="500" y="620" font-size="13" fill="#333">UI 顶部应用/版本选择器 · token 按 appKey 分存 localStorage</text>
+  <text x="500" y="640" font-size="13" fill="#333">未挂 app 的接口落默认应用 · 未配置时与 M5 字节级一致</text>
+
+  <!-- 卡片 9：v2 规划 -->
+  <rect x="40" y="670" width="860" height="120" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <rect x="740" y="660" width="150" height="24" rx="12" fill="#95a5a6"/>
+  <text x="815" y="676" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">规划中</text>
+  <text x="60" y="706" font-size="17" font-weight="bold" fill="#566573">v2 规划</text>
+  <text x="60" y="730" font-size="13" fill="#333">代码生成器 · 数据表字段引用 · 分享链接 · 调试事件</text>
+  <text x="60" y="750" font-size="13" fill="#333">适配器：axum / actix 均已覆盖（功能 1:1）</text>
+  <text x="60" y="770" font-size="13" fill="#333">M1–M6 已全部完成（含密码鉴权 · 多应用多版本）</text>
+
+  <text x="470" y="805" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

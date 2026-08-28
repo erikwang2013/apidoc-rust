@@ -59,9 +59,14 @@ apidoc-rust は Rust で実装された**汎用プラグイン型 API インタ�
 - **actix-web アダプタ**（`crates/apidoc-actix`）：axum アダプタと機能 1:1——`apidoc_routes(ApidocConfig) -> Scope` で /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export をマウント、`cors_layer(CorsConfig)` がクロスオリジンを許可
 - **UI 共有**：ドキュメント UI（`src/ui.html`）をコア crate に移動し、`pub const UI_HTML` としてエクスポート、両アダプタは同一のものを参照（リリースパッケージングでも安全）
 
-### 計画中
+### 実装済み（M6）
 
-- 複数アプリ / 複数バージョン / アクセスパスワード
+- **パスワード認証（M6a）**：`AuthConfig { enable, password, secret_key, expire }` を有効にすると、クライアントは `GET /apidoc/auth?password=<md5(パスワード)>&appKey=<key>` で token を取得；データルート `/apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` には `?token=xxx` の添付が必要で、token の欠落/期限切れ/誤りは 401 を返し、ドキュメント UI はパスワード入力マスクを表示；token は authcode の暗号化スイートで署名（Discuz authcode を逐行移植：RC4 変種 + md5 チェックサム + padding なし base64）、ペイロードは `{key: md5(md5(元パスワード)), expire: now+expire}`、MAC 比較は定数時間
+- **認証の安全ライン**：`password` / `secret_key` は決してシリアライズされず、api.json の出力は認証を無効にした場合とバイトレベルで一致；auth が無効のとき `/apidoc/auth` は 404 を返し、データルートは直接通過；アプリ設定の独立 password がある場合はアプリのパスワードがグローバルのパスワードより優先；`secret_key` のデフォルトは `"apidoc#hgcode"`（有効かつ未設定のとき stderr に警告が 1 回）、`expire` のデフォルトは 86400 秒
+- **複数アプリ・複数バージョン（M6b）**：`ApidocConfig.apps: Vec<AppConfig>`（`key` / `title` / `items` 再帰サブバージョン / `password`）でアプリツリーを設定、`#[apidoc::app("key")]` でインターフェースを指定のアプリ key に接続、key 未指定のインターフェースはデフォルトアプリに落ちる；api.json の出力に `doc.apps` ツリーが追加され、UI 上部にアプリ/バージョン選択セレクタが出現、token は appKey ごとに localStorage を分けて保存（アプリごとに独立したパスワードを持てる）
+
+### 計画中（v2）
+
 - v2：コードジェネレータ、データテーブルフィールド参照、共有リンク、デバッグイベント
 
 ## アーキテクチャ
@@ -85,11 +90,12 @@ apidoc-rust/
 ├── crates/
 │   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
 │   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML
+│   │   ├── src/auth.rs        # M6a パスワード認証（authcode token 発行/検証 + ルートガード）
 │   │   ├── src/export/        # M5 エクスポート：markdown / typescript / swagger
 │   │   ├── src/ui.html        # 共有ドキュメント UI（コア crate がエクスポート、両アダプタが参照）
 │   │   ├── tests/             # 統合テスト（マクロ展開/集約/シリアライズ/クロス crate）
 │   │   └── examples/demo.rs   # サンプル：注釈 + api.json 出力
-│   ├── apidoc-macros/         # proc-macro：19 つの属性マクロ
+│   ├── apidoc-macros/         # proc-macro：20 つの属性マクロ
 │   │   └── src/lib.rs         # マクロ定義 + パラメータ解析 + コンパイル期検証
 │   ├── apidoc-mock/           # Mock エンジン（fake ルールで mock データ生成）
 │   ├── apidoc-test-fixtures/  # クロス crate 登録テストフィクスチャ
@@ -147,14 +153,12 @@ fn get_user_info() -> String {
 
 ```rust
 fn main() {
-    let endpoints = DocRegistry::collect();
-    let doc = ApiDoc {
-        config: ApidocConfig {
-            title: "我的 API".to_string(),
-            description: None,
-        },
-        endpoints,
-    };
+    let doc = DocRegistry::collect_doc(ApidocConfig {
+        title: "我的 API".to_string(),
+        description: None,
+        auth: None,    // M6a パスワード認証、詳細は「8. パスワード認証」
+        apps: vec![],  // M6b 複数アプリ・複数バージョン、詳細は「9. 複数アプリ・複数バージョン」
+    });
     println!("{}", serde_json::to_string_pretty(&doc).unwrap());
 }
 ```
@@ -260,6 +264,8 @@ async fn main() -> std::io::Result<()> {
             .service(apidoc_routes(ApidocConfig {
                 title: "我的 API".to_string(),
                 description: None,
+                auth: None,    // M6a パスワード認証、詳細は「8. パスワード認証」
+                apps: vec![],  // M6b 複数アプリ・複数バージョン、詳細は「9. 複数アプリ・複数バージョン」
             }))
             .wrap(cors_layer(CorsConfig::default()))   // M4 在线调试跨域放行
     })
@@ -271,6 +277,70 @@ async fn main() -> std::io::Result<()> {
 
 マウント後は `/apidoc`（ドキュメント UI）、`/apidoc/api.json`（データ）、`/apidoc/mock`（Mock）、`/apidoc/export`（エクスポート）にアクセスできます。CORS 空設定はリテラル `*` を許可し（クレデンシャルなし）、`allow_origins` ホワイトリストを設定するとリフレクトされた Origin を正確に一致させます。どちらのモードもクレデンシャルは有効にしません。
 
+### 8. パスワード認証（M6a）
+
+`auth` を有効にすると、ドキュメントにパスワードが必要になります（上流 apidoc-php の Auth.php に合わせ、token は Discuz authcode の暗号化スイートを逐行移植）：
+
+```rust
+use apidoc::auth::AuthConfig;
+
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: Some(AuthConfig {
+        enable: true,
+        password: "your-password".to_string(),
+        secret_key: "your-secret-key".to_string(), // デフォルト "apidoc#hgcode"（有効かつ未設定のとき stderr に警告が 1 回）
+        expire: 86400,                             // 秒；デフォルト 86400
+    }),
+    apps: vec![],
+});
+```
+
+**フロー**：
+
+1. クライアントが `GET /apidoc/auth?password=<md5(パスワード)>&appKey=<key>` で token を取得（成功すると `{"token":"..."}` を返し、パスワード誤りは 401）；auth が無効のときこのルートは 404 を返し、データルートは直接通過
+2. データルート `GET /apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` には `?token=xxx` の添付が必要（特定のアプリを選択した場合は同時に `&appKey=` を付ける）；token の欠落/期限切れ/誤りは 401 を返し、ドキュメント UI が自動的にパスワード入力マスクを表示、パスワード入力後にフロントエンドで md5 化して提出し token を取得
+3. token のペイロードは `{key: md5(md5(元パスワード)), expire: now+expire}`、`secret_key` により authcode で暗号化（RC4 変種 + md5 チェックサム + padding なし base64、MAC 比較は定数時間でタイミングサイドチャネルを防止）
+4. `password` / `secret_key` は決してシリアライズされず、api.json の出力は認証を無効にした場合とバイトレベルで一致；アプリに独立した `password` を設定した場合はアプリのパスワードがグローバルのパスワードより優先
+
+### 9. 複数アプリ・複数バージョン（M6b）
+
+1 つのプロジェクトを複数のアプリ/バージョンに分割でき、それぞれ独立して表示・アクセス制御できます：
+
+```rust
+#[apidoc::title("获取用户信息")]
+#[apidoc::app("demo")]   // key="demo" のアプリに接続；app 未指定のインターフェースはデフォルトアプリに落ちる
+fn get_user_info() -> String {
+    unimplemented!()
+}
+```
+
+```rust
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: None,
+    apps: vec![
+        AppConfig {
+            key: "demo".to_string(),
+            title: "演示应用".to_string(),
+            items: vec![AppConfig {
+                key: "v1".to_string(),
+                title: "v1".to_string(),
+                items: vec![],
+                password: None,
+            }],
+            password: None, // アプリ独立のアクセスパスワード、グローバルのパスワードより優先、決してシリアライズされない
+        },
+    ],
+});
+```
+
+- `AppConfig { key, title, items, password }`：`key` は `#[apidoc::app("key")]` アノテーションが参照する一意の識別子、`items` は子バージョン/子アプリを再帰的にネスト、`password` はアプリ独立のアクセスパスワード（独立パスワードがあるときはアプリ token のみ検証）
+- api.json の出力に `doc.apps` ツリー（key / title / items / endpoints）が追加；UI 上部にアプリ/バージョン選択セレクタが出現し、切り替えるとそのノードでインターフェースを描画してデータを再取得、token は appKey ごとに localStorage を分けて保存
+- `app` アノテーションが `apps` に設定されていない key を参照した場合は stderr に警告しデフォルトアプリに落ちる；`app` アノテーションなし、または `apps` 未設定の場合は M5 とバイトレベルで一致する出力
+
 ## 開発ロードマップ
 
 | フェーズ | 内容 | ステータス |
@@ -281,7 +351,8 @@ async fn main() -> std::io::Result<()> {
 | M4 | オンラインデバッグ + Mock エンジン | ✅ 完了 |
 | M5 | markdown / typescript / swagger.json（OpenAPI3）のエクスポート | ✅ 完了 |
 | —  | actix-web アダプタ（axum と機能 1:1） | ✅ 完了 |
-| M6 | パスワード認証、複数アプリ・複数バージョン、リリース | 計画中 |
+| M6a | パスワード認証（authcode token + パスワードマスク、アプリのパスワード優先） | ✅ 完了 |
+| M6b | 複数アプリ・複数バージョン（apps 設定ツリー + app アノテーション + UI セレクタ） | ✅ 完了 |
 
 ## 多言語ドキュメント
 

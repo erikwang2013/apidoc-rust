@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 600" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 720" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="600" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="600" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="720" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="720" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Arsitektur Umum apidoc-rust (M4 Selesai)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Arsitektur Umum apidoc-rust (M6 Selesai)</text>
 
   <!-- Lapisan kode pengguna -->
   <rect x="120" y="62" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
@@ -16,10 +16,10 @@
 
   <!-- Waktu kompilasi -->
   <rect x="120" y="138" width="700" height="72" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
-  <rect x="730" y="144" width="76" height="22" rx="11" fill="#6c5ce7"/>
-  <text x="768" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1 + M3</text>
+  <rect x="724" y="144" width="96" height="22" rx="11" fill="#6c5ce7"/>
+  <text x="772" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1+M3+M6</text>
   <text x="140" y="164" font-size="17" font-weight="bold" fill="#3d2f9e">Waktu Kompilasi · apidoc-macros (proc-macro)</text>
-  <text x="140" y="188" font-size="12" fill="#333">19 makro atribut: 7 dasar dari M1 (title/desc/method/url/param/query/returned) + 12 perluasan dari M3 (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref)</text>
+  <text x="140" y="188" font-size="12" fill="#333">20 makro atribut: 7 dasar dari M1 (title/desc/method/url/param/query/returned) + 12 perluasan dari M3 (tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) + pemasangan app M6</text>
   <text x="140" y="204" font-size="12" fill="#555">Semua menyertakan validasi parameter saat kompilasi (url diawali /, whitelist method, param name wajib), anotasi tidak valid langsung error kompilasi</text>
 
   <!-- Registrasi -->
@@ -31,44 +31,53 @@
 
   <!-- Inti runtime -->
   <rect x="120" y="280" width="700" height="58" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
-  <rect x="730" y="285" width="62" height="20" rx="10" fill="#2980b9"/>
-  <text x="761" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <rect x="730" y="285" width="64" height="20" rx="10" fill="#2980b9"/>
+  <text x="762" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1+M6</text>
   <text x="140" y="308" font-size="17" font-weight="bold" fill="#1a5276">Inti Runtime · apidoc (independen kerangka kerja)</text>
   <text x="140" y="330" font-size="13" fill="#333">DocRegistry::collect() menggabungkan fragmen berdasarkan id, mengembalikan urutan deklarasi berdasarkan seq → model data ApiDoc</text>
-  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serialisasi serde, dipakai bersama UI dan ekspor)</text>
+  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serialisasi serde, dipakai bersama UI dan ekspor; berisi pohon doc.apps di M6b) → ekspor: md / ts / swagger (OpenAPI3)</text>
+
+  <!-- Otentikasi (M6a) -->
+  <rect x="120" y="350" width="700" height="40" rx="8" fill="#fdedec" stroke="#c0392b" stroke-width="2"/>
+  <rect x="730" y="354" width="62" height="20" rx="10" fill="#c0392b"/>
+  <text x="761" y="368" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M6a</text>
+  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; untuk token (amplop enkripsi authcode, password/secret_key tidak pernah diserialisasi)</text>
 
   <!-- Lapisan adaptor: selesai -->
-  <rect x="120" y="350" width="700" height="62" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="656" y="355" width="76" height="22" rx="11" fill="#27ae60"/>
-  <text x="694" y="370" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2 + M4</text>
-  <text x="140" y="376" font-size="16" font-weight="bold" fill="#1e8449">Lapisan Adaptor (selesai) · apidoc-axum: pemasangan rute + CORS, inti tanpa perubahan</text>
-  <text x="140" y="398" font-size="13" fill="#333">/apidoc (panel debugging UI) · /apidoc/api.json (data dokumentasi) · /apidoc/mock (mesin Mock)</text>
-  <!-- actix dalam rencana -->
-  <rect x="656" y="384" width="148" height="24" rx="6" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="730" y="400" text-anchor="middle" font-size="12" fill="#566573">apidoc-actix (dalam rencana)</text>
+  <rect x="120" y="402" width="700" height="76" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="708" y="407" width="112" height="22" rx="11" fill="#27ae60"/>
+  <text x="764" y="422" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2+M4+M5+M6</text>
+  <text x="140" y="428" font-size="16" font-weight="bold" fill="#1e8449">Lapisan Adaptor (selesai) · apidoc-axum + apidoc-actix: pemasangan rute + CORS</text>
+  <!-- actix selesai -->
+  <rect x="656" y="434" width="148" height="24" rx="6" fill="#27ae60" stroke="#27ae60" stroke-width="2"/>
+  <text x="730" y="450" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">apidoc-actix (selesai)</text>
+  <text x="140" y="452" font-size="13" fill="#333">/apidoc (UI) · /apidoc/api.json · /apidoc/mock · /apidoc/export · /apidoc/auth (M6a ambil token)</text>
+  <text x="140" y="470" font-size="13" fill="#333">api.json / export / mock wajib membawa ?token=, tidak ada/kadaluarsa/salah mengembalikan 401; jika auth tidak aktif 404 dan rute data langsung terbuka</text>
 
   <!-- Lapisan tampilan: selesai -->
-  <rect x="120" y="424" width="700" height="50" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="730" y="429" width="62" height="20" rx="10" fill="#27ae60"/>
-  <text x="761" y="443" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
-  <text x="140" y="449" font-size="16" font-weight="bold" fill="#1e8449">Lapisan Tampilan (selesai) · panel debugging UI dokumentasi (Html tertanam, tanpa dependensi eksternal)</text>
-  <text x="140" y="467" font-size="13" fill="#333">Penelusuran direktori / debugging online (koneksi langsung CORS) / praisi Mock</text>
+  <rect x="120" y="490" width="700" height="64" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="708" y="495" width="84" height="20" rx="10" fill="#27ae60"/>
+  <text x="750" y="509" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
+  <text x="140" y="515" font-size="16" font-weight="bold" fill="#1e8449">Lapisan Tampilan (selesai) · panel debugging UI dokumentasi (Html tertanam, tanpa dependensi eksternal)</text>
+  <text x="140" y="537" font-size="13" fill="#333">Penelusuran direktori / debugging online (koneksi langsung CORS) / praisi Mock</text>
+  <text x="140" y="553" font-size="13" fill="#333">M6: masker kata sandi (md5 di frontend untuk dapat token) · pemilih aplikasi/versi · token disimpan di localStorage per appKey</text>
 
   <!-- Alur data -->
-  <rect x="120" y="486" width="700" height="44" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
-  <rect x="730" y="491" width="62" height="20" rx="10" fill="#b58900"/>
-  <text x="761" y="505" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
-  <text x="140" y="508" font-size="13" fill="#333" font-family="monospace">Browser → /apidoc (panel debugging) → koneksi langsung CORS → API target (permintaan nyata)</text>
-  <text x="140" y="524" font-size="13" fill="#333" font-family="monospace">Browser → /apidoc/mock → data Mock (fake crate · 15 aturan)</text>
+  <rect x="120" y="566" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <rect x="708" y="571" width="84" height="20" rx="10" fill="#b58900"/>
+  <text x="750" y="585" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
+  <text x="140" y="588" font-size="13" fill="#333" font-family="monospace">Browser → /apidoc (panel debugging) → koneksi langsung CORS → API target (permintaan nyata)</text>
+  <text x="140" y="606" font-size="13" fill="#333" font-family="monospace">Browser → /apidoc/mock → data Mock (fake crate · 15 aturan)</text>
+  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">Browser → /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token, rute data diakses dengan ?token=</text>
 
   <!-- workspace -->
-  <rect x="120" y="542" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
-  <text x="470" y="560" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (inti) · apidoc-macros (makro) · apidoc-axum (adaptor) · apidoc-mock (Mock·fake) · apidoc-test-fixtures (fixture pengujian)</text>
+  <rect x="120" y="642" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
+  <text x="470" y="660" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (inti·auth.rs) · macros (makro) · axum (adaptor) · actix (adaptor) · mock (Mock) · test-fixtures (fixture pengujian)</text>
 
   <!-- Legenda -->
-  <rect x="120" y="578" width="24" height="12" fill="#27ae60"/>
-  <text x="152" y="589" font-size="13" fill="#333">Sudah diimplementasikan (M1–M4)</text>
-  <rect x="310" y="578" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="342" y="589" font-size="13" fill="#333">Dalam rencana (ekspor M5 / multi-aplikasi multi-versi M6 / actix)</text>
-  <text x="700" y="589" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <rect x="120" y="678" width="24" height="12" fill="#27ae60"/>
+  <text x="152" y="689" font-size="13" fill="#333">Sudah diimplementasikan (M1–M6)</text>
+  <rect x="310" y="678" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="342" y="689" font-size="13" fill="#333">Dalam rencana (v2: generator kode / tautan berbagi, dll.)</text>
+  <text x="700" y="689" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

@@ -59,9 +59,14 @@ apidoc-rust — это **универсальный плагинный гене�
 - **Адаптер actix-web** (`crates/apidoc-actix`): функционально 1:1 с адаптером axum — `apidoc_routes(ApidocConfig) -> Scope` монтирует /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` разрешает кросс-домен
 - **Общий UI**: UI документации (`src/ui.html`) перенесён в core crate и экспортируется как `pub const UI_HTML`; оба адаптера ссылаются на одну копию (безопасно при публикации)
 
-### В планах
+### Реализовано (M6)
 
-- Несколько приложений / несколько версий / пароль доступа
+- **Парольная аутентификация (M6a)**: при включённом `AuthConfig { enable, password, secret_key, expire }` клиент получает token через `GET /apidoc/auth?password=<md5(пароль)>&appKey=<key>`; маршруты данных `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` требуют `?token=xxx` — отсутствие/просрочка/ошибка token возвращает 401, а UI документации показывает парольную маску; token подписывается набором шифрования authcode (построчный перенос Discuz authcode: вариант RC4 + контрольная сумма md5 + base64 без padding), полезная нагрузка `{key: md5(md5(исходный пароль)), expire: now+expire}`, сравнение MAC — за константное время
+- **Красные линии безопасности**: `password` / `secret_key` никогда не сериализуются — вывод api.json побайтово совпадает с вариантом без аутентификации; при выключенном auth `/apidoc/auth` возвращает 404, а маршруты данных пропускают напрямую; при собственном password у приложения приоритет у пароля приложения, а не глобального; `secret_key` по умолчанию `"apidoc#hgcode"` (одно предупреждение в stderr при включении без настройки), `expire` по умолчанию 86400 секунд
+- **Несколько приложений и версий (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / `items` с рекурсивными подверсиями / `password`) задаёт дерево приложений; `#[apidoc::app("key")]` привязывает интерфейс к key приложения; интерфейсы без key попадают в приложение по умолчанию; в вывод api.json добавлено дерево `doc.apps`, вверху UI появляется селектор приложения/версии, token хранится в localStorage раздельно по appKey (у разных приложений могут быть свои пароли)
+
+### В планах (v2)
+
 - v2: генератор кода, ссылки на поля таблиц БД, ссылки для совместного доступа, события отладки
 
 ## Архитектура
@@ -85,11 +90,12 @@ apidoc-rust/
 ├── crates/
 │   ├── apidoc/                # ядро рантайма (не зависит от фреймворка)
 │   │   ├── src/lib.rs         # модель данных + агрегация DocRegistry + api.json + UI_HTML
+│   │   ├── src/auth.rs        # M6a парольная аутентификация (выдача/проверка token authcode + защита маршрутов)
 │   │   ├── src/export/        # экспорт M5: markdown / typescript / swagger
 │   │   ├── src/ui.html        # общий UI документации (экспортируется core crate, оба адаптера ссылаются)
 │   │   ├── tests/             # интеграционные тесты (раскрытие макросов/агрегация/сериализация/между crates)
 │   │   └── examples/demo.rs   # пример: аннотации + вывод api.json
-│   ├── apidoc-macros/         # proc-macro: 19 атрибутных макросов
+│   ├── apidoc-macros/         # proc-macro: 20 атрибутных макросов
 │   │   └── src/lib.rs         # определения макросов + разбор параметров + проверка на этапе компиляции
 │   ├── apidoc-mock/           # движок Mock (генерация mock-данных по правилам fake)
 │   ├── apidoc-test-fixtures/  # тестовые фикстуры для регистрации между crates
@@ -147,14 +153,12 @@ fn get_user_info() -> String {
 
 ```rust
 fn main() {
-    let endpoints = DocRegistry::collect();
-    let doc = ApiDoc {
-        config: ApidocConfig {
-            title: "我的 API".to_string(),
-            description: None,
-        },
-        endpoints,
-    };
+    let doc = DocRegistry::collect_doc(ApidocConfig {
+        title: "我的 API".to_string(),
+        description: None,
+        auth: None,    // M6a парольная аутентификация, см. «8. Парольная аутентификация»
+        apps: vec![],  // M6b несколько приложений и версий, см. «9. Несколько приложений и версий»
+    });
     println!("{}", serde_json::to_string_pretty(&doc).unwrap());
 }
 ```
@@ -260,6 +264,8 @@ async fn main() -> std::io::Result<()> {
             .service(apidoc_routes(ApidocConfig {
                 title: "我的 API".to_string(),
                 description: None,
+                auth: None,    // M6a парольная аутентификация, см. «8. Парольная аутентификация»
+                apps: vec![],  // M6b несколько приложений и версий, см. «9. Несколько приложений и версий»
             }))
             .wrap(cors_layer(CorsConfig::default()))   // разрешение кросс-домена для онлайн-отладки (M4)
     })
@@ -271,6 +277,70 @@ async fn main() -> std::io::Result<()> {
 
 После подключения доступны `/apidoc` (UI документации), `/apidoc/api.json` (данные), `/apidoc/mock` (Mock), `/apidoc/export` (экспорт). Пустая конфигурация CORS пропускает литеральный `*` (без учётных данных); при настройке белого списка `allow_origins` Origin отражается с точным совпадением — в обоих режимах учётные данные не включаются.
 
+### 8. Парольная аутентификация (M6a)
+
+При включённом `auth` документация доступна только по паролю (выровнено по Auth.php из apidoc-php; token — построчный перенос набора шифрования Discuz authcode):
+
+```rust
+use apidoc::auth::AuthConfig;
+
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: Some(AuthConfig {
+        enable: true,
+        password: "your-password".to_string(),
+        secret_key: "your-secret-key".to_string(), // по умолчанию "apidoc#hgcode" (одно предупреждение в stderr при включении без настройки)
+        expire: 86400,                             // секунды; по умолчанию 86400
+    }),
+    apps: vec![],
+});
+```
+
+**Порядок действий**:
+
+1. Клиент получает token через `GET /apidoc/auth?password=<md5(пароль)>&appKey=<key>` (при успехе возвращается `{"token":"..."}`, при неверном пароле — 401); при выключенном auth этот маршрут возвращает 404, а маршруты данных пропускают напрямую
+2. Маршруты данных `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` требуют `?token=xxx` (а при выборе конкретного приложения — ещё и `&appKey=`); отсутствие/просрочка/ошибка token возвращает 401, UI документации автоматически показывает парольную маску, после ввода пароля фронтенд вычисляет md5 и отправляет его для получения token
+3. Полезная нагрузка token — `{key: md5(md5(исходный пароль)), expire: now+expire}`, шифруется `secret_key` через authcode (вариант RC4 + контрольная сумма md5 + base64 без padding; сравнение MAC за константное время против timing-атак)
+4. `password` / `secret_key` никогда не сериализуются — вывод api.json побайтово совпадает с вариантом без аутентификации; при собственном `password` у приложения приоритет у пароля приложения, а не глобального
+
+### 9. Несколько приложений и версий (M6b)
+
+Один проект можно разбить на несколько приложений/версий, у каждого — свой показ и контроль доступа:
+
+```rust
+#[apidoc::title("获取用户信息")]
+#[apidoc::app("demo")]   // привязка к приложению key="demo"; интерфейсы без app попадают в приложение по умолчанию
+fn get_user_info() -> String {
+    unimplemented!()
+}
+```
+
+```rust
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: None,
+    apps: vec![
+        AppConfig {
+            key: "demo".to_string(),
+            title: "演示应用".to_string(),
+            items: vec![AppConfig {
+                key: "v1".to_string(),
+                title: "v1".to_string(),
+                items: vec![],
+                password: None,
+            }],
+            password: None, // свой пароль доступа приложения, приоритет над глобальным, никогда не сериализуется
+        },
+    ],
+});
+```
+
+- `AppConfig { key, title, items, password }`: `key` — уникальный идентификатор, на который ссылается аннотация `#[apidoc::app("key")]`; `items` рекурсивно вкладывает подверсии/подприложения; `password` — свой пароль доступа приложения (при своём пароле проверяется только token приложения)
+- В вывод api.json добавлено дерево `doc.apps` (key / title / items / endpoints); вверху UI появляется селектор приложения/версии — при переключении интерфейсы рендерятся по выбранному узлу и данные перезагружаются; token хранится в localStorage раздельно по appKey
+- Если аннотация `app` ссылается на key, отсутствующий в `apps`, — предупреждение в stderr и попадание в приложение по умолчанию; без аннотации `app` или без настройки `apps` вывод побайтово совпадает с M5
+
 ## План разработки
 
 | Этап | Содержание | Статус |
@@ -281,7 +351,8 @@ async fn main() -> std::io::Result<()> {
 | M4 | Онлайн-отладка + движок Mock | ✅ Завершено |
 | M5 | Экспорт в markdown / typescript / swagger.json (OpenAPI3) | ✅ Завершено |
 | —  | Адаптер actix-web (функционально 1:1 с axum) | ✅ Завершено |
-| M6 | Парольная аутентификация, несколько приложений и версий, релиз | В планах |
+| M6a | Парольная аутентификация (token authcode + парольная маска, приоритет пароля приложения) | ✅ Завершено |
+| M6b | Несколько приложений и версий (дерево настройки apps + аннотация app + селектор в UI) | ✅ Завершено |
 
 ## Многоязычная документация
 

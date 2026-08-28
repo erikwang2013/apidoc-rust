@@ -59,9 +59,14 @@ apidoc-rust is a **general-purpose pluggable API documentation generator** imple
 - **actix-web adapter** (`crates/apidoc-actix`): 1:1 feature parity with the axum adapter — `apidoc_routes(ApidocConfig) -> Scope` mounts /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, and `cors_layer(CorsConfig)` allows cross-origin
 - **Shared UI**: the docs UI (`src/ui.html`) was moved up into the core crate and exported as `pub const UI_HTML`; both adapters reference the same copy (safe for published packages)
 
-### Planned
+### Implemented (M6)
 
-- Multi-app / multi-version / access password
+- **Password authentication (M6a)**: with `AuthConfig { enable, password, secret_key, expire }` enabled, the client exchanges `GET /apidoc/auth?password=<md5(password)>&appKey=<key>` for a token; the data routes `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` require `?token=xxx`, and a missing/expired/wrong token returns 401 while the docs UI shows a password overlay; the token is issued with the authcode encryption suite (line-by-line port of Discuz authcode: RC4 variant + md5 checksum + padding-free base64), payload `{key: md5(md5(raw password)), expire: now+expire}`, constant-time MAC comparison
+- **Auth security red lines**: `password` / `secret_key` are never serialized — the api.json output is byte-identical to when auth is disabled; with auth disabled, `/apidoc/auth` returns 404 and data routes pass through directly; when an app config has its own password, the app password takes precedence over the global one; `secret_key` defaults to `"apidoc#hgcode"` (stderr warning once when enabled but unconfigured), `expire` defaults to 86400 seconds
+- **Multi-app multi-version (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / recursive sub-versions in `items` / `password`) configures an app tree; `#[apidoc::app("key")]` attaches endpoints to a specific app key, endpoints without a key land in the default app; the api.json output gains the `doc.apps` tree, an app/version selector appears at the top of the UI, and tokens are stored in localStorage separately per appKey (different apps can have independent passwords)
+
+### Planned (v2)
+
 - v2: code generator, data-table field references, share links, debug events
 
 ## Architecture
@@ -85,11 +90,12 @@ apidoc-rust/
 ├── crates/
 │   ├── apidoc/                # runtime core (framework-agnostic)
 │   │   ├── src/lib.rs         # data model + DocRegistry aggregation + api.json + UI_HTML
+│   │   ├── src/auth.rs        # M6a password authentication (authcode token issuance/verification + route guard)
 │   │   ├── src/export/        # M5 exports: markdown / typescript / swagger
 │   │   ├── src/ui.html        # shared docs UI (exported by the core crate, referenced by both adapters)
 │   │   ├── tests/             # integration tests (macro expansion/aggregation/serialization/cross-crate)
 │   │   └── examples/demo.rs   # example: annotations + api.json output
-│   ├── apidoc-macros/         # proc-macro: 19 attribute macros
+│   ├── apidoc-macros/         # proc-macro: 20 attribute macros
 │   │   └── src/lib.rs         # macro definitions + argument parsing + compile-time validation
 │   ├── apidoc-mock/           # Mock engine (generates mock data via fake rules)
 │   ├── apidoc-test-fixtures/  # cross-crate registration test fixtures
@@ -147,14 +153,12 @@ fn get_user_info() -> String {
 
 ```rust
 fn main() {
-    let endpoints = DocRegistry::collect();
-    let doc = ApiDoc {
-        config: ApidocConfig {
-            title: "我的 API".to_string(),
-            description: None,
-        },
-        endpoints,
-    };
+    let doc = DocRegistry::collect_doc(ApidocConfig {
+        title: "我的 API".to_string(),
+        description: None,
+        auth: None,    // M6a password authentication, see "8. Password Authentication"
+        apps: vec![],  // M6b multi-app multi-version, see "9. Multi-App & Multi-Version"
+    });
     println!("{}", serde_json::to_string_pretty(&doc).unwrap());
 }
 ```
@@ -260,6 +264,8 @@ async fn main() -> std::io::Result<()> {
             .service(apidoc_routes(ApidocConfig {
                 title: "我的 API".to_string(),
                 description: None,
+                auth: None,    // M6a password authentication, see "8. Password Authentication"
+                apps: vec![],  // M6b multi-app multi-version, see "9. Multi-App & Multi-Version"
             }))
             .wrap(cors_layer(CorsConfig::default()))   // M4 online debugging cross-origin allowance
     })
@@ -271,6 +277,70 @@ async fn main() -> std::io::Result<()> {
 
 After mounting, `/apidoc` (docs UI), `/apidoc/api.json` (data), `/apidoc/mock` (Mock), and `/apidoc/export` (export) are all accessible. An empty CORS config allows the literal `*` (without credentials); with an `allow_origins` whitelist configured, the Origin is reflected with exact matching — neither mode enables credentials.
 
+### 8. Password Authentication (M6a)
+
+With `auth` enabled, the documentation requires a password to access (aligned with the upstream apidoc-php Auth.php; the token is a line-by-line port of the Discuz authcode encryption suite):
+
+```rust
+use apidoc::auth::AuthConfig;
+
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: Some(AuthConfig {
+        enable: true,
+        password: "your-password".to_string(),
+        secret_key: "your-secret-key".to_string(), // defaults to "apidoc#hgcode" (stderr warning once when enabled but unconfigured)
+        expire: 86400,                             // seconds; defaults to 86400
+    }),
+    apps: vec![],
+});
+```
+
+**Flow**:
+
+1. The client calls `GET /apidoc/auth?password=<md5(password)>&appKey=<key>` to exchange for a token (returns `{"token":"..."}` on success, 401 on wrong password); with auth disabled this route returns 404 and data routes pass through directly
+2. The data routes `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` require `?token=xxx` (also `&appKey=` when a specific app is selected); a missing/expired/wrong token returns 401, the docs UI automatically pops up the password overlay, and after entering the password the frontend hashes it with md5 locally and exchanges it for a token
+3. The token payload is `{key: md5(md5(raw password)), expire: now+expire}`, encrypted with `secret_key` via authcode (RC4 variant + md5 checksum + padding-free base64, constant-time MAC comparison against timing side channels)
+4. `password` / `secret_key` are never serialized — the api.json output is byte-identical to when auth is disabled; when an app config has its own `password`, the app password takes precedence over the global one
+
+### 9. Multi-App & Multi-Version (M6b)
+
+A project can be split into multiple apps/versions, each displayed and access-controlled independently:
+
+```rust
+#[apidoc::title("获取用户信息")]
+#[apidoc::app("demo")]   // attach to the app with key="demo"; endpoints without an app annotation land in the default app
+fn get_user_info() -> String {
+    unimplemented!()
+}
+```
+
+```rust
+let doc = DocRegistry::collect_doc(ApidocConfig {
+    title: "我的 API".to_string(),
+    description: None,
+    auth: None,
+    apps: vec![
+        AppConfig {
+            key: "demo".to_string(),
+            title: "演示应用".to_string(),
+            items: vec![AppConfig {
+                key: "v1".to_string(),
+                title: "v1".to_string(),
+                items: vec![],
+                password: None,
+            }],
+            password: None, // independent app access password, takes precedence over the global one, never serialized
+        },
+    ],
+});
+```
+
+- `AppConfig { key, title, items, password }`: `key` is the unique identifier referenced by the `#[apidoc::app("key")]` annotation, `items` recursively nests sub-versions/sub-apps, `password` is the app's independent access password (with an independent password, only the app token is validated)
+- The api.json output gains the `doc.apps` tree (key / title / items / endpoints); an app/version selector appears at the top of the UI — switching renders the endpoints of that node and re-fetches the data, and tokens are stored in localStorage separately per appKey
+- When the `app` annotation references a key not configured in `apps`, a stderr warning is issued and the endpoint lands in the default app; without `app` annotations or without `apps` configured, the output is byte-identical to M5
+
 ## Roadmap
 
 | Phase | Content | Status |
@@ -281,7 +351,8 @@ After mounting, `/apidoc` (docs UI), `/apidoc/api.json` (data), `/apidoc/mock` (
 | M4 | online debugging + Mock engine | ✅ Done |
 | M5 | export markdown / typescript / swagger.json (OpenAPI3) | ✅ Done |
 | —  | actix-web adapter (1:1 feature parity with axum) | ✅ Done |
-| M6 | password auth, multi-app multi-version, release | Planned |
+| M6a | password authentication (authcode token + password overlay, app password takes precedence) | ✅ Done |
+| M6b | multi-app multi-version (apps config tree + app annotation + UI selector) | ✅ Done |
 
 ## Multilingual Documentation
 

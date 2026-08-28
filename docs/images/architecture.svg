@@ -1,13 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 600" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 720" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="600" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="600" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="720" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="720" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 总体架构（M5 已完成）</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 总体架构（M6 已完成）</text>
 
   <!-- 用户代码层 -->
   <rect x="120" y="62" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
@@ -16,10 +16,10 @@
 
   <!-- 编译期 -->
   <rect x="120" y="138" width="700" height="72" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
-  <rect x="730" y="144" width="76" height="22" rx="11" fill="#6c5ce7"/>
-  <text x="768" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1 + M3</text>
+  <rect x="724" y="144" width="96" height="22" rx="11" fill="#6c5ce7"/>
+  <text x="772" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1+M3+M6</text>
   <text x="140" y="164" font-size="17" font-weight="bold" fill="#3d2f9e">编译期 · apidoc-macros（proc-macro）</text>
-  <text x="140" y="188" font-size="12" fill="#333">19 个属性宏：M1 基础 7 个（title/desc/method/url/param/query/returned）＋M3 扩展 12 个（tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref）</text>
+  <text x="140" y="188" font-size="12" fill="#333">20 个属性宏：M1 基础 7 个（title/desc/method/url/param/query/returned）＋M3 扩展 12 个（tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref）＋M6 app 挂载</text>
   <text x="140" y="204" font-size="12" fill="#555">全部含编译期参数校验（url 以 / 开头、method 白名单、param name 必填），非法注解直接编译报错</text>
 
   <!-- 注册 -->
@@ -31,44 +31,53 @@
 
   <!-- 运行期核心 -->
   <rect x="120" y="280" width="700" height="58" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
-  <rect x="730" y="285" width="62" height="20" rx="10" fill="#2980b9"/>
-  <text x="761" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
+  <rect x="730" y="285" width="64" height="20" rx="10" fill="#2980b9"/>
+  <text x="762" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1+M6</text>
   <text x="140" y="308" font-size="17" font-weight="bold" fill="#1a5276">运行期核心 · apidoc（框架无关）</text>
   <text x="140" y="330" font-size="13" fill="#333">DocRegistry::collect() 按 id 合并片段、按 seq 恢复声明顺序 → ApiDoc 数据模型</text>
-  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json（serde 序列化，UI 与导出共用）→ 导出：md / ts / swagger(OpenAPI3)</text>
+  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json（serde 序列化，UI 与导出共用；M6b 含 doc.apps 树）→ 导出：md / ts / swagger(OpenAPI3)</text>
+
+  <!-- 鉴权（M6a） -->
+  <rect x="120" y="350" width="700" height="40" rx="8" fill="#fdedec" stroke="#c0392b" stroke-width="2"/>
+  <rect x="730" y="354" width="62" height="20" rx="10" fill="#c0392b"/>
+  <text x="761" y="368" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M6a</text>
+  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs：GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; 换 token（authcode 加密封套，password/secret_key 永不序列化）</text>
 
   <!-- 适配器层 已完成 -->
-  <rect x="120" y="350" width="700" height="62" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="724" y="355" width="96" height="22" rx="11" fill="#27ae60"/>
-  <text x="772" y="370" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2 + M4 + M5</text>
-  <text x="140" y="376" font-size="16" font-weight="bold" fill="#1e8449">适配器层（已完成）· apidoc-axum + apidoc-actix：路由挂载 + CORS</text>
-  <text x="140" y="398" font-size="13" fill="#333">/apidoc（UI）· /apidoc/api.json · /apidoc/mock · /apidoc/export</text>
+  <rect x="120" y="402" width="700" height="76" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="708" y="407" width="112" height="22" rx="11" fill="#27ae60"/>
+  <text x="764" y="422" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2+M4+M5+M6</text>
+  <text x="140" y="428" font-size="16" font-weight="bold" fill="#1e8449">适配器层（已完成）· apidoc-axum + apidoc-actix：路由挂载 + CORS</text>
   <!-- actix 已完成 -->
-  <rect x="656" y="384" width="148" height="24" rx="6" fill="#27ae60" stroke="#27ae60" stroke-width="2"/>
-  <text x="730" y="400" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">apidoc-actix（已完成）</text>
+  <rect x="656" y="434" width="148" height="24" rx="6" fill="#27ae60" stroke="#27ae60" stroke-width="2"/>
+  <text x="730" y="450" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">apidoc-actix（已完成）</text>
+  <text x="140" y="452" font-size="13" fill="#333">/apidoc（UI）· /apidoc/api.json · /apidoc/mock · /apidoc/export · /apidoc/auth（M6a 换 token）</text>
+  <text x="140" y="470" font-size="13" fill="#333">api.json / export / mock 需带 ?token=，缺失/过期/错误返回 401；auth 未启用时 404、数据路由直接放行</text>
 
   <!-- 展示层 已完成 -->
-  <rect x="120" y="424" width="700" height="50" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="730" y="429" width="62" height="20" rx="10" fill="#27ae60"/>
-  <text x="761" y="443" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
-  <text x="140" y="449" font-size="16" font-weight="bold" fill="#1e8449">展示层（已完成）· 文档 UI 调试面板（内嵌 Html，零外部依赖）</text>
-  <text x="140" y="467" font-size="13" fill="#333">目录浏览 / 在线调试（CORS 直连）/ Mock 预填</text>
+  <rect x="120" y="490" width="700" height="64" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="708" y="495" width="84" height="20" rx="10" fill="#27ae60"/>
+  <text x="750" y="509" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
+  <text x="140" y="515" font-size="16" font-weight="bold" fill="#1e8449">展示层（已完成）· 文档 UI 调试面板（内嵌 Html，零外部依赖）</text>
+  <text x="140" y="537" font-size="13" fill="#333">目录浏览 / 在线调试（CORS 直连）/ Mock 预填</text>
+  <text x="140" y="553" font-size="13" fill="#333">M6：密码遮罩（前端 md5 提交换 token）· 应用/版本选择器 · token 按 appKey 分存 localStorage</text>
 
   <!-- 数据流 -->
-  <rect x="120" y="486" width="700" height="44" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
-  <rect x="730" y="491" width="62" height="20" rx="10" fill="#b58900"/>
-  <text x="761" y="505" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4</text>
-  <text x="140" y="508" font-size="13" fill="#333" font-family="monospace">浏览器 → /apidoc（调试面板）→ CORS 直连 → 目标接口（真实请求）</text>
-  <text x="140" y="524" font-size="13" fill="#333" font-family="monospace">浏览器 → /apidoc/mock → Mock 数据（fake crate · 15 条规则）</text>
+  <rect x="120" y="566" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <rect x="708" y="571" width="84" height="20" rx="10" fill="#b58900"/>
+  <text x="750" y="585" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
+  <text x="140" y="588" font-size="13" fill="#333" font-family="monospace">浏览器 → /apidoc（调试面板）→ CORS 直连 → 目标接口（真实请求）</text>
+  <text x="140" y="606" font-size="13" fill="#333" font-family="monospace">浏览器 → /apidoc/mock → Mock 数据（fake crate · 15 条规则）</text>
+  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">浏览器 → /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token，数据路由带 ?token= 访问</text>
 
   <!-- workspace -->
-  <rect x="120" y="542" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
-  <text x="470" y="560" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace：apidoc（核心）· macros（宏）· axum（适配）· actix（适配）· mock（Mock）· test-fixtures（测试夹具）</text>
+  <rect x="120" y="642" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
+  <text x="470" y="660" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace：apidoc（核心·auth.rs）· macros（宏）· axum（适配）· actix（适配）· mock（Mock）· test-fixtures（测试夹具）</text>
 
   <!-- 图例 -->
-  <rect x="120" y="578" width="24" height="12" fill="#27ae60"/>
-  <text x="152" y="589" font-size="13" fill="#333">已实现（M1–M5）</text>
-  <rect x="310" y="578" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="342" y="589" font-size="13" fill="#333">规划中（M6 多应用多版本 / v2 规划项）</text>
-  <text x="700" y="589" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <rect x="120" y="678" width="24" height="12" fill="#27ae60"/>
+  <text x="152" y="689" font-size="13" fill="#333">已实现（M1–M6）</text>
+  <rect x="310" y="678" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="342" y="689" font-size="13" fill="#333">规划中（v2：代码生成器 / 分享链接等）</text>
+  <text x="700" y="689" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

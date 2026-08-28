@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 400" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 480" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
@@ -7,10 +7,10 @@
       <path d="M0,0 L0,6 L9,3 z" fill="#555"/>
     </marker>
   </defs>
-  <rect width="940" height="400" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="400" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="480" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="480" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 文档生命周期（M1–M5 已完成）</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 文档生命周期（M1–M6 已完成）</text>
 
   <!-- 步骤 1 -->
   <circle cx="85" cy="150" r="34" fill="#b58900"/>
@@ -57,40 +57,61 @@
   <text x="545" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
   <text x="545" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
   <text x="545" y="235" text-anchor="middle" font-size="12" fill="#555">统一文档数据模型</text>
-  <text x="545" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints</text>
-  <text x="545" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
+  <text x="545" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints + apps</text>
+  <text x="545" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1·M6</text>
 
-  <line x1="585" y1="150" x2="620" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <!-- 转折箭头 5 → 6 -->
+  <line x1="579" y1="150" x2="856" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- 步骤 6 已实现 -->
-  <circle cx="660" cy="150" r="34" fill="#16a085"/>
-  <text x="660" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
-  <text x="660" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI 调试面板</text>
-  <text x="660" y="235" text-anchor="middle" font-size="12" fill="#555">目录浏览 / 在线调试</text>
-  <text x="660" y="252" text-anchor="middle" font-size="12" fill="#555">Mock 预填 / CORS 直连</text>
-  <text x="660" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+  <!-- 步骤 6：M6a 鉴权换 token -->
+  <circle cx="890" cy="310" r="34" fill="#c0392b"/>
+  <text x="890" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
+  <text x="890" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">鉴权换 token</text>
+  <text x="890" y="395" text-anchor="middle" font-size="12" fill="#555">前端 md5 提交</text>
+  <text x="890" y="412" text-anchor="middle" font-size="12" fill="#555">数据路由需 ?token=（401）</text>
+  <text x="890" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M6a</text>
 
-  <line x1="700" y1="150" x2="735" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="850" y1="310" x2="815" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
-  <!-- 步骤 7 已实现 -->
-  <circle cx="775" cy="150" r="34" fill="#e67e22"/>
-  <text x="775" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
-  <text x="775" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">调试数据流</text>
-  <text x="775" y="235" text-anchor="middle" font-size="12" fill="#555">CORS 直连目标接口</text>
-  <text x="775" y="252" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock → mock</text>
-  <text x="775" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
+  <!-- 步骤 7：M6b 按应用选择渲染 -->
+  <circle cx="775" cy="310" r="34" fill="#34495e"/>
+  <text x="775" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">7</text>
+  <text x="775" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">按应用渲染</text>
+  <text x="775" y="395" text-anchor="middle" font-size="12" fill="#555">UI 应用/版本选择器</text>
+  <text x="775" y="412" text-anchor="middle" font-size="12" fill="#555">token 按 appKey 分存</text>
+  <text x="775" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M6b</text>
 
-  <line x1="815" y1="150" x2="850" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+  <line x1="735" y1="310" x2="700" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
   <!-- 步骤 8 已实现 -->
-  <circle cx="890" cy="150" r="34" fill="#8e44ad"/>
-  <text x="890" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">8</text>
-  <text x="890" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">三格式导出</text>
-  <text x="890" y="235" text-anchor="middle" font-size="12" fill="#555">md / ts / swagger</text>
-  <text x="890" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">OpenAPI 3.0</text>
-  <text x="890" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M5</text>
+  <circle cx="660" cy="310" r="34" fill="#16a085"/>
+  <text x="660" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">8</text>
+  <text x="660" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI 调试面板</text>
+  <text x="660" y="395" text-anchor="middle" font-size="12" fill="#555">目录浏览 / 在线调试</text>
+  <text x="660" y="412" text-anchor="middle" font-size="12" fill="#555">Mock 预填 / CORS 直连</text>
+  <text x="660" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+
+  <line x1="620" y1="310" x2="585" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- 步骤 9 已实现 -->
+  <circle cx="545" cy="310" r="34" fill="#e67e22"/>
+  <text x="545" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">9</text>
+  <text x="545" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">调试数据流</text>
+  <text x="545" y="395" text-anchor="middle" font-size="12" fill="#555">CORS 直连目标接口</text>
+  <text x="545" y="412" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock → mock</text>
+  <text x="545" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
+
+  <line x1="505" y1="310" x2="470" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <!-- 步骤 10 已实现 -->
+  <circle cx="430" cy="310" r="34" fill="#8e44ad"/>
+  <text x="430" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">10</text>
+  <text x="430" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">三格式导出</text>
+  <text x="430" y="395" text-anchor="middle" font-size="12" fill="#555">md / ts / swagger</text>
+  <text x="430" y="412" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">OpenAPI 3.0</text>
+  <text x="430" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M5</text>
 
   <!-- 图例 -->
-  <text x="470" y="331" text-anchor="middle" font-size="13" fill="#333">阶段标注：M1 注解 / 收集 / 聚合 / 输出 · M2 适配器与 UI · M4 调试面板 / Mock / CORS 直连 · M5 三格式导出（全部已实现，无规划项）</text>
-  <text x="700" y="355" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <text x="470" y="455" text-anchor="middle" font-size="13" fill="#333">阶段标注：M1 注解 / 收集 / 聚合 / 输出 · M2 适配器与 UI · M4 调试面板 / Mock / CORS 直连 · M5 三格式导出 · M6a 密码鉴权 · M6b 多应用多版本（全部已实现，无规划项）</text>
+  <text x="700" y="472" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>
