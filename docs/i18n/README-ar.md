@@ -47,7 +47,7 @@ apidoc-rust هو **مولّد وثائق API عام وقابل للتوسع عب
 ### تم تنفيذه (M4)
 
 - **تصحيح أونلاين**: لوحة «تصحيح أونلاين» مدمجة في صفحة الوثائق — Base URL يُعبَّأ مسبقًا بـ `location.origin` للاتصال المباشر بالخدمة عبر النطاقات، نموذج المعاملات يُعبَّأ مسبقًا ببيانات mock، استبدال مواضع المسار `{name}` / `:name`، دمج معاملات GET/HEAD في query، وتجميع بقية الـ methods في JSON body، تحرير رؤوس الطلب + header مخصص، عرض الاستجابة (الحالة / الزمن / pretty JSON)، مع تنبيه أصفر عند فشل CORS
-- **محرك Mock** (`crates/apidoc-mock`، يعتمد على crate fake، 15 قاعدة: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). أولوية القواعد: `mock="fake:xxx"` تمر عبر جدول قواعد fake (الأسماء غير المعروفة تعود إلى قيمة افتراضية) ← بقية قيم mock غير الفارغة تُخرج كما هي (مثل `mock="1"`، `mock="erik"`) ← بدون mock يُولَّد تلقائيًا حسب `ty` (int←`"1"`، float←`"0.5"`، bool←`"true"`، object←`"{}"`، string←`"string"`)؛ children يتداخل بشكل متكرر، وarray ثابت على عنصرين
+- **محرك Mock** (`crates/apidoc/src/mock.rs`، يعتمد على crate fake، 15 قاعدة: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). أولوية القواعد: `mock="fake:xxx"` تمر عبر جدول قواعد fake (الأسماء غير المعروفة تعود إلى قيمة افتراضية) ← بقية قيم mock غير الفارغة تُخرج كما هي (مثل `mock="1"`، `mock="erik"`) ← بدون mock يُولَّد تلقائيًا حسب `ty` (int←`"1"`، float←`"0.5"`، bool←`"true"`، object←`"{}"`، string←`"string"`)؛ children يتداخل بشكل متكرر، وarray ثابت على عنصرين
 - **واجهة mock**: محول axum يضيف `GET /apidoc/mock?url=&method=`، بمطابقة دقيقة لـ url + method، ويعيد 404 عند عدم التطابق؛ لوحة التصحيح تخفي افتراضيًا نقاط النهاية `not_debug`، ولا تظهرها إلا بعد تحديد «إظهار واجهات not_debug»
 - **اتصال CORS مباشر**: التصحيح أونلاين يربط المتصفح مباشرة بالواجهة الهدف، و`cors_layer` من المحول يتولى السماح (الوكيل العكسي من جهة الخادم يُترك لـ v2)
 
@@ -56,7 +56,7 @@ apidoc-rust هو **مولّد وثائق API عام وقابل للتوسع عب
 - **التصدير بثلاث صيغ** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0)، النواة توفر `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **مسار التصدير**: المحول يضيف `GET /apidoc/export?format=md|ts|swagger`، والصيغة غير المعروفة تعيد 400؛ وContent-Type تكون `text/markdown` / `application/typescript` / `application/json` على التوالي
 - **markdown**: فهرس مجمّع + جدول معاملات + كتلة استجابة؛ **typescript**: توليد أنواع `{Name}Params` / `{Name}Result` ضمن نطاق group، والواجهات غير المجمّعة تقع في `defaultGroup` (`default` كلمة محجوزة في TS)؛ **swagger**: `info.version` مأخوذ من محتوى ملف `VERSION` في جذر المشروع
-- **محول actix-web** (`crates/apidoc-actix`): وظائف متطابقة 1:1 مع محول axum — `apidoc_routes(ApidocConfig) -> Scope` يركّب /apidoc و/apidoc/api.json و/apidoc/mock و/apidoc/export، و`cors_layer(CorsConfig)` يسمح بالطلبات عبر النطاقات
+- **محول actix-web** (`crates/apidoc/src/actix.rs`): وظائف متطابقة 1:1 مع محول axum — `apidoc_routes(ApidocConfig) -> Scope` يركّب /apidoc و/apidoc/api.json و/apidoc/mock و/apidoc/export، و`cors_layer(CorsConfig)` يسمح بالطلبات عبر النطاقات
 - **مشاركة الواجهة**: واجهة الوثائق (`src/ui.html`) نُقلت للأعلى إلى النواة، وتُصدَّر باسم `pub const UI_HTML`، والمحولان يشيران إلى النسخة نفسها (آمن عند نشر الحزمة)
 
 ### تم تنفيذه (M6)
@@ -86,7 +86,7 @@ apidoc-rust هو **مولّد وثائق API عام وقابل للتوسع عب
 ```
 apidoc-rust/
 ├── Cargo.toml                 # إعداد workspace (resolver 2)
-├── VERSION                    # إصدار المشروع (v1.1.0، منفصل عن إصدار الإطار 0.1.0)
+├── VERSION                    # إصدار المشروع (v1.3.0، منفصل عن إصدار الإطار 0.1.0)
 ├── crates/
 │   ├── apidoc/                # النواة في زمن التشغيل (مستقلة عن الإطار)
 │   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json + UI_HTML
@@ -97,10 +97,10 @@ apidoc-rust/
 │   │   └── examples/demo.rs   # مثال: تعليقات توضيحية + إخراج api.json
 │   ├── apidoc-macros/         # proc-macro: 20 ماكروات سمات
 │   │   └── src/lib.rs         # تعريفات الماكرو + تحليل المعاملات + التحقق في زمن الترجمة
-│   ├── apidoc-mock/           # محرك Mock (توليد بيانات mock وفق قواعد fake)
+
 │   ├── apidoc-test-fixtures/  # نماذج اختبار التسجيل عبر crates
-│   ├── apidoc-axum/           # محول axum (مسارات الوثائق + cors_layer + mock + export)
-│   └── apidoc-actix/          # محول actix-web (وظائف متطابقة 1:1 مع axum)
+
+
 ├── .github/
 │   └── workflows/release.yml  # سير عمل النشر (يقرأ VERSION، وإنشاء tag+release تدريجي)
 └── docs/
@@ -114,13 +114,13 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc = "0.1"        # أو path = "crates/apidoc"
-apidoc-macros = "0.1"
-linkme = "0.3"        # توسيع الماكرو يشير مباشرة إلى مسار linkme، لذا يجب أن تعتمد عليه جهة الاستهلاك مباشرة
+apidoc-rs = "0.1"        # أو path = "crates/apidoc"
+
+
 serde_json = "1"      # لاستخدام إخراج api.json
 ```
 
-> المحولات تُختار واحدًا حسب إطار العمل: axum يستخدم `apidoc-axum`، وactix-web يستخدم `apidoc-actix` (وظائف الاثنين 1:1). `apidoc-mock` (محرك Mock) تبعية داخلية للإطار، تُضاف تلقائيًا عبر المحول، ولا يحتاج المستهلك عمومًا إلى استخدامه مباشرة.
+> المحولات تُختار واحدًا حسب إطار العمل: axum يستخدم `features = ["axum"]`، وactix-web يستخدم `features = ["actix"]` (وظائف الاثنين 1:1). `mock` (محرك Mock) تبعية داخلية للإطار، تُضاف تلقائيًا عبر المحول، ولا يحتاج المستهلك عمومًا إلى استخدامه مباشرة.
 
 ### 2. كتابة التعليقات التوضيحية
 
@@ -242,20 +242,21 @@ GET /apidoc/export?format=swagger   # ملف وصف OpenAPI 3.0.0 (application/j
 
 - **markdown**: مناسب للصقه في Wiki المشروع / ملاحظات الإصدار، يخرج فهرسًا مجمّعًا حسب المجموعة، وكل واجهة مع جدول معاملات وكتلة استجابة؛
 - **typescript**: الواجهة الأمامية يمكنها لصقه مباشرة كتعريفات أنواع؛ الواجهات غير المجمّعة تقع في نطاق `defaultGroup` (`default` كلمة محجوزة في TS، لا يمكن استخدامها كمعرّف)؛
-- **swagger**: `info.version` مأخوذ من محتوى ملف `VERSION` في جذر المشروع (حاليًا 1.1.0)، ويمكن استيراده مباشرة إلى Swagger UI أو مولّدات الكود.
+- **swagger**: `info.version` مأخوذ من محتوى ملف `VERSION` في جذر المشروع (حاليًا 1.3.0)، ويمكن استيراده مباشرة إلى Swagger UI أو مولّدات الكود.
 
 ### 7. محول actix-web
 
-عند استخدام actix-web كإطار عمل للويب، اربط `apidoc-actix` (وظائف متطابقة 1:1 مع محول axum):
+عند استخدام actix-web كإطار عمل للويب، اربط `features = ["actix"]` (وظائف متطابقة 1:1 مع محول axum):
 
 ```toml
 [dependencies]
-apidoc-actix = "0.1"     # أو path = "crates/apidoc-actix"
+apidoc-rs = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust
 use actix_web::{App, HttpServer};
-use apidoc_actix::{apidoc_routes, cors_layer, ApidocConfig, CorsConfig};
+use apidoc::actix::{apidoc_routes, cors_layer, CorsConfig};
+use apidoc::ApidocConfig;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

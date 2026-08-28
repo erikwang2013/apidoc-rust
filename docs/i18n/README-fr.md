@@ -47,7 +47,7 @@ apidoc-rust est un **générateur de documentation d'API générique et modulair
 ### Implémenté (M4)
 
 - **Débogage en ligne** : la page de documentation intègre un panneau « Débogage en ligne » — Base URL préremplie avec `location.origin` pour une connexion directe inter-domaines au service cible, préremplissage du formulaire de paramètres avec les valeurs Mock, remplacement des placeholders de route `{name}` / `:name`, paramètres GET/HEAD fusionnés dans la query string, corps JSON assemblé pour les autres méthodes, édition des en-têtes de requête + en-têtes personnalisés, affichage de la réponse (statut / temps / pretty JSON), avertissement jaune en cas d'échec CORS
-- **Moteur Mock** (`crates/apidoc-mock`, dépend du crate fake, 15 règles : name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). Priorité des règles : `mock="fake:xxx"` suit la table des règles fake (nom inconnu → valeur par défaut) → les autres valeurs mock non vides sont renvoyées telles quelles (p. ex. `mock="1"`, `mock="erik"`) → sans mock, génération automatique selon `ty` (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`) ; les children sont imbriqués récursivement, les array ont fixé 2 éléments
+- **Moteur Mock** (`crates/apidoc/src/mock.rs`, dépend du crate fake, 15 règles : name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). Priorité des règles : `mock="fake:xxx"` suit la table des règles fake (nom inconnu → valeur par défaut) → les autres valeurs mock non vides sont renvoyées telles quelles (p. ex. `mock="1"`, `mock="erik"`) → sans mock, génération automatique selon `ty` (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`) ; les children sont imbriqués récursivement, les array ont fixé 2 éléments
 - **Interface mock** : l'adaptateur axum ajoute `GET /apidoc/mock?url=&method=`, correspondance exacte url + method, 404 si aucune correspondance ; le panneau de débogage masque par défaut les endpoints `not_debug`, qui n'apparaissent qu'en cochant « Afficher les interfaces not_debug »
 - **Connexion CORS directe** : le débogage en ligne connecte le navigateur directement à l'interface cible, le `cors_layer` de l'adaptateur autorise la traversée (proxy inverse côté serveur réservé à v2)
 
@@ -56,7 +56,7 @@ apidoc-rust est un **générateur de documentation d'API générique et modulair
 - **Export en trois formats** (`crates/apidoc/src/export/`) : markdown / typescript / swagger (OpenAPI 3.0.0), le crate cœur fournit `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **Routes d'export** : les adaptateurs ajoutent `GET /apidoc/export?format=md|ts|swagger`, format inconnu → 400 ; Content-Type : `text/markdown` / `application/typescript` / `application/json`
 - **markdown** : sommaire par groupe + table de paramètres + bloc de réponse ; **typescript** : génère les types `{Name}Params` / `{Name}Result` par namespace de groupe, les interfaces non groupées tombent dans `defaultGroup` (`default` est un mot réservé TS) ; **swagger** : `info.version` provient du contenu du fichier `VERSION` à la racine
-- **Adaptateur actix-web** (`crates/apidoc-actix`) : fonctionnalités 1:1 avec l'adaptateur axum — `apidoc_routes(ApidocConfig) -> Scope` monte /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` autorise le CORS
+- **Adaptateur actix-web** (`crates/apidoc/src/actix.rs`) : fonctionnalités 1:1 avec l'adaptateur axum — `apidoc_routes(ApidocConfig) -> Scope` monte /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` autorise le CORS
 - **UI partagée** : l'UI de documentation (`src/ui.html`) remonte dans le crate cœur, exportée en `pub const UI_HTML`, les deux adaptateurs référencent la même copie (sûr pour l'empaquetage de publication)
 
 ### Implémenté (M6)
@@ -86,7 +86,7 @@ apidoc-rust est un **générateur de documentation d'API générique et modulair
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuration du workspace (resolver 2)
-├── VERSION                    # version du projet (v1.1.0, séparée de la version du framework 0.1.0)
+├── VERSION                    # version du projet (v1.3.0, séparée de la version du framework 0.1.0)
 ├── crates/
 │   ├── apidoc/                # cœur à l'exécution (indépendant du framework)
 │   │   ├── src/lib.rs         # modèle de données + agrégation DocRegistry + api.json + UI_HTML
@@ -97,10 +97,10 @@ apidoc-rust/
 │   │   └── examples/demo.rs   # exemple : annotations + sortie api.json
 │   ├── apidoc-macros/         # proc-macro : 20 macros d'attributs
 │   │   └── src/lib.rs         # définitions des macros + analyse des paramètres + validation à la compilation
-│   ├── apidoc-mock/           # moteur Mock (génération de données Mock par règles fake)
+
 │   ├── apidoc-test-fixtures/  # fixtures de test d'enregistrement inter-crates
-│   ├── apidoc-axum/           # adaptateur axum (routes de documentation + cors_layer + mock + export)
-│   └── apidoc-actix/          # adaptateur actix-web (fonctionnalités 1:1 avec axum)
+
+
 ├── .github/
 │   └── workflows/release.yml  # workflow de publication (lit VERSION, crée tag + release de façon incrémentale)
 └── docs/
@@ -114,13 +114,13 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc = "0.1"        # ou path = "crates/apidoc"
-apidoc-macros = "0.1"
-linkme = "0.3"        # l'expansion des macros référence directement le chemin linkme, le consommateur doit en dépendre directement
+apidoc-rs = "0.1"        # ou path = "crates/apidoc"
+
+
 serde_json = "1"      # pour la sortie api.json
 ```
 
-> Adaptateur à choisir selon le framework Web : `apidoc-axum` pour axum, `apidoc-actix` pour actix-web (les deux ont des fonctionnalités 1:1). `apidoc-mock` (moteur Mock) est une dépendance interne du framework, importée automatiquement par l'adaptateur ; le consommateur n'a généralement pas besoin de l'utiliser directement.
+> Adaptateur à choisir selon le framework Web : `features = ["axum"]` pour axum, `features = ["actix"]` pour actix-web (les deux ont des fonctionnalités 1:1). `mock` (moteur Mock) est une dépendance interne du framework, importée automatiquement par l'adaptateur ; le consommateur n'a généralement pas besoin de l'utiliser directement.
 
 ### 2. Écrire les annotations
 
@@ -242,20 +242,21 @@ GET /apidoc/export?format=swagger   # fichier descriptif OpenAPI 3.0.0 (applicat
 
 - **markdown** : idéal à coller dans le Wiki du projet / les notes de version, sommaire par groupe, chaque interface avec table de paramètres et bloc de réponse ;
 - **typescript** : le front peut coller directement les définitions de types ; les interfaces non groupées tombent dans le namespace `defaultGroup` (`default` est un mot réservé TS, il ne peut pas servir d'identifiant) ;
-- **swagger** : `info.version` provient du contenu du fichier `VERSION` à la racine (actuellement 1.1.0), importable directement dans Swagger UI ou un générateur de code.
+- **swagger** : `info.version` provient du contenu du fichier `VERSION` à la racine (actuellement 1.3.0), importable directement dans Swagger UI ou un générateur de code.
 
 ### 7. Adaptateur actix-web
 
-Si le framework Web est actix-web, branchez `apidoc-actix` (fonctionnalités 1:1 avec l'adaptateur axum) :
+Si le framework Web est actix-web, branchez `features = ["actix"]` (fonctionnalités 1:1 avec l'adaptateur axum) :
 
 ```toml
 [dependencies]
-apidoc-actix = "0.1"     # ou path = "crates/apidoc-actix"
+apidoc-rs = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust
 use actix_web::{App, HttpServer};
-use apidoc_actix::{apidoc_routes, cors_layer, ApidocConfig, CorsConfig};
+use apidoc::actix::{apidoc_routes, cors_layer, CorsConfig};
+use apidoc::ApidocConfig;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

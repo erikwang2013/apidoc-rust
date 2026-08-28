@@ -11,6 +11,12 @@ repository.workspace = true
 [lib]
 name = "apidoc"
 
+[features]
+# 默认零重型依赖（M4 红线）；axum/actix 隐含启用 mock（适配器整体交付）
+mock = ["dep:fake"]
+axum = ["dep:axum", "dep:tower-http", "mock"]
+actix = ["dep:actix-web", "dep:actix-cors", "mock"]
+
 [dependencies]
 linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
@@ -19,6 +25,19 @@ md5 = "0.7"
 # M5 导出（swagger::render 返回 Value）需要；原 dev-dependency 提升为正式依赖
 serde_json = "1"
 apidoc-macros = { path = "../apidoc-macros", version = "0.1.0" }
+# 以下 optional：默认构建不拉任何框架/faker 依赖
+fake = { version = "3", features = ["chrono", "uuid"], optional = true }
+axum = { version = "0.8", optional = true }
+tower-http = { version = "0.7", features = ["cors"], optional = true }
+actix-web = { version = "4", features = ["macros"], optional = true }
+actix-cors = { version = "0.7", optional = true }
 
 [dev-dependencies]
 apidoc-test-fixtures = { path = "../apidoc-test-fixtures", version = "0.1.0" }
+# axum 集成测试（feature "axum" 时编译）
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+tower = { version = "0.5", features = ["util"] }
+
+[[example]]
+name = "axum_demo"
+required-features = ["axum"]

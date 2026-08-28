@@ -18,6 +18,18 @@ pub mod export;
 /// M6a: 密码鉴权（authcode token，对齐上游 apidoc-php）。
 pub mod auth;
 
+/// M4 mock 引擎（feature "mock"；axum/actix feature 隐含启用）。
+#[cfg(feature = "mock")]
+pub mod mock;
+
+/// axum 适配器（feature "axum"）。
+#[cfg(feature = "axum")]
+pub mod axum;
+
+/// actix-web 适配器（feature "actix"）。
+#[cfg(feature = "actix")]
+pub mod actix;
+
 /// 共享文档 UI（axum/actix 适配器 include_str! 自本 crate，发布打包安全）。
 /// ui.html 为标记与样式、ui.js 为核心脚本、ui.debug.js 为在线调试面板，
 /// 编译期拼接为完整 HTML（同一 <script>，函数声明提升保证跨文件可见）。

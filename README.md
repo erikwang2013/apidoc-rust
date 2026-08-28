@@ -47,7 +47,7 @@ apidoc-rust 是一个用 Rust 实现的**通用插件式 API 接口文档生成�
 ### 已实现（M4）
 
 - **在线调试**：文档页内置「在线调试」面板——Base URL 预填 `location.origin` 跨域直连目标服务、参数表单 mock 预填、`{name}` / `:name` 路由占位符替换、GET/HEAD 参数并入 query、其余 method 组装 JSON body、请求头编辑 + 自定义 header、响应展示（状态 / 耗时 / pretty JSON）、CORS 失败黄色提示
-- **Mock 引擎**（`crates/apidoc-mock`，依赖 fake crate，15 条规则：name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date）。规则优先级：`mock="fake:xxx"` 走 fake 规则表（未知名回退默认值）→ 其余非空 mock 原样直出（如 `mock="1"`、`mock="erik"`）→ 无 mock 按 `ty` 自动生成（int→`"1"`、float→`"0.5"`、bool→`"true"`、object→`"{}"`、string→`"string"`）；children 递归嵌套对象，array 固定 2 项
+- **Mock 引擎**（`crates/apidoc/src/mock.rs`，feature `mock`，依赖 fake crate，15 条规则：name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date）。规则优先级：`mock="fake:xxx"` 走 fake 规则表（未知名回退默认值）→ 其余非空 mock 原样直出（如 `mock="1"`、`mock="erik"`）→ 无 mock 按 `ty` 自动生成（int→`"1"`、float→`"0.5"`、bool→`"true"`、object→`"{}"`、string→`"string"`）；children 递归嵌套对象，array 固定 2 项
 - **mock 接口**：axum 适配器新增 `GET /apidoc/mock?url=&method=`，url + method 精确匹配，未命中返回 404；调试面板默认隐藏 `not_debug` 端点，勾选「显示 not_debug 接口」才显示
 - **CORS 直连**：在线调试由浏览器直连目标接口，适配器 `cors_layer` 负责放行（服务端反向代理留 v2）
 
@@ -56,7 +56,7 @@ apidoc-rust 是一个用 Rust 实现的**通用插件式 API 接口文档生成�
 - **导出三格式**（`crates/apidoc/src/export/`）：markdown / typescript / swagger（OpenAPI 3.0.0），核心 crate 提供 `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **导出路由**：适配器新增 `GET /apidoc/export?format=md|ts|swagger`，未知 format 返回 400；Content-Type 分别为 `text/markdown` / `application/typescript` / `application/json`
 - **markdown**：分组目录 + 参数表 + 响应块；**typescript**：按 group 命名空间生成 `{Name}Params` / `{Name}Result` 类型，未分组接口落入 `defaultGroup`（`default` 是 TS 保留字）；**swagger**：`info.version` 取根目录 `VERSION` 文件内容
-- **actix-web 适配器**（`crates/apidoc-actix`）：与 axum 适配器功能 1:1——`apidoc_routes(ApidocConfig) -> Scope` 挂载 /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export，`cors_layer(CorsConfig)` 放行跨域
+- **actix-web 适配器**（`crates/apidoc/src/actix.rs`，feature `actix`）：与 axum 适配器功能 1:1——`apidoc_routes(ApidocConfig) -> Scope` 挂载 /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export，`cors_layer(CorsConfig)` 放行跨域
 - **UI 共享**：文档 UI（`src/ui.html`）上移至核心 crate，导出 `pub const UI_HTML`，两适配器引用同一份（发布打包安全）
 
 ### 已实现（M6）
@@ -86,21 +86,22 @@ apidoc-rust 是一个用 Rust 实现的**通用插件式 API 接口文档生成�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 配置（resolver 2）
-├── VERSION                    # 项目版本（v1.1.0，与框架版本 0.1.0 分离）
+├── VERSION                    # 项目版本（v1.3.0，与框架版本 0.1.0 分离）
 ├── crates/
-│   ├── apidoc/                # 运行时核心（框架无关）
+│   ├── apidoc/                # 单一发布包 apidoc-rs（lib 名 apidoc）
 │   │   ├── src/lib.rs         # 数据模型 + DocRegistry 聚合 + api.json + UI_HTML
 │   │   ├── src/auth.rs        # M6a 密码鉴权（authcode token 签发/校验 + 路由守卫）
+│   │   ├── src/mock.rs        # M4 Mock 引擎（feature `mock`，axum/actix 隐含启用）
+│   │   ├── src/axum.rs        # axum 适配器（feature `axum`：文档路由 + cors + mock + export）
+│   │   ├── src/actix.rs       # actix-web 适配器（feature `actix`，与 axum 功能 1:1）
 │   │   ├── src/export/        # M5 导出：markdown / typescript / swagger
-│   │   ├── src/ui.html        # 共享文档 UI（核心 crate 导出，两适配器引用）
-│   │   ├── tests/             # 集成测试（宏展开/聚合/序列化/跨 crate）
-│   │   └── examples/demo.rs   # 示例：注解 + 输出 api.json
-│   ├── apidoc-macros/         # proc-macro：20 个属性宏
+│   │   ├── src/ui.html        # 共享文档 UI（核心 crate 导出，适配器引用）
+│   │   ├── tests/             # 集成测试（宏展开/聚合/序列化/跨 crate/适配器）
+│   │   ├── examples/demo.rs   # 示例：注解 + 输出 api.json
+│   │   └── examples/axum_demo.rs  # 示例：axum 接入（feature `axum`）
+│   ├── apidoc-macros/         # proc-macro：20 个属性宏（经 apidoc-rs re-export）
 │   │   └── src/lib.rs         # 宏定义 + 参数解析 + 编译期校验
-│   ├── apidoc-mock/           # Mock 引擎（fake 规则生成 mock 数据）
-│   ├── apidoc-test-fixtures/  # 跨 crate 注册测试夹具
-│   ├── apidoc-axum/           # axum 适配器（文档路由 + cors_layer + mock + export）
-│   └── apidoc-actix/          # actix-web 适配器（与 axum 功能 1:1）
+│   └── apidoc-test-fixtures/  # 跨 crate 注册测试夹具（仅 workspace，不发布）
 ├── .github/
 │   └── workflows/release.yml  # 发布工作流（读取 VERSION，增量创建 tag+release）
 └── docs/
@@ -114,13 +115,12 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc = "0.1"        # 或 path = "crates/apidoc"
-apidoc-macros = "0.1"
-linkme = "0.3"        # 宏展开直接引用 linkme 路径，消费方需直接依赖
+apidoc-rs = "0.1"     # 或 path = "crates/apidoc"
 serde_json = "1"      # 输出 api.json 用
 ```
 
-> 适配器按 Web 框架二选一：axum 用 `apidoc-axum`，actix-web 用 `apidoc-actix`（两者功能 1:1）。`apidoc-mock`（Mock 引擎）为框架内部依赖，由适配器自动引入，一般消费方无需直接使用。
+> 单个发布包 `apidoc-rs`（lib 名 `apidoc`，宏经 re-export 无需单独依赖）：
+> 纯核心零 feature；按 Web 框架二选一开 `features = ["axum"]` 或 `features = ["actix"]`（两者功能 1:1）；Mock 引擎由适配器 feature 隐含启用（`mock` 也可单独开启）。默认构建不拉任何框架依赖。
 
 ### 2. 编写注解
 
@@ -291,20 +291,21 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 描述文件（application/j
 
 - **markdown**：适合贴进项目 Wiki / 发布说明，按分组输出目录，每个接口带参数表与响应块；
 - **typescript**：前端可直接粘贴为类型定义；未分组接口落入 `defaultGroup` 命名空间（`default` 是 TS 保留字，不能作标识符）；
-- **swagger**：`info.version` 取根目录 `VERSION` 文件内容（当前 1.1.0），可直接导入 Swagger UI 或代码生成器。
+- **swagger**：`info.version` 取根目录 `VERSION` 文件内容（当前 1.3.0），可直接导入 Swagger UI 或代码生成器。
 
 ### 7. actix-web 适配器
 
-Web 框架用 actix-web 时接入 `apidoc-actix`（与 axum 适配器功能 1:1）：
+Web 框架用 actix-web 时开启 `features = ["actix"]`（与 axum 适配器功能 1:1）：
 
 ```toml
 [dependencies]
-apidoc-actix = "0.1"     # 或 path = "crates/apidoc-actix"
+apidoc-rs = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust
 use actix_web::{App, HttpServer};
-use apidoc_actix::{apidoc_routes, cors_layer, ApidocConfig, CorsConfig};
+use apidoc::actix::{apidoc_routes, cors_layer, CorsConfig};
+use apidoc::ApidocConfig;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

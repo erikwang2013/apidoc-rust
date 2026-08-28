@@ -231,44 +231,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "apidoc"
-version = "0.1.0"
-dependencies = [
- "apidoc-macros",
- "apidoc-test-fixtures",
- "linkme",
- "md5",
- "serde",
- "serde_json",
-]
-
-[[package]]
-name = "apidoc-actix"
-version = "0.1.0"
-dependencies = [
- "actix-cors",
- "actix-web",
- "apidoc",
- "apidoc-mock",
- "linkme",
- "serde_json",
-]
-
-[[package]]
-name = "apidoc-axum"
-version = "0.1.0"
-dependencies = [
- "apidoc",
- "apidoc-mock",
- "axum",
- "linkme",
- "serde_json",
- "tokio",
- "tower",
- "tower-http",
-]
-
-[[package]]
 name = "apidoc-macros"
 version = "0.1.0"
 dependencies = [
@@ -278,20 +240,29 @@ dependencies = [
 ]
 
 [[package]]
-name = "apidoc-mock"
+name = "apidoc-rs"
 version = "0.1.0"
 dependencies = [
- "apidoc",
+ "actix-cors",
+ "actix-web",
+ "apidoc-macros",
+ "apidoc-test-fixtures",
+ "axum",
  "fake",
+ "linkme",
+ "md5",
  "serde",
  "serde_json",
+ "tokio",
+ "tower",
+ "tower-http",
 ]
 
 [[package]]
 name = "apidoc-test-fixtures"
 version = "0.1.0"
 dependencies = [
- "apidoc",
+ "apidoc-rs",
  "linkme",
 ]
 

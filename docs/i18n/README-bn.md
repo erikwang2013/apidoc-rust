@@ -47,7 +47,7 @@ apidoc-rust হল একটি রাস্টে বাস্তবায়�
 ### বাস্তবায়িত (M4)
 
 - **অনলাইন ডিবাগিং**: ডকুমেন্ট পেজে বিল্ট-ইন «অনলাইন ডিবাগিং» প্যানেল — Base URL প্রি-ফিল হয় `location.origin` দিয়ে ক্রস-অরিজিনে সরাসরি টার্গেট সার্ভিসে, প্যারামিটার ফর্ম mock দিয়ে প্রি-ফিল, `{name}` / `:name` রাউট প্লেসহোল্ডার রিপ্লেসমেন্ট, GET/HEAD প্যারামিটার query-তে, বাকি methods JSON body হিসেবে, রিকোয়েস্ট হেডার এডিট + কাস্টম header, রেসপন্স ডিসপ্লে (স্ট্যাটাস / সময় / pretty JSON), CORS ফেল হলে হলুদ সতর্কতা
-- **Mock ইঞ্জিন** (`crates/apidoc-mock`, fake crate-এর উপর নির্ভরশীল, ১৫টি রুল: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date)। রুল প্রায়োরিটি: `mock="fake:xxx"` fake রুল টেবিলে যায় (অজানা নাম ডিফল্ট ভ্যালুতে ফলব্যাক) ← বাকি নন-খালি mock অপরিবর্তিত আউটপুট (যেমন `mock="1"`, `mock="erik"`) ← mock না থাকলে `ty` অনুযায়ী অটো-জেনারেশন (int←`"1"`, float←`"0.5"`, bool←`"true"`, object←`"{}"`, string←`"string"`)؛ children রিকার্সিভ নেস্টিং, array ফিক্সড ২টি আইটেম
+- **Mock ইঞ্জিন** (`crates/apidoc/src/mock.rs`, fake crate-এর উপর নির্ভরশীল, ১৫টি রুল: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date)। রুল প্রায়োরিটি: `mock="fake:xxx"` fake রুল টেবিলে যায় (অজানা নাম ডিফল্ট ভ্যালুতে ফলব্যাক) ← বাকি নন-খালি mock অপরিবর্তিত আউটপুট (যেমন `mock="1"`, `mock="erik"`) ← mock না থাকলে `ty` অনুযায়ী অটো-জেনারেশন (int←`"1"`, float←`"0.5"`, bool←`"true"`, object←`"{}"`, string←`"string"`)؛ children রিকার্সিভ নেস্টিং, array ফিক্সড ২টি আইটেম
 - **mock ইন্টারফেস**: axum অ্যাডাপ্টারে নতুন `GET /apidoc/mock?url=&method=`, url + method এক্সাক্ট ম্যাচ, ম্যাচ না হলে 404; ডিবাগ প্যানেল ডিফল্টে `not_debug` এন্ডপয়েন্ট লুকিয়ে রাখে, «not_debug ইন্টারফেস দেখান» টিক দিলে দেখায়
 - **CORS ডাইরেক্ট**: অনলাইন ডিবাগিং ব্রাউজার থেকে সরাসরি টার্গেট ইন্টারফেসে সংযোগ করে, অ্যাডাপ্টারের `cors_layer` পারমিশন দেয় (সার্ভার-সাইড রিভার্স প্রক্সি v2-তে)
 
@@ -56,7 +56,7 @@ apidoc-rust হল একটি রাস্টে বাস্তবায়�
 - **তিন ফরম্যাটে এক্সপোর্ট** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), কোর ক্রেট `export::markdown::render` / `export::typescript::render` / `export::swagger::render` সরবরাহ করে
 - **এক্সপোর্ট রাউট**: অ্যাডাপ্টারে নতুন `GET /apidoc/export?format=md|ts|swagger`, অজানা format-এ 400; Content-Type যথাক্রমে `text/markdown` / `application/typescript` / `application/json`
 - **markdown**: গ্রুপড ডিরেক্টরি + প্যারামিটার টেবিল + রেসপন্স ব্লক; **typescript**: group নেমস্পেস অনুযায়ী `{Name}Params` / `{Name}Result` টাইপ তৈরি, গ্রুপবিহীন ইন্টারফেস `defaultGroup`-এ পড়ে (`default` TS রিজার্ভড শব্দ); **swagger**: `info.version` রুটের `VERSION` ফাইলের কনটেন্ট থেকে নেওয়া
-- **actix-web অ্যাডাপ্টার** (`crates/apidoc-actix`): axum অ্যাডাপ্টারের সাথে 1:1 ফাংশনালিটি—`apidoc_routes(ApidocConfig) -> Scope` /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export মাউন্ট করে, `cors_layer(CorsConfig)` ক্রস-অরিজিন পারমিশন দেয়
+- **actix-web অ্যাডাপ্টার** (`crates/apidoc/src/actix.rs`): axum অ্যাডাপ্টারের সাথে 1:1 ফাংশনালিটি—`apidoc_routes(ApidocConfig) -> Scope` /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export মাউন্ট করে, `cors_layer(CorsConfig)` ক্রস-অরিজিন পারমিশন দেয়
 - **UI শেয়ারিং**: ডকুমেন্ট UI (`src/ui.html`) কোর ক্রেটে স্থানান্তরিত, `pub const UI_HTML` এক্সপোর্ট হয়, দুই অ্যাডাপ্টারই একই কপি রেফার করে (রিলিজ প্যাকেজিংয়ে নিরাপদ)
 
 ### বাস্তবায়িত (M6)
@@ -86,7 +86,7 @@ apidoc-rust হল একটি রাস্টে বাস্তবায়�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace কনফিগারেশন (resolver 2)
-├── VERSION                    # প্রজেক্ট ভার্সন (v1.1.0, ফ্রেমওয়ার্ক ভার্সন 0.1.0 থেকে আলাদা)
+├── VERSION                    # প্রজেক্ট ভার্সন (v1.3.0, ফ্রেমওয়ার্ক ভার্সন 0.1.0 থেকে আলাদা)
 ├── crates/
 │   ├── apidoc/                # রানটাইম কোর (ফ্রেমওয়ার্ক-নিরপেক্ষ)
 │   │   ├── src/lib.rs         # ডেটা মডেল + DocRegistry অ্যাগ্রিগেশন + api.json + UI_HTML
@@ -97,10 +97,10 @@ apidoc-rust/
 │   │   └── examples/demo.rs   # উদাহরণ: অ্যানোটেশন + api.json আউটপুট
 │   ├── apidoc-macros/         # proc-macro: ২০টি অ্যাট্রিবিউট ম্যাক্রো
 │   │   └── src/lib.rs         # ম্যাক্রো সংজ্ঞা + প্যারামিটার পার্সিং + কম্পাইল-টাইম ভ্যালিডেশন
-│   ├── apidoc-mock/           # Mock ইঞ্জিন (fake রুল দিয়ে mock ডেটা জেনারেশন)
+
 │   ├── apidoc-test-fixtures/  # ক্রস-crate রেজিস্ট্রেশন টেস্ট ফিক্সচার
-│   ├── apidoc-axum/           # axum অ্যাডাপ্টার (ডকুমেন্ট রাউট + cors_layer + mock + export)
-│   └── apidoc-actix/          # actix-web অ্যাডাপ্টার (axum-এর সাথে 1:1 ফাংশনালিটি)
+
+
 ├── .github/
 │   └── workflows/release.yml  # রিলিজ ওয়ার্কফ্লো (VERSION পড়ে, ইনক্রিমেন্টাল tag+release তৈরি)
 └── docs/
@@ -114,13 +114,13 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc = "0.1"        # অথবা path = "crates/apidoc"
-apidoc-macros = "0.1"
-linkme = "0.3"        # ম্যাক্রো এক্সপানশন সরাসরি linkme পাথ রেফার করে, ভোক্তাকে সরাসরি ডিপেন্ডেন্সি দিতে হবে
+apidoc-rs = "0.1"        # অথবা path = "crates/apidoc"
+
+
 serde_json = "1"      # api.json আউটপুটের জন্য
 ```
 
-> অ্যাডাপ্টার ওয়েব ফ্রেমওয়ার্ক অনুযায়ী একটি বেছে নিন: axum-এ `apidoc-axum`, actix-web-এ `apidoc-actix` (দুটোর ফাংশনালিটি 1:1)। `apidoc-mock` (Mock ইঞ্জিন) ফ্রেমওয়ার্কের অভ্যন্তরীণ ডিপেন্ডেন্সি, অ্যাডাপ্টারের মাধ্যমে স্বয়ংক্রিয়ভাবে যুক্ত হয়, সাধারণত ভোক্তাকে সরাসরি ব্যবহার করতে হয় না।
+> অ্যাডাপ্টার ওয়েব ফ্রেমওয়ার্ক অনুযায়ী একটি বেছে নিন: axum-এ `features = ["axum"]`, actix-web-এ `features = ["actix"]` (দুটোর ফাংশনালিটি 1:1)। `mock` (Mock ইঞ্জিন) ফ্রেমওয়ার্কের অভ্যন্তরীণ ডিপেন্ডেন্সি, অ্যাডাপ্টারের মাধ্যমে স্বয়ংক্রিয়ভাবে যুক্ত হয়, সাধারণত ভোক্তাকে সরাসরি ব্যবহার করতে হয় না।
 
 ### ২. অ্যানোটেশন লেখা
 
@@ -242,20 +242,21 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 বর্ণনা ফাই
 
 - **markdown**: প্রজেক্ট Wiki / রিলিজ নোটে পেস্ট করার উপযুক্ত, গ্রুপ অনুযায়ী ডিরেক্টরি আউটপুট, প্রতিটি ইন্টারফেসে প্যারামিটার টেবিল ও রেসপন্স ব্লক;
 - **typescript**: ফ্রন্টএন্ড সরাসরি টাইপ ডেফিনিশন হিসেবে পেস্ট করতে পারে; গ্রুপবিহীন ইন্টারফেস `defaultGroup` নেমস্পেসে পড়ে (`default` TS রিজার্ভড শব্দ, আইডেন্টিফায়ার হিসেবে ব্যবহার করা যাবে না);
-- **swagger**: `info.version` রুটের `VERSION` ফাইলের কনটেন্ট থেকে নেওয়া (বর্তমানে 1.1.0), সরাসরি Swagger UI বা কোড জেনারেটরে ইমপোর্ট করা যায়।
+- **swagger**: `info.version` রুটের `VERSION` ফাইলের কনটেন্ট থেকে নেওয়া (বর্তমানে 1.3.0), সরাসরি Swagger UI বা কোড জেনারেটরে ইমপোর্ট করা যায়।
 
 ### ৭. actix-web অ্যাডাপ্টার
 
-ওয়েব ফ্রেমওয়ার্ক হিসেবে actix-web ব্যবহার করলে `apidoc-actix` যুক্ত করুন (axum অ্যাডাপ্টারের সাথে 1:1 ফাংশনালিটি):
+ওয়েব ফ্রেমওয়ার্ক হিসেবে actix-web ব্যবহার করলে `features = ["actix"]` যুক্ত করুন (axum অ্যাডাপ্টারের সাথে 1:1 ফাংশনালিটি):
 
 ```toml
 [dependencies]
-apidoc-actix = "0.1"     # অথবা path = "crates/apidoc-actix"
+apidoc-rs = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust
 use actix_web::{App, HttpServer};
-use apidoc_actix::{apidoc_routes, cors_layer, ApidocConfig, CorsConfig};
+use apidoc::actix::{apidoc_routes, cors_layer, CorsConfig};
+use apidoc::ApidocConfig;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

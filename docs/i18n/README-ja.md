@@ -47,7 +47,7 @@ apidoc-rust は Rust で実装された**汎用プラグイン型 API インタ�
 ### 実装済み（M4）
 
 - **オンラインデバッグ**：ドキュメントページに組み込みの「オンラインデバッグ」パネル——Base URL は `location.origin` で事前入力されクロスオリジンで対象サービスに直結、パラメータフォームは mock で事前入力、`{name}` / `:name` のルートプレースホルダー置換、GET/HEAD パラメータは query に統合、その他の method は JSON body に組み立て、リクエストヘッダー編集 + カスタム header、レスポンス表示（ステータス / 所要時間 / pretty JSON）、CORS 失敗時は黄色の警告
-- **Mock エンジン**（`crates/apidoc-mock`、fake crate 依存、15 ルール：name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date）。ルール優先度：`mock="fake:xxx"` は fake ルール表を通る（不明な名前はデフォルト値にフォールバック）→ その他の非空 mock はそのまま出力（例：`mock="1"`、`mock="erik"`）→ mock なしは `ty` に応じて自動生成（int→`"1"`、float→`"0.5"`、bool→`"true"`、object→`"{}"`、string→`"string"`）；children は再帰的にネスト、array は固定 2 項目
+- **Mock エンジン**（`crates/apidoc/src/mock.rs`、fake crate 依存、15 ルール：name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date）。ルール優先度：`mock="fake:xxx"` は fake ルール表を通る（不明な名前はデフォルト値にフォールバック）→ その他の非空 mock はそのまま出力（例：`mock="1"`、`mock="erik"`）→ mock なしは `ty` に応じて自動生成（int→`"1"`、float→`"0.5"`、bool→`"true"`、object→`"{}"`、string→`"string"`）；children は再帰的にネスト、array は固定 2 項目
 - **mock インターフェース**：axum アダプタに `GET /apidoc/mock?url=&method=` を追加、url + method を完全一致で照合し、不一致は 404；デバッグパネルはデフォルトで `not_debug` エンドポイントを非表示にし、「not_debug インターフェースを表示」にチェックすると表示
 - **CORS 直結**：オンラインデバッグはブラウザから対象インターフェースに直接接続し、アダプタの `cors_layer` が許可します（サーバー側リバースプロキシは v2 に持ち越し）
 
@@ -56,7 +56,7 @@ apidoc-rust は Rust で実装された**汎用プラグイン型 API インタ�
 - **3 形式エクスポート**（`crates/apidoc/src/export/`）：markdown / typescript / swagger（OpenAPI 3.0.0）、コア crate が `export::markdown::render` / `export::typescript::render` / `export::swagger::render` を提供
 - **エクスポートルート**：アダプタに `GET /apidoc/export?format=md|ts|swagger` を追加、未知の format は 400 を返す；Content-Type はそれぞれ `text/markdown` / `application/typescript` / `application/json`
 - **markdown**：グループ別ディレクトリ + パラメータ表 + レスポンスブロック；**typescript**：group ごとに名前空間で `{Name}Params` / `{Name}Result` 型を生成、未グループのインターフェースは `defaultGroup` に入る（`default` は TS の予約語）；**swagger**：`info.version` はルートの `VERSION` ファイルの内容を取得
-- **actix-web アダプタ**（`crates/apidoc-actix`）：axum アダプタと機能 1:1——`apidoc_routes(ApidocConfig) -> Scope` で /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export をマウント、`cors_layer(CorsConfig)` がクロスオリジンを許可
+- **actix-web アダプタ**（`crates/apidoc/src/actix.rs`）：axum アダプタと機能 1:1——`apidoc_routes(ApidocConfig) -> Scope` で /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export をマウント、`cors_layer(CorsConfig)` がクロスオリジンを許可
 - **UI 共有**：ドキュメント UI（`src/ui.html`）をコア crate に移動し、`pub const UI_HTML` としてエクスポート、両アダプタは同一のものを参照（リリースパッケージングでも安全）
 
 ### 実装済み（M6）
@@ -86,7 +86,7 @@ apidoc-rust は Rust で実装された**汎用プラグイン型 API インタ�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 設定（resolver 2）
-├── VERSION                    # プロジェクトバージョン（v1.1.0、フレームワーク 0.1.0 と分離）
+├── VERSION                    # プロジェクトバージョン（v1.3.0、フレームワーク 0.1.0 と分離）
 ├── crates/
 │   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
 │   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML
@@ -97,10 +97,10 @@ apidoc-rust/
 │   │   └── examples/demo.rs   # サンプル：注釈 + api.json 出力
 │   ├── apidoc-macros/         # proc-macro：20 つの属性マクロ
 │   │   └── src/lib.rs         # マクロ定義 + パラメータ解析 + コンパイル期検証
-│   ├── apidoc-mock/           # Mock エンジン（fake ルールで mock データ生成）
+
 │   ├── apidoc-test-fixtures/  # クロス crate 登録テストフィクスチャ
-│   ├── apidoc-axum/           # axum アダプタ（ドキュメントルート + cors_layer + mock + export）
-│   └── apidoc-actix/          # actix-web アダプタ（axum と機能 1:1）
+
+
 ├── .github/
 │   └── workflows/release.yml  # リリースワークフロー（VERSION を読み、tag+release を増分作成）
 └── docs/
@@ -114,13 +114,13 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc = "0.1"        # または path = "crates/apidoc"
-apidoc-macros = "0.1"
-linkme = "0.3"        # マクロ展開が linkme のパスを直接参照するため、利用側は直接依存が必要
+apidoc-rs = "0.1"        # または path = "crates/apidoc"
+
+
 serde_json = "1"      # api.json 出力用
 ```
 
-> アダプタは Web フレームワークに応じてどちらか一方を選びます：axum は `apidoc-axum`、actix-web は `apidoc-actix`（両者の機能は 1:1）。`apidoc-mock`（Mock エンジン）はフレームワーク内部の依存で、アダプタ経由で自動的に導入されるため、通常は利用側が直接使う必要はありません。
+> アダプタは Web フレームワークに応じてどちらか一方を選びます：axum は `features = ["axum"]`、actix-web は `features = ["actix"]`（両者の機能は 1:1）。`mock`（Mock エンジン）はフレームワーク内部の依存で、アダプタ経由で自動的に導入されるため、通常は利用側が直接使う必要はありません。
 
 ### 2. 注釈の記述
 
@@ -242,20 +242,21 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 記述ファイル（applica
 
 - **markdown**：プロジェクト Wiki / リリースノートに貼り付けるのに適しており、グループごとにディレクトリを出力し、各インターフェースにパラメータ表とレスポンスブロック付き；
 - **typescript**：フロントエンドがそのまま型定義として貼り付け可能；未グループのインターフェースは `defaultGroup` 名前空間に入る（`default` は TS の予約語のため識別子にできない）；
-- **swagger**：`info.version` はルートの `VERSION` ファイルの内容を取得（現在 1.1.0）、そのまま Swagger UI やコードジェネレータにインポート可能。
+- **swagger**：`info.version` はルートの `VERSION` ファイルの内容を取得（現在 1.3.0）、そのまま Swagger UI やコードジェネレータにインポート可能。
 
 ### 7. actix-web アダプタ
 
-Web フレームワークに actix-web を使う場合は `apidoc-actix` を接続します（axum アダプタと機能 1:1）：
+Web フレームワークに actix-web を使う場合は `features = ["actix"]` を接続します（axum アダプタと機能 1:1）：
 
 ```toml
 [dependencies]
-apidoc-actix = "0.1"     # または path = "crates/apidoc-actix"
+apidoc-rs = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust
 use actix_web::{App, HttpServer};
-use apidoc_actix::{apidoc_routes, cors_layer, ApidocConfig, CorsConfig};
+use apidoc::actix::{apidoc_routes, cors_layer, CorsConfig};
+use apidoc::ApidocConfig;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

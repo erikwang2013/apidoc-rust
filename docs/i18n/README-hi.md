@@ -47,7 +47,7 @@ apidoc-rust एक Rust में कार्यान्वित **साम�
 ### कार्यान्वित (M4)
 
 - **ऑनलाइन डिबगिंग**: दस्तावेज़ पेज में «ऑनलाइन डिबगिंग» पैनल बिल्ट-इन है — Base URL `location.origin` से प्री-फिल होकर लक्ष्य सेवा से सीधे क्रॉस-डोमेन जुड़ता है, पैरामीटर फ़ॉर्म mock से प्री-फिल, `{name}` / `:name` रूट प्लेसहोल्डर प्रतिस्थापन, GET/HEAD पैरामीटर query में जोड़े जाते हैं, बाकी method का JSON body बनता है, रिक्वेस्ट हेडर संपादन + कस्टम header, रिस्पॉन्स प्रदर्शन (स्थिति / समय / pretty JSON), CORS विफलता पर पीली चेतावनी
-- **मॉक इंजन** (`crates/apidoc-mock`, fake crate पर निर्भर, 15 नियम: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date)। नियम प्राथमिकता: `mock="fake:xxx"` fake नियम तालिका से (अज्ञात नाम → डिफ़ॉल्ट मान) → बाकी गैर-खाली mock ज्यों-का-त्यों आउटपुट (जैसे `mock="1"`, `mock="erik"`) → बिना mock के `ty` के अनुसार स्वतः जनरेट (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); children रिकर्सिव रूप से नेस्टेड, array में निश्चित 2 आइटम
+- **मॉक इंजन** (`crates/apidoc/src/mock.rs`, fake crate पर निर्भर, 15 नियम: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date)। नियम प्राथमिकता: `mock="fake:xxx"` fake नियम तालिका से (अज्ञात नाम → डिफ़ॉल्ट मान) → बाकी गैर-खाली mock ज्यों-का-त्यों आउटपुट (जैसे `mock="1"`, `mock="erik"`) → बिना mock के `ty` के अनुसार स्वतः जनरेट (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); children रिकर्सिव रूप से नेस्टेड, array में निश्चित 2 आइटम
 - **mock इंटरफ़ेस**: axum अडैप्टर में नया `GET /apidoc/mock?url=&method=`, url + method का सटीक मिलान, न मिलने पर 404; डिबग पैनल डिफ़ॉल्ट रूप से `not_debug` एंडपॉइंट छिपाता है, «not_debug इंटरफ़ेस दिखाएँ» चेक करने पर ही दिखते हैं
 - **CORS सीधा कनेक्शन**: ऑनलाइन डिबगिंग में ब्राउज़र सीधे लक्ष्य इंटरफ़ेस से जुड़ता है, अडैप्टर का `cors_layer` अनुमति देता है (सर्वर-साइड रिवर्स प्रॉक्सी v2 के लिए)
 
@@ -56,7 +56,7 @@ apidoc-rust एक Rust में कार्यान्वित **साम�
 - **तीन प्रारूपों में निर्यात** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), कोर crate `export::markdown::render` / `export::typescript::render` / `export::swagger::render` प्रदान करता है
 - **निर्यात रूट**: अडैप्टर में नया `GET /apidoc/export?format=md|ts|swagger`, अज्ञात format पर 400; Content-Type क्रमशः `text/markdown` / `application/typescript` / `application/json`
 - **markdown**: समूहित कैटलॉग + पैरामीटर तालिका + रिस्पॉन्स ब्लॉक; **typescript**: group namespace के अनुसार `{Name}Params` / `{Name}Result` टाइप जनरेट होते हैं, बिना समूह वाले इंटरफ़ेस `defaultGroup` में जाते हैं (`default` TS का आरक्षित शब्द है); **swagger**: `info.version` रूट में `VERSION` फ़ाइल की सामग्री से लिया जाता है
-- **actix-web अडैप्टर** (`crates/apidoc-actix`): axum अडैप्टर के साथ कार्यक्षमता 1:1 — `apidoc_routes(ApidocConfig) -> Scope` /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export माउंट करता है, `cors_layer(CorsConfig)` क्रॉस-डोमेन की अनुमति देता है
+- **actix-web अडैप्टर** (`crates/apidoc/src/actix.rs`): axum अडैप्टर के साथ कार्यक्षमता 1:1 — `apidoc_routes(ApidocConfig) -> Scope` /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export माउंट करता है, `cors_layer(CorsConfig)` क्रॉस-डोमेन की अनुमति देता है
 - **UI साझाकरण**: दस्तावेज़ UI (`src/ui.html`) कोर crate में ऊपर स्थानांतरित, `pub const UI_HTML` निर्यात, दोनों अडैप्टर एक ही प्रति संदर्भित करते हैं (रिलीज़ पैकेजिंग सुरक्षित)
 
 ### कार्यान्वित (M6)
@@ -86,7 +86,7 @@ apidoc-rust एक Rust में कार्यान्वित **साम�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace कॉन्फ़िगरेशन (resolver 2)
-├── VERSION                    # परियोजना संस्करण (v1.1.0, फ्रेमवर्क संस्करण 0.1.0 से अलग)
+├── VERSION                    # परियोजना संस्करण (v1.3.0, फ्रेमवर्क संस्करण 0.1.0 से अलग)
 ├── crates/
 │   ├── apidoc/                # रनटाइम कोर (फ्रेमवर्क-स्वतंत्र)
 │   │   ├── src/lib.rs         # डेटा मॉडल + DocRegistry एकत्रीकरण + api.json + UI_HTML
@@ -97,10 +97,10 @@ apidoc-rust/
 │   │   └── examples/demo.rs   # उदाहरण: एनोटेशन + api.json आउटपुट
 │   ├── apidoc-macros/         # proc-macro: 20 एट्रिब्यूट मैक्रो
 │   │   └── src/lib.rs         # मैक्रो परिभाषाएँ + पैरामीटर पार्सिंग + संकलन-समय सत्यापन
-│   ├── apidoc-mock/           # मॉक इंजन (fake नियमों से mock डेटा जनरेट)
+
 │   ├── apidoc-test-fixtures/  # क्रॉस-crate पंजीकरण टेस्ट फिक्स्चर
-│   ├── apidoc-axum/           # axum अडैप्टर (दस्तावेज़ रूट + cors_layer + mock + export)
-│   └── apidoc-actix/          # actix-web अडैप्टर (axum के साथ कार्यक्षमता 1:1)
+
+
 ├── .github/
 │   └── workflows/release.yml  # रिलीज़ वर्कफ़्लो (VERSION पढ़कर, incremental tag+release बनाता है)
 └── docs/
@@ -114,13 +114,13 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc = "0.1"        # या path = "crates/apidoc"
-apidoc-macros = "0.1"
-linkme = "0.3"        # मैक्रो विस्तार सीधे linkme पथ का संदर्भ देता है, उपभोक्ता को सीधे निर्भरता चाहिए
+apidoc-rs = "0.1"        # या path = "crates/apidoc"
+
+
 serde_json = "1"      # api.json आउटपुट के लिए
 ```
 
-> Web फ्रेमवर्क के अनुसार अडैप्टर चुनें: axum के लिए `apidoc-axum`, actix-web के लिए `apidoc-actix` (दोनों की कार्यक्षमता 1:1 है)। `apidoc-mock` (मॉक इंजन) फ्रेमवर्क की आंतरिक निर्भरता है, अडैप्टर द्वारा स्वतः जोड़ी जाती है, आम उपभोक्ता को सीधे उपयोग करने की आवश्यकता नहीं।
+> Web फ्रेमवर्क के अनुसार अडैप्टर चुनें: axum के लिए `features = ["axum"]`, actix-web के लिए `features = ["actix"]` (दोनों की कार्यक्षमता 1:1 है)। `mock` (मॉक इंजन) फ्रेमवर्क की आंतरिक निर्भरता है, अडैप्टर द्वारा स्वतः जोड़ी जाती है, आम उपभोक्ता को सीधे उपयोग करने की आवश्यकता नहीं।
 
 ### 2. एनोटेशन लिखें
 
@@ -242,20 +242,21 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 विवरण फ़ाइ
 
 - **markdown**: प्रोजेक्ट Wiki / रिलीज़ नोट्स में चिपकाने के लिए उपयुक्त, समूह के अनुसार कैटलॉग, प्रत्येक इंटरफ़ेस में पैरामीटर तालिका और रिस्पॉन्स ब्लॉक;
 - **typescript**: फ्रंटएंड सीधे टाइप परिभाषाओं के रूप में चिपका सकता है; बिना समूह वाले इंटरफ़ेस `defaultGroup` namespace में जाते हैं (`default` TS का आरक्षित शब्द है, पहचानकर्ता नहीं बन सकता);
-- **swagger**: `info.version` रूट की `VERSION` फ़ाइल की सामग्री से लिया जाता है (वर्तमान में 1.1.0), सीधे Swagger UI या कोड जनरेटर में आयात किया जा सकता है।
+- **swagger**: `info.version` रूट की `VERSION` फ़ाइल की सामग्री से लिया जाता है (वर्तमान में 1.3.0), सीधे Swagger UI या कोड जनरेटर में आयात किया जा सकता है।
 
 ### 7. actix-web अडैप्टर
 
-Web फ्रेमवर्क actix-web होने पर `apidoc-actix` जोड़ें (axum अडैप्टर के साथ कार्यक्षमता 1:1):
+Web फ्रेमवर्क actix-web होने पर `features = ["actix"]` जोड़ें (axum अडैप्टर के साथ कार्यक्षमता 1:1):
 
 ```toml
 [dependencies]
-apidoc-actix = "0.1"     # या path = "crates/apidoc-actix"
+apidoc-rs = { version = "0.1", features = ["actix"] }
 ```
 
 ```rust
 use actix_web::{App, HttpServer};
-use apidoc_actix::{apidoc_routes, cors_layer, ApidocConfig, CorsConfig};
+use apidoc::actix::{apidoc_routes, cors_layer, CorsConfig};
+use apidoc::ApidocConfig;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
