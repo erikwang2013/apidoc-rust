@@ -1,7 +1,11 @@
+<div align="center">
+<img src="../images/apidoc-pet.svg" alt="Apidoc 펫" width="200">
+</div>
+
 <h1 align="center">Apidoc (apidoc-rust)</h1>
 
 <div align="center">
- Rust 프로시저 매크로(proc-macro)로 API 인터페이스 문서를 생성하는 범용 플러그인 라이브러리
+ Rust 프로시저 매크로(proc-macro) 기반 API 문서 생성·인터페이스 개발 도구, axum·actix-web 등 주요 프레임워크 지원
 </div>
 
 <div align="center">
@@ -25,13 +29,30 @@
 <a href="README-ja.md">日本語</a>
 </div>
 
-## 프로젝트 소개
+## 📖프로젝트 소개
 
-apidoc-rust는 Rust로 구현된 **범용 플러그형 API 인터페이스 문서 생성기**로, [apidoc-php](https://github.com/erikwang2013/apidoc-php)(PHP 8 attributes 기반으로 API 문서를 생성하는 composer 확장)를 참고해 "주석이 곧 문서"라는 능력을 Rust 네이티브 방식으로 구현했습니다:
+Apidoc은 **Rust 프로시저 매크로(proc-macro)** 를 파싱해 API 인터페이스 문서를 자동 생성하는 Rust 플러그인 라이브러리로, axum·actix-web 등 주요 프레임워크를 지원합니다. 문서 자동 생성 외에도 온라인 인터페이스 디버깅, Mock 디버깅 데이터, Json/TypeScript 코드 생성, 인터페이스 생성기, 코드 생성기 등의 기능을 통합해 인터페이스 개발·디버깅·납품의 전 과정을 아우르며, API 개발 효율 향상을 목표로 합니다.
+
+> **프로젝트 출처**: 본 프로젝트는 [apidoc-php](https://github.com/erikwang2013/apidoc-php)(PHP 8 attributes 기반으로 API 문서를 생성하는 composer 확장)를 참고해 "주석이 곧 문서"라는 능력을 Rust 네이티브 방식으로 구현한 것으로, erikwang2013이 지속적으로 유지·확장하고 있습니다.
+
+apidoc-rust의 구현 방향:
 
 - **컴파일 타임 생성**: 문서는 프로시저 매크로에 의해 컴파일 타임에 생성되어, 문서와 코드가 결코 동기화되지 않을 일이 없습니다;
 - **제로 비용 수집**: linkme 정적 등록으로 런타임에 한 번의 집계로 모든 인터페이스 문서를 얻습니다;
 - **범용 플러그인**: 코어는 HTTP 프레임워크와 무관하며, 얇은 어댑터(axum / actix-web)로 어떤 프레임워크에도 연결됩니다.
+
+### ✨프로젝트 설명
+
+- **설치 즉시 사용**: 복잡한 설정 없이 설치 후 문서에 따라 주석을 작성하면 API 문서가 자동으로 생성됩니다.
+- **간편한 작성**: 공통 정의(definitions)와 필드 `ref` 참조를 지원하며, 몇 줄의 주석만으로 완전한 필드 정의를 완성할 수 있습니다.
+- **온라인 디버깅**: 문서 페이지에서 인터페이스를 바로 디버깅할 수 있으며, 전역 파라미터 전달, Mock 데이터, 디버깅 이벤트를 지원합니다.
+- **다중 앱·다중 버전**: 단일 앱, 다중 앱, 다중 버전 프로젝트를 모두 설정할 수 있고, 인터페이스는 앱/버전별로 그룹화되어 표시·전환됩니다.
+- **그룹·Tag**: 인터페이스는 다단계 그룹과 Tag 표시를 지원합니다.
+- **Markdown 문서**: `md` 주석으로 Markdown을 문서 페이지로 마운트할 수 있습니다.
+- **Json·TypeScript 생성**: 각 인터페이스의 Json 요청/응답 예시와 TypeScript 타입 정의를 자동 생성해 프런트엔드에서 바로 사용할 수 있습니다.
+- **코드 생성기**: 설정 + 템플릿으로 비즈니스 코드와 프런트엔드 Api 파일을 생성합니다.
+- **인터페이스 공유**: 지정한 앱/인터페이스의 공유 링크를 생성하고 `swagger.json`을 내보낼 수 있습니다.
+- **안전한 접근**: 전역 비밀번호와 앱/버전별 독립 비밀번호 권한 부여를 지원하며, 문서 캐시를 켤 수 있습니다.
 
 ## 기능
 
@@ -67,7 +88,7 @@ apidoc-rust는 Rust로 구현된 **범용 플러그형 API 인터페이스 문�
 
 ### 계획 중 (v2)
 
-- v2: 코드 생성기, 데이터 테이블 필드 참조, 공유 링크, 디버깅 이벤트
+- v2: 코드 생성기(인터페이스 생성기), 데이터 테이블 필드 참조, 공유 링크, 디버깅 이벤트, 문서 캐시
 
 ## 아키텍처
 
@@ -86,7 +107,7 @@ apidoc-rust는 Rust로 구현된 **범용 플러그형 API 인터페이스 문�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 설정(resolver 2)
-├── VERSION                    # 프로젝트 버전(v1.3.0, 프레임워크 버전 0.1.0과 분리)
+├── VERSION                    # 프로젝트 버전(v1.5.0)
 ├── crates/
 │   ├── apidoc/                # 런타임 코어(프레임워크 무관)
 │   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML
@@ -114,7 +135,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "0.1"        # 또는 path = "crates/apidoc"
+apidoc-rust = "1.5"        # 또는 path = "crates/apidoc"
 
 
 serde_json = "1"      # api.json 출력용
@@ -242,7 +263,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 설명 파일(application/js
 
 - **markdown**: 프로젝트 Wiki / 릴리스 노트에 붙여넣기 적합, 그룹별 목차 출력, 각 인터페이스에 파라미터 테이블과 응답 블록 포함;
 - **typescript**: 프론트엔드가 바로 타입 정의로 붙여넣기 가능; 그룹 없는 인터페이스는 `defaultGroup` 네임스페이스에 포함(`default`는 TS 예약어라 식별자로 사용 불가);
-- **swagger**: `info.version`은 루트 `VERSION` 파일 내용 사용(현재 1.3.0), Swagger UI나 코드 생성기에 바로 가져오기 가능.
+- **swagger**: `info.version`은 루트 `VERSION` 파일 내용 사용(현재 1.5.0), Swagger UI나 코드 생성기에 바로 가져오기 가능.
 
 ### 7. actix-web 어댑터
 
@@ -250,7 +271,7 @@ Web 프레임워크로 actix-web을 사용할 때 `features = ["actix"]` 연결(
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "1.5", features = ["actix"] }
 ```
 
 ```rust

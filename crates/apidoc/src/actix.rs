@@ -77,6 +77,15 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
                     .body(crate::UI_HTML)
             }),
         )
+        // UI 宠物图标：favicon 与页头 logo（UI 页内容的一部分，与 UI 页同样不设守卫）
+        .route(
+            "/pet.svg",
+            web::get().to(|| async {
+                HttpResponse::Ok()
+                    .content_type("image/svg+xml")
+                    .body(crate::PET_SVG)
+            }),
+        )
         // GET /apidoc/auth?password=<md5>&appKey=...（appKey 应用密码优先）
         .route(
             "/auth",

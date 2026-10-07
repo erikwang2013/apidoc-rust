@@ -1,7 +1,11 @@
+<div align="center">
+<img src="../images/apidoc-pet.svg" alt="Apidoc ペット" width="200">
+</div>
+
 <h1 align="center">Apidoc (apidoc-rust)</h1>
 
 <div align="center">
- Rust の手続きマクロ（proc-macro）で API インターフェースドキュメントを生成する汎用プラグインライブラリ
+ Rust の手続きマクロ（proc-macro）による API ドキュメント生成・インターフェース開発ツール。axum、actix-web など主要フレームワークに対応
 </div>
 
 <div align="center">
@@ -25,13 +29,30 @@
 <a href="README-ja.md"><strong>日本語</strong></a>
 </div>
 
-## プロジェクト紹介
+## 📖プロジェクト紹介
 
-apidoc-rust は Rust で実装された**汎用プラグイン型 API インターフェースドキュメントジェネレータ**です。[apidoc-php](https://github.com/erikwang2013/apidoc-php)（PHP 8 の attributes で API ドキュメントを生成する composer 拡張）を参考に、「注釈＝ドキュメント」という能力を Rust ネイティブな形で実現します：
+Apidoc は **Rust の手続きマクロ（proc-macro）** を解析して API インターフェースドキュメントを自動生成する Rust プラグインライブラリで、axum、actix-web などの主要フレームワークに対応しています。ドキュメントの自動生成に加えて、オンラインインターフェースデバッグ、Mock デバッグデータ、Json/TypeScript コード生成、インターフェースジェネレータ、コードジェネレータなどの機能を統合し、インターフェースの開発・デバッグ・納品までの全工程をカバーして、API 開発効率の向上を目指しています。
+
+> **プロジェクトの出典**：本プロジェクトは [apidoc-php](https://github.com/erikwang2013/apidoc-php)（PHP 8 の attributes で API ドキュメントを生成する composer 拡張）を参考に、「注釈＝ドキュメント」という能力を Rust ネイティブな形で実現したもので、erikwang2013 が継続的にメンテナンス・拡張しています。
+
+apidoc-rust の実装方針：
 
 - **コンパイル期生成**：ドキュメントは手続きマクロによりコンパイル期に生成され、ドキュメントとコードの同期が常に保たれます；
 - **ゼロコスト収集**：linkme による静的登録で、実行時に一度集約するだけで全インターフェースドキュメントを取得できます；
 - **汎用プラグイン**：コアは HTTP フレームワークに依存せず、薄いアダプタ（axum / actix-web）経由で任意のフレームワークに接続できます。
+
+### ✨プロジェクト説明
+
+- **すぐに使える**：面倒な設定は不要で、インストール後にドキュメントどおりに注釈を書くだけで API ドキュメントが自動生成されます。
+- **手軽な記述**：共通定義（definitions）とフィールドの `ref` 参照に対応し、数行の注釈で完全なフィールド定義を完成できます。
+- **オンラインデバッグ**：ドキュメントページ上でインターフェースを直接デバッグでき、グローバルパラメータの引き継ぎ、Mock データ、デバッグイベントに対応します。
+- **複数アプリ・複数バージョン**：単一アプリ、複数アプリ、複数バージョンのプロジェクトをいずれも設定でき、インターフェースはアプリ/バージョンごとにグループ化して表示・切り替えできます。
+- **グループ・Tag**：インターフェースは多段階グループと Tag マーキングに対応します。
+- **Markdown ドキュメント**：`md` 注釈で Markdown をドキュメントページとしてマウントできます。
+- **Json・TypeScript 生成**：各インターフェースの Json リクエスト/レスポンス例と TypeScript 型定義を自動生成し、フロントエンドでそのまま利用できます。
+- **コードジェネレータ**：設定 + テンプレートで業務コードとフロントエンドの Api ファイルを生成できます。
+- **インターフェース共有**：指定したアプリ/インターフェースの共有リンクを生成し、`swagger.json` をエクスポートできます。
+- **安全なアクセス**：グローバルパスワードとアプリ/バージョンごとの独立パスワード認可に対応し、ドキュメントキャッシュを有効にできます。
 
 ## 特徴
 
@@ -67,7 +88,7 @@ apidoc-rust は Rust で実装された**汎用プラグイン型 API インタ�
 
 ### 計画中（v2）
 
-- v2：コードジェネレータ、データテーブルフィールド参照、共有リンク、デバッグイベント
+- v2：コードジェネレータ（インターフェースジェネレータ）、データテーブルフィールド参照、共有リンク、デバッグイベント、ドキュメントキャッシュ
 
 ## アーキテクチャ
 
@@ -86,7 +107,7 @@ apidoc-rust は Rust で実装された**汎用プラグイン型 API インタ�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 設定（resolver 2）
-├── VERSION                    # プロジェクトバージョン（v1.3.0、フレームワーク 0.1.0 と分離）
+├── VERSION                    # プロジェクトバージョン（v1.5.0）
 ├── crates/
 │   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
 │   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML
@@ -114,7 +135,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "0.1"        # または path = "crates/apidoc"
+apidoc-rust = "1.5"        # または path = "crates/apidoc"
 
 
 serde_json = "1"      # api.json 出力用
@@ -242,7 +263,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 記述ファイル（applica
 
 - **markdown**：プロジェクト Wiki / リリースノートに貼り付けるのに適しており、グループごとにディレクトリを出力し、各インターフェースにパラメータ表とレスポンスブロック付き；
 - **typescript**：フロントエンドがそのまま型定義として貼り付け可能；未グループのインターフェースは `defaultGroup` 名前空間に入る（`default` は TS の予約語のため識別子にできない）；
-- **swagger**：`info.version` はルートの `VERSION` ファイルの内容を取得（現在 1.3.0）、そのまま Swagger UI やコードジェネレータにインポート可能。
+- **swagger**：`info.version` はルートの `VERSION` ファイルの内容を取得（現在 1.5.0）、そのまま Swagger UI やコードジェネレータにインポート可能。
 
 ### 7. actix-web アダプタ
 
@@ -250,7 +271,7 @@ Web フレームワークに actix-web を使う場合は `features = ["actix"]`
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "1.5", features = ["actix"] }
 ```
 
 ```rust

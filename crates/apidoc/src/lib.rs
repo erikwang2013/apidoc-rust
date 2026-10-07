@@ -39,6 +39,10 @@ pub const UI_HTML: &str = concat!(
     include_str!("ui.debug.js")
 );
 
+/// 文档 UI 的宠物图标（favicon + 页头 logo），适配器挂在 `/apidoc/pet.svg`。
+/// 与仓库 README 用的 docs/images/apidoc-pet.svg 同一份，包内自带以保证发布打包安全。
+pub const PET_SVG: &str = include_str!("pet.svg");
+
 use serde::Serialize;
 
 /// Collects every `#[apidoc::*]` annotation from all linked crates.

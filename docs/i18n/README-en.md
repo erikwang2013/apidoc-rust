@@ -1,7 +1,11 @@
+<div align="center">
+<img src="../images/apidoc-pet.svg" alt="Apidoc pet" width="200">
+</div>
+
 <h1 align="center">Apidoc (apidoc-rust)</h1>
 
 <div align="center">
- A general-purpose plugin library that generates API documentation from Rust procedural macros (proc-macro)
+ Rust proc-macro powered API documentation generation and interface development toolkit, compatible with axum, actix-web and other mainstream frameworks
 </div>
 
 <div align="center">
@@ -25,13 +29,30 @@
 <a href="README-ja.md">日本語</a>
 </div>
 
-## Introduction
+## 📖Introduction
 
-apidoc-rust is a **general-purpose pluggable API documentation generator** implemented in Rust, inspired by [apidoc-php](https://github.com/erikwang2013/apidoc-php) (a composer extension that generates API documentation from PHP 8 attributes). It brings "annotations as documentation" to the Rust ecosystem the native way:
+Apidoc is a Rust plugin library that parses **Rust procedural macros (proc-macro)** to automatically generate API documentation, and is compatible with mainstream frameworks such as axum and actix-web. Beyond automatic documentation generation, it also integrates online endpoint debugging, mock debugging data, Json/TypeScript code generation, an interface generator, a code generator and more, covering the entire workflow of API development, debugging and delivery, all aimed at making API development more efficient.
+
+> **Project origin**: this project is inspired by [apidoc-php](https://github.com/erikwang2013/apidoc-php) (a composer extension that generates API documentation from PHP 8 attributes), bringing "annotations as documentation" to the Rust ecosystem the native way; it is continuously maintained and extended by erikwang2013.
+
+apidoc-rust's implementation approach:
 
 - **Generated at compile time**: documentation is produced by procedural macros during compilation, so the docs can never drift out of sync with the code;
 - **Zero-cost collection**: static registration via linkme, a single pass at runtime aggregates all endpoint documentation;
 - **Generic plugin core**: the core is HTTP-framework-agnostic and plugs into any framework through thin adapters (axum / actix-web).
+
+### ✨Project Description
+
+- **Out of the box**: no complicated configuration needed — install it, write annotations as documented, and the API documentation is generated automatically.
+- **Effortless authoring**: common definitions (`definitions`) and field `ref` references are supported; a few annotations are enough to complete a full field definition.
+- **Online debugging**: debug endpoints directly inside the docs page, with global parameters carried in, mock data and debug events.
+- **Multi-app / multi-version**: single-app, multi-app and multi-version projects are all supported, with endpoints grouped by app/version for display and switching.
+- **Groups / Tags**: endpoints support multi-level groups and Tag markers.
+- **Markdown docs**: the `md` annotation mounts Markdown as a documentation page.
+- **Json / TypeScript generation**: every endpoint automatically generates Json request/response examples and TypeScript type definitions, ready for direct use in the frontend.
+- **Code generator**: configuration + templates generate business code and frontend Api files.
+- **Endpoint sharing**: generate share links for a chosen app/endpoint and export `swagger.json`.
+- **Secure access**: global password and per-app/version independent password authorization, with optional documentation caching.
 
 ## Features
 
@@ -67,7 +88,7 @@ apidoc-rust is a **general-purpose pluggable API documentation generator** imple
 
 ### Planned (v2)
 
-- v2: code generator, data-table field references, share links, debug events
+- v2: code generator (interface generator), data-table field references, share links, debug events, documentation cache
 
 ## Architecture
 
@@ -86,7 +107,7 @@ apidoc-rust is a **general-purpose pluggable API documentation generator** imple
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace config (resolver 2)
-├── VERSION                    # project version (v1.3.0, separate from the framework version 0.1.0)
+├── VERSION                    # project version (v1.5.0)
 ├── crates/
 │   ├── apidoc/                # runtime core (framework-agnostic)
 │   │   ├── src/lib.rs         # data model + DocRegistry aggregation + api.json + UI_HTML
@@ -114,7 +135,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "0.1"        # or path = "crates/apidoc"
+apidoc-rust = "1.5"        # or path = "crates/apidoc"
 
 
 serde_json = "1"      # for api.json output
@@ -242,7 +263,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 description file (applicatio
 
 - **markdown**: great for pasting into a project Wiki / release notes; outputs a catalog by group, each endpoint with parameter tables and response blocks;
 - **typescript**: the frontend can paste it directly as type definitions; ungrouped endpoints fall into the `defaultGroup` namespace (`default` is a TS reserved word and cannot be an identifier);
-- **swagger**: `info.version` is read from the root `VERSION` file (currently 1.3.0), importable directly into Swagger UI or code generators.
+- **swagger**: `info.version` is read from the root `VERSION` file (currently 1.5.0), importable directly into Swagger UI or code generators.
 
 ### 7. actix-web adapter
 
@@ -250,7 +271,7 @@ When using actix-web, add `features = ["actix"]` (1:1 feature parity with the ax
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "1.5", features = ["actix"] }
 ```
 
 ```rust

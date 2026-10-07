@@ -1,7 +1,11 @@
+<div align="center">
+<img src="docs/images/apidoc-pet.svg" alt="Apidoc 宠物" width="200">
+</div>
+
 <h1 align="center">Apidoc (apidoc-rust)</h1>
 
 <div align="center">
- 基于 Rust 过程宏（proc-macro）生成 API 接口文档的通用插件库
+ 基于 Rust 过程宏（proc-macro）的 API 文档生成与接口开发工具，兼容 axum、actix-web 等主流框架
 </div>
 
 <div align="center">
@@ -25,13 +29,30 @@
 <a href="docs/i18n/README-ja.md">日本語</a>
 </div>
 
-## 项目介绍
+## 📖项目介绍
 
-apidoc-rust 是一个用 Rust 实现的**通用插件式 API 接口文档生成器**，参考 [apidoc-php](https://github.com/erikwang2013/apidoc-php)（基于 PHP 8 attributes 生成 API 文档的 composer 扩展），把"注解即文档"的能力以 Rust 原生方式落地：
+Apidoc 是一款通过解析 **Rust 过程宏（proc-macro）** 自动生成 API 接口文档的 Rust 插件库，兼容 axum、actix-web 等主流框架。除文档自动生成外，还集成了在线接口调试、Mock 调试数据、Json/TypeScript 代码生成、接口生成器、代码生成器等能力，覆盖接口开发、调试、交付的全流程，致力于提升 API 开发效率。
+
+> **项目来源**：本项目参考 [apidoc-php](https://github.com/erikwang2013/apidoc-php)（基于 PHP 8 attributes 生成 API 文档的 composer 扩展），把「注解即文档」的能力以 Rust 原生方式落地，由 erikwang2013 持续维护与扩展。
+
+apidoc-rust 的实现取向：
 
 - **编译期生成**：文档由过程宏在编译期生成，文档与代码永不失同步；
 - **零成本收集**：linkme 静态注册，运行期一次聚合即得全部接口文档；
 - **通用插件**：核心与 HTTP 框架无关，通过薄适配器（axum / actix-web）接入任意框架。
+
+### ✨项目说明
+
+- **开箱即用**：无需繁杂配置，安装后按文档编写注解即可自动生成 API 文档。
+- **轻松编写**：支持通用定义（definitions）、字段的 `ref` 引用，几句注解即可完成完整字段定义。
+- **在线调试**：文档页内直接调试接口，支持全局参数带入、Mock 数据、调试事件。
+- **多应用/多版本**：单应用、多应用、多版本项目均可配置，接口按应用/版本分组展示与切换。
+- **分组/Tag**：接口支持多级分组与 Tag 标记。
+- **Markdown 文档**：`md` 注解可将 Markdown 挂载为文档页。
+- **Json/TypeScript 生成**：每个接口自动生成 Json 请求/响应示例与 TypeScript 类型定义，直接用于前端。
+- **代码生成器**：配置 + 模板即可生成业务代码与前端 Api 文件。
+- **接口分享**：可生成指定应用/接口的分享链接、导出 `swagger.json`。
+- **安全访问**：支持全局密码与应用/版本独立密码授权，可开启文档缓存。
 
 ## 特性
 
@@ -67,7 +88,7 @@ apidoc-rust 是一个用 Rust 实现的**通用插件式 API 接口文档生成�
 
 ### 规划中（v2）
 
-- v2：代码生成器、数据表字段引用、分享链接、调试事件
+- v2：代码生成器（接口生成器）、数据表字段引用、分享链接、调试事件、文档缓存
 
 ## 架构
 
@@ -86,7 +107,7 @@ apidoc-rust 是一个用 Rust 实现的**通用插件式 API 接口文档生成�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 配置（resolver 2）
-├── VERSION                    # 项目版本（v1.3.0，与框架版本 0.1.0 分离）
+├── VERSION                    # 项目版本（v1.5.0）
 ├── crates/
 │   ├── apidoc/                # 单一发布包 apidoc-rust（lib 名 apidoc）
 │   │   ├── src/lib.rs         # 数据模型 + DocRegistry 聚合 + api.json + UI_HTML
@@ -115,7 +136,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "0.1"     # 或 path = "crates/apidoc"
+apidoc-rust = "1.5"     # 或 path = "crates/apidoc"
 serde_json = "1"      # 输出 api.json 用
 ```
 
@@ -291,7 +312,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 描述文件（application/j
 
 - **markdown**：适合贴进项目 Wiki / 发布说明，按分组输出目录，每个接口带参数表与响应块；
 - **typescript**：前端可直接粘贴为类型定义；未分组接口落入 `defaultGroup` 命名空间（`default` 是 TS 保留字，不能作标识符）；
-- **swagger**：`info.version` 取根目录 `VERSION` 文件内容（当前 1.3.0），可直接导入 Swagger UI 或代码生成器。
+- **swagger**：`info.version` 取根目录 `VERSION` 文件内容（当前 1.5.0），可直接导入 Swagger UI 或代码生成器。
 
 ### 7. actix-web 适配器
 
@@ -299,7 +320,7 @@ Web 框架用 actix-web 时开启 `features = ["actix"]`（与 axum 适配器功
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "1.5", features = ["actix"] }
 ```
 
 ```rust

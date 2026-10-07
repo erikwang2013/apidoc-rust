@@ -1,7 +1,11 @@
+<div align="center">
+<img src="../images/apidoc-pet.svg" alt="Maskot Apidoc" width="200">
+</div>
+
 <h1 align="center">Apidoc (apidoc-rust)</h1>
 
 <div align="center">
- Perpustakaan plugin umum untuk menghasilkan dokumentasi API berdasarkan makro prosedural (proc-macro) Rust
+ Alat pembuat dokumentasi API dan pengembangan antarmuka berbasis makro prosedural (proc-macro) Rust, kompatibel dengan axum, actix-web, dan kerangka kerja populer lainnya
 </div>
 
 <div align="center">
@@ -25,13 +29,30 @@
 <a href="README-ja.md">日本語</a>
 </div>
 
-## Pengenalan Proyek
+## 📖Pengenalan Proyek
 
-apidoc-rust adalah **pembuat dokumentasi API plugin-umum** yang diimplementasikan dalam Rust, mengacu pada [apidoc-php](https://github.com/erikwang2013/apidoc-php) (ekstensi composer yang menghasilkan dokumentasi API berdasarkan PHP 8 attributes), mewujudkan kemampuan "anotasi sebagai dokumentasi" secara native di Rust:
+Apidoc adalah pustaka plugin Rust yang secara otomatis menghasilkan dokumentasi antarmuka API dengan mengurai **makro prosedural (proc-macro) Rust**, dan kompatibel dengan kerangka kerja populer seperti axum dan actix-web. Selain pembuatan dokumentasi otomatis, Apidoc juga mengintegrasikan debugging antarmuka online, data uji Mock, pembuatan kode Json/TypeScript, generator antarmuka, generator kode, dan kemampuan lainnya, mencakup seluruh alur pengembangan, debugging, dan penyerahan antarmuka, dengan tujuan meningkatkan efisiensi pengembangan API.
+
+> **Asal Proyek**: proyek ini mengacu pada [apidoc-php](https://github.com/erikwang2013/apidoc-php) (ekstensi composer yang menghasilkan dokumentasi API berdasarkan PHP 8 attributes), mewujudkan kemampuan "anotasi sebagai dokumentasi" secara native di Rust, dan terus dipelihara serta dikembangkan oleh erikwang2013.
+
+Pendekatan implementasi apidoc-rust:
 
 - **Dihasilkan saat kompilasi**: dokumentasi dihasilkan oleh makro prosedural pada waktu kompilasi, dokumentasi tidak akan pernah kehilangan sinkronisasi dengan kode;
 - **Pengumpulan biaya nol**: registrasi statis linkme, satu kali agregasi saat runtime langsung mendapatkan seluruh dokumentasi API;
 - **Plugin umum**: inti tidak terikat kerangka kerja HTTP mana pun, terhubung ke kerangka kerja apa pun melalui adaptor tipis (axum / actix-web).
+
+### ✨Deskripsi Proyek
+
+- **Siap pakai**: tanpa konfigurasi rumit; setelah dipasang, cukup menulis anotasi sesuai dokumentasi dan dokumentasi API akan dibuat otomatis.
+- **Penulisan mudah**: mendukung definisi umum (definitions) dan referensi `ref` pada field; beberapa anotasi singkat sudah cukup untuk melengkapi definisi field secara utuh.
+- **Debugging online**: debug antarmuka langsung dari halaman dokumentasi, mendukung parameter global, data Mock, dan peristiwa debugging.
+- **Multi-aplikasi/multi-versi**: proyek dengan aplikasi tunggal, multi-aplikasi, maupun multi-versi dapat dikonfigurasi; antarmuka ditampilkan dan dialihkan berdasarkan pengelompokan aplikasi/versi.
+- **Grup/Tag**: antarmuka mendukung pengelompokan bertingkat dan penandaan Tag.
+- **Dokumentasi Markdown**: anotasi `md` dapat memasang Markdown sebagai halaman dokumentasi.
+- **Pembuatan Json/TypeScript**: setiap antarmuka otomatis menghasilkan contoh permintaan/respons Json dan definisi tipe TypeScript, siap dipakai langsung di frontend.
+- **Generator kode**: konfigurasi + template cukup untuk menghasilkan kode bisnis dan file Api frontend.
+- **Berbagi antarmuka**: dapat menghasilkan tautan berbagi untuk aplikasi/antarmuka tertentu dan mengekspor `swagger.json`.
+- **Akses aman**: mendukung otorisasi kata sandi global dan kata sandi independen per aplikasi/versi, serta dapat mengaktifkan cache dokumentasi.
 
 ## Fitur
 
@@ -67,7 +88,7 @@ apidoc-rust adalah **pembuat dokumentasi API plugin-umum** yang diimplementasika
 
 ### Dalam Rencana (v2)
 
-- v2: generator kode, referensi field tabel data, tautan berbagi, peristiwa debugging
+- v2: generator kode (generator antarmuka), referensi field tabel data, tautan berbagi, peristiwa debugging, cache dokumentasi
 
 ## Arsitektur
 
@@ -86,7 +107,7 @@ apidoc-rust adalah **pembuat dokumentasi API plugin-umum** yang diimplementasika
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Konfigurasi workspace (resolver 2)
-├── VERSION                    # Versi proyek (v1.3.0, terpisah dari versi kerangka 0.1.0)
+├── VERSION                    # Versi proyek (v1.5.0)
 ├── crates/
 │   ├── apidoc/                # Inti runtime (independen kerangka kerja)
 │   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json + UI_HTML
@@ -114,7 +135,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "0.1"        # atau path = "crates/apidoc"
+apidoc-rust = "1.5"        # atau path = "crates/apidoc"
 
 
 serde_json = "1"      # untuk output api.json
@@ -242,7 +263,7 @@ GET /apidoc/export?format=swagger   # file deskripsi OpenAPI 3.0.0 (application/
 
 - **markdown**: cocok ditempel ke Wiki proyek / catatan rilis, mengeluarkan direktori per grup, setiap antarmuka dengan tabel parameter dan blok respons;
 - **typescript**: frontend bisa langsung ditempel sebagai definisi tipe; antarmuka tanpa group masuk ke namespace `defaultGroup` (`default` kata cadangan TS, tidak bisa dijadikan pengenal);
-- **swagger**: `info.version` diambil dari isi file `VERSION` di root (saat ini 1.3.0), bisa langsung diimpor ke Swagger UI atau generator kode.
+- **swagger**: `info.version` diambil dari isi file `VERSION` di root (saat ini 1.5.0), bisa langsung diimpor ke Swagger UI atau generator kode.
 
 ### 7. Adaptor actix-web
 
@@ -250,7 +271,7 @@ Saat kerangka web memakai actix-web, pasang `features = ["actix"]` (fungsionalit
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "1.5", features = ["actix"] }
 ```
 
 ```rust

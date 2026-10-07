@@ -1,7 +1,11 @@
+<div align="center">
+<img src="../images/apidoc-pet.svg" alt="Apidoc-Maskottchen" width="200">
+</div>
+
 <h1 align="center">Apidoc (apidoc-rust)</h1>
 
 <div align="center">
-  Universelle Plugin-Bibliothek zur Generierung von API-Dokumentation per Rust-Prozessmakro (proc-macro)
+  Toolkit für die Generierung von API-Dokumentation und die Entwicklung von Schnittstellen auf Basis von Rust-Prozessmakros (proc-macro), kompatibel mit axum, actix-web und weiteren gängigen Frameworks
 </div>
 
 <div align="center">
@@ -25,13 +29,30 @@
 <a href="README-ja.md">日本語</a>
 </div>
 
-## Projektvorstellung
+## 📖Projektvorstellung
 
-apidoc-rust ist ein in Rust implementierter **universeller Plugin-API-Dokumentationsgenerator** in Anlehnung an [apidoc-php](https://github.com/erikwang2013/apidoc-php) (eine Composer-Erweiterung, die API-Dokumentation auf Basis von PHP-8-Attributen erzeugt). Es setzt das Konzept „Annotationen sind Dokumentation" auf native Rust-Art um:
+Apidoc ist eine Rust-Plugin-Bibliothek, die durch die Auswertung von **Rust-Prozessmakros (proc-macro)** automatisch API-Dokumentation erzeugt und mit axum, actix-web und weiteren gängigen Frameworks kompatibel ist. Neben der automatischen Dokumentationserzeugung vereint sie Online-Schnittstellen-Debugging, Mock-Debug-Daten, Json/TypeScript-Codegenerierung, einen Schnittstellen-Generator und einen Code-Generator und deckt damit den gesamten Ablauf von Entwicklung, Debugging und Auslieferung der Schnittstellen ab — mit dem Ziel, die Effizienz der API-Entwicklung zu steigern.
+
+> **Projektursprung**: apidoc-rust entstand in Anlehnung an [apidoc-php](https://github.com/erikwang2013/apidoc-php) (eine Composer-Erweiterung, die API-Dokumentation auf Basis von PHP-8-Attributen erzeugt) und setzt das Konzept „Annotationen sind Dokumentation" auf native Rust-Art um; es wird von erikwang2013 kontinuierlich gepflegt und erweitert.
+
+Der Umsetzungsansatz von apidoc-rust:
 
 - **Generierung zur Kompilierzeit**: Die Dokumentation wird von Prozessmakros zur Kompilierzeit erzeugt — Dokumentation und Code geraten nie aus dem Gleichschritt;
 - **Sammlung ohne Laufzeitkosten**: statische Registrierung über linkme, ein einziger Sammelvorgang zur Laufzeit liefert die gesamte API-Dokumentation;
 - **Universelle Plugins**: Der Kern ist unabhängig vom HTTP-Framework; beliebige Frameworks werden über dünne Adapter (axum / actix-web) angebunden.
+
+### ✨Projektbeschreibung
+
+- **Sofort einsatzbereit**: Ohne aufwendige Konfiguration — nach der Installation genügt es, die Annotationen gemäß der Dokumentation zu schreiben, und die API-Dokumentation wird automatisch erzeugt.
+- **Müheloses Schreiben**: Unterstützung für allgemeine Definitionen (definitions) und `ref`-Verweise auf Felder — mit wenigen Annotationen ist eine vollständige Felddefinition fertig.
+- **Online-Debugging**: Schnittstellen direkt auf der Dokumentationsseite debuggen, mit globalen Parametern, Mock-Daten und Debug-Events.
+- **Mehrere Apps/Versionen**: Projekte mit einer App, mehreren Apps oder mehreren Versionen sind konfigurierbar; die Schnittstellen werden nach App/Version gruppiert angezeigt und umgeschaltet.
+- **Gruppen/Tags**: Schnittstellen unterstützen mehrstufige Gruppen und Tag-Markierungen.
+- **Markdown-Dokumentation**: Die `md`-Annotation bindet Markdown als Dokumentationsseite ein.
+- **Json/TypeScript-Generierung**: Für jede Schnittstelle werden automatisch Json-Request/Response-Beispiele und TypeScript-Typdefinitionen erzeugt — direkt einsetzbar im Frontend.
+- **Code-Generator**: Konfiguration + Vorlagen erzeugen den Business-Code und die Frontend-Api-Dateien.
+- **Schnittstellen-Sharing**: Freigabelinks für ausgewählte Apps/Schnittstellen generieren und `swagger.json` exportieren.
+- **Sicherer Zugriff**: Unterstützung für ein globales Passwort und unabhängige Passwörter je App/Version; der Dokumentations-Cache kann aktiviert werden.
 
 ## Funktionen
 
@@ -67,7 +88,7 @@ apidoc-rust ist ein in Rust implementierter **universeller Plugin-API-Dokumentat
 
 ### Geplant (v2)
 
-- v2: Code-Generator, Referenzen auf Datenbankfelder, Teilen-Links, Debug-Events
+- v2: Code-Generator (Schnittstellen-Generator), Referenzen auf Datenbankfelder, Teilen-Links, Debug-Events, Dokumentations-Cache
 
 ## Architektur
 
@@ -86,7 +107,7 @@ apidoc-rust ist ein in Rust implementierter **universeller Plugin-API-Dokumentat
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Workspace-Konfiguration (resolver 2)
-├── VERSION                    # Projektversion (v1.3.0, getrennt von der Framework-Version 0.1.0)
+├── VERSION                    # Projektversion (v1.5.0)
 ├── crates/
 │   ├── apidoc/                # Laufzeitkern (frameworkunabhängig)
 │   │   ├── src/lib.rs         # Datenmodell + DocRegistry-Aggregation + api.json + UI_HTML
@@ -114,7 +135,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "0.1"        # oder path = "crates/apidoc"
+apidoc-rust = "1.5"        # oder path = "crates/apidoc"
 
 
 serde_json = "1"      # für die Ausgabe von api.json
@@ -242,7 +263,7 @@ GET /apidoc/export?format=swagger   # OpenAPI-3.0.0-Beschreibungsdatei (applicat
 
 - **markdown**: geeignet zum Einfügen in Projekt-Wiki / Release-Notizen, Ausgabe eines Verzeichnisses nach Gruppen, jede Schnittstelle mit Parametertabelle und Antwortblock;
 - **typescript**: das Frontend kann es direkt als Typdefinitionen einfügen; nicht gruppierte Schnittstellen landen im Namensraum `defaultGroup` (`default` ist ein TS-Schlüsselwort und kann kein Bezeichner sein);
-- **swagger**: `info.version` stammt aus der Datei `VERSION` im Wurzelverzeichnis (aktuell 1.3.0), direkt importierbar in Swagger UI oder Code-Generatoren.
+- **swagger**: `info.version` stammt aus der Datei `VERSION` im Wurzelverzeichnis (aktuell 1.5.0), direkt importierbar in Swagger UI oder Code-Generatoren.
 
 ### 7. actix-web-Adapter
 
@@ -250,7 +271,7 @@ Bei Verwendung von actix-web `features = ["actix"]` einbinden (funktional 1:1 zu
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "1.5", features = ["actix"] }
 ```
 
 ```rust

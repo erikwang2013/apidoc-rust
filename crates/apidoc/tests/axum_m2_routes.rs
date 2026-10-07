@@ -89,6 +89,26 @@ async fn apidoc_route_returns_html_page() {
 }
 
 #[tokio::test]
+async fn pet_route_serves_svg_and_ui_references_it() {
+    let (status, headers, body) = get("/apidoc/pet.svg", None).await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(
+        headers
+            .get(header::CONTENT_TYPE)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .starts_with("image/svg+xml"),
+        "宠物 Content-Type 错误"
+    );
+    assert!(body.contains("<svg"), "宠物必须是 SVG 源码");
+    // UI 页确实引用了它（favicon + 页头 logo），否则图挂了也没人发现
+    let (_, _, ui) = get("/apidoc", None).await;
+    assert!(ui.contains(r#"href="/apidoc/pet.svg""#), "UI 缺少 favicon 引用");
+    assert!(ui.contains(r#"src="/apidoc/pet.svg""#), "UI 缺少页头 logo 引用");
+}
+
+#[tokio::test]
 async fn api_json_route_returns_valid_doc() {
     let (status, headers, body) = get("/apidoc/api.json", None).await;
     assert_eq!(status, StatusCode::OK);

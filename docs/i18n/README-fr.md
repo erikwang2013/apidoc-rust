@@ -1,7 +1,11 @@
+<div align="center">
+<img src="../images/apidoc-pet.svg" alt="Mascotte Apidoc" width="200">
+</div>
+
 <h1 align="center">Apidoc (apidoc-rust)</h1>
 
 <div align="center">
- Bibliothèque de plugins générique générant la documentation d'API via les proc-macros (proc-macro) de Rust
+ Boîte à outils de génération de documentation d'API et de développement d'interfaces basée sur les proc-macros Rust (proc-macro), compatible avec axum, actix-web et d'autres frameworks courants
 </div>
 
 <div align="center">
@@ -25,13 +29,30 @@
 <a href="README-ja.md">日本語</a>
 </div>
 
-## Présentation du projet
+## 📖Présentation du projet
 
-apidoc-rust est un **générateur de documentation d'API générique et modulaire** implémenté en Rust, inspiré de [apidoc-php](https://github.com/erikwang2013/apidoc-php) (une extension composer qui génère de la documentation d'API à partir des attributs PHP 8), transposant le principe « les annotations sont la documentation » de façon native en Rust :
+Apidoc est une bibliothèque de plugins Rust qui génère automatiquement la documentation d'API en analysant les **proc-macros Rust (proc-macro)**, et reste compatible avec axum, actix-web et les autres frameworks courants. Outre la génération automatique de la documentation, elle intègre le débogage d'interfaces en ligne, les données Mock de débogage, la génération de code Json/TypeScript, un générateur d'interfaces et un générateur de code — couvrant tout le cycle de développement, de débogage et de livraison des interfaces, avec pour objectif d'améliorer l'efficacité du développement d'API.
+
+> **Source du projet** : ce projet s'inspire de [apidoc-php](https://github.com/erikwang2013/apidoc-php) (une extension composer qui génère de la documentation d'API à partir des attributs PHP 8) et transpose le principe « les annotations sont la documentation » de façon native en Rust ; il est maintenu et enrichi en continu par erikwang2013.
+
+L'approche d'implémentation d'apidoc-rust :
 
 - **Génération à la compilation** : la documentation est générée par les proc-macros à la compilation ; elle ne se désynchronise jamais du code ;
 - **Collecte à coût nul** : enregistrement statique via linkme, une seule agrégation à l'exécution suffit pour obtenir toute la documentation des interfaces ;
 - **Plugin générique** : le cœur est indépendant du framework HTTP et se connecte à n'importe quel framework via de minces adaptateurs (axum / actix-web).
+
+### ✨Description du projet
+
+- **Prêt à l'emploi** : aucune configuration complexe — après l'installation, il suffit d'écrire les annotations selon la documentation pour générer automatiquement la documentation de l'API.
+- **Écriture simplifiée** : prise en charge des définitions communes (definitions) et des références `ref` de champs — quelques annotations suffisent pour définir des champs complets.
+- **Débogage en ligne** : déboguer les interfaces directement depuis la page de documentation, avec paramètres globaux, données Mock et événements de débogage.
+- **Multi-applications/multi-versions** : projets mono-application, multi-applications et multi-versions configurables ; les interfaces sont regroupées et permutables par application/version.
+- **Groupes/Tags** : les interfaces prennent en charge les groupes multi-niveaux et les marqueurs Tag.
+- **Documentation Markdown** : l'annotation `md` monte un contenu Markdown comme page de documentation.
+- **Génération Json/TypeScript** : chaque interface génère automatiquement des exemples de requête/réponse Json et des définitions de types TypeScript, directement utilisables côté frontend.
+- **Générateur de code** : configuration + modèles suffisent pour générer le code métier et les fichiers Api du frontend.
+- **Partage d'interfaces** : générer des liens de partage pour une application/interface donnée et exporter `swagger.json`.
+- **Accès sécurisé** : prise en charge d'un mot de passe global et de mots de passe indépendants par application/version, avec activation possible du cache de documentation.
 
 ## Fonctionnalités
 
@@ -67,7 +88,7 @@ apidoc-rust est un **générateur de documentation d'API générique et modulair
 
 ### Prévu (v2)
 
-- v2 : générateur de code, référencement des champs de tables de données, liens de partage, événements de débogage
+- v2 : générateur de code (générateur d'interfaces), référencement des champs de tables de données, liens de partage, événements de débogage, cache de documentation
 
 ## Architecture
 
@@ -86,7 +107,7 @@ apidoc-rust est un **générateur de documentation d'API générique et modulair
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuration du workspace (resolver 2)
-├── VERSION                    # version du projet (v1.3.0, séparée de la version du framework 0.1.0)
+├── VERSION                    # version du projet (v1.5.0)
 ├── crates/
 │   ├── apidoc/                # cœur à l'exécution (indépendant du framework)
 │   │   ├── src/lib.rs         # modèle de données + agrégation DocRegistry + api.json + UI_HTML
@@ -114,7 +135,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "0.1"        # ou path = "crates/apidoc"
+apidoc-rust = "1.5"        # ou path = "crates/apidoc"
 
 
 serde_json = "1"      # pour la sortie api.json
@@ -242,7 +263,7 @@ GET /apidoc/export?format=swagger   # fichier descriptif OpenAPI 3.0.0 (applicat
 
 - **markdown** : idéal à coller dans le Wiki du projet / les notes de version, sommaire par groupe, chaque interface avec table de paramètres et bloc de réponse ;
 - **typescript** : le front peut coller directement les définitions de types ; les interfaces non groupées tombent dans le namespace `defaultGroup` (`default` est un mot réservé TS, il ne peut pas servir d'identifiant) ;
-- **swagger** : `info.version` provient du contenu du fichier `VERSION` à la racine (actuellement 1.3.0), importable directement dans Swagger UI ou un générateur de code.
+- **swagger** : `info.version` provient du contenu du fichier `VERSION` à la racine (actuellement 1.5.0), importable directement dans Swagger UI ou un générateur de code.
 
 ### 7. Adaptateur actix-web
 
@@ -250,7 +271,7 @@ Si le framework Web est actix-web, branchez `features = ["actix"]` (fonctionnali
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "0.1", features = ["actix"] }
+apidoc-rust = { version = "1.5", features = ["actix"] }
 ```
 
 ```rust

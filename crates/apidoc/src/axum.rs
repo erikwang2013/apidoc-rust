@@ -91,6 +91,13 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
     // 变量（避免 FnOnce）。api_json/mocks/md/ts/sw 单路由独占，一层 clone 即可。
     Router::new()
         .route("/apidoc", get(|| async { Html(crate::UI_HTML) }))
+        // UI 宠物图标：favicon 与页头 logo（UI 页内容的一部分，与 UI 页同样不设守卫）
+        .route(
+            "/apidoc/pet.svg",
+            get(|| async {
+                ([(header::CONTENT_TYPE, "image/svg+xml")], crate::PET_SVG)
+            }),
+        )
         // M6a：GET /apidoc/auth?password=<md5>&appKey=...（appKey 应用密码优先）
         .route("/apidoc/auth", get({
             let auth_cfg = auth_cfg.clone();

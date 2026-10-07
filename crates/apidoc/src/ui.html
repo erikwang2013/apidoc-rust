@@ -4,11 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>API Documentation</title>
+<link rel="icon" type="image/svg+xml" href="/apidoc/pet.svg">
 <style>
 :root { --bg:#f6f7f9; --panel:#fff; --border:#e3e6ea; --text:#24292f; --muted:#6b7280; --accent:#2563eb; }
 * { box-sizing:border-box; }
 body { margin:0; font:14px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--text); }
-header { background:var(--panel); border-bottom:1px solid var(--border); padding:12px 20px; }
+header { display:flex; align-items:center; gap:10px; background:var(--panel); border-bottom:1px solid var(--border); padding:12px 20px; }
+header img { flex:none; }
 header h1 { margin:0; font-size:18px; }
 header p { margin:2px 0 0; color:var(--muted); font-size:13px; }
 #sel-row { display:none; gap:8px; align-items:center; background:var(--panel); border-bottom:1px solid var(--border); padding:8px 20px; }
@@ -54,8 +56,11 @@ button:hover { background:#f0f3f8; }
 </head>
 <body>
 <header>
-  <h1 id="title">API Documentation</h1>
-  <p id="subtitle"></p>
+  <img src="/apidoc/pet.svg" alt="Apidoc" width="34" height="34">
+  <div>
+    <h1 id="title">API Documentation</h1>
+    <p id="subtitle"></p>
+  </div>
 </header>
 <div id="sel-row">
   <label>应用</label><select id="apps-sel"></select>
@@ -67,6 +72,7 @@ button:hover { background:#f0f3f8; }
 </div>
 <div id="mask">
   <div id="mask-box">
+    <img src="/apidoc/pet.svg" alt="Apidoc" width="56" height="56">
     <h2>访问受保护</h2>
     <p id="mask-msg" class="empty"></p>
     <input id="mask-pw" type="password" placeholder="请输入访问密码">
