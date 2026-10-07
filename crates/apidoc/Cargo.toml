@@ -33,7 +33,7 @@ actix-web = { version = "4", features = ["macros"], optional = true }
 actix-cors = { version = "0.7", optional = true }
 
 [dev-dependencies]
-apidoc-test-fixtures = { path = "../apidoc-test-fixtures", version = "1.5.0" }
+apidoc-test-fixtures = { path = "../apidoc-test-fixtures" }
 # axum 集成测试（feature "axum" 时编译）
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tower = { version = "0.5", features = ["util"] }
