@@ -78,9 +78,13 @@ apidoc-rust 的实现取向：
 - **鉴权安全红线**：`password` / `secret_key` 永不序列化，api.json 输出与未启用鉴权时字节级一致；auth 未启用时 `/apidoc/auth` 返回 404、数据路由直接放行；应用配置独立 password 时应用密码优先于全局密码；`secret_key` 缺省 `"apidoc#hgcode"`（启用且未配时 stderr 警告一次）、`expire` 缺省 86400 秒
 - **多应用多版本（M6b）**：`ApidocConfig.apps: Vec<AppConfig>`（`key` / `title` / `items` 递归子版本 / `password`）配置应用树，`#[apidoc::app("key")]` 把接口挂到指定应用 key，未挂 key 的接口落默认应用；api.json 输出新增 `doc.apps` 树，UI 顶部出现应用/版本选择器，token 按 appKey 分开存 localStorage（不同应用可有独立密码）
 
-### 规划中（v2）
+### 已实现（v2）
 
-- v2：代码生成器（接口生成器）、数据表字段引用、分享链接、调试事件、文档缓存
+- **数据表字段引用（`table`）**：`#[apidoc::table("user")]` 按 `ApidocConfig.tables` 配置的表 key 把字段**平铺**并入 `returned`（与 `ref` 同语义，区别是数据源为配置表而非其他端点）；字段支持 `required` / `default` / `desc` / `mock`；未配置的 key 只在 stderr 警告；未使用该注解时输出与 v1 字节级一致
+- **文档缓存**：`ApidocConfig.cache = Some(CacheConfig { enable, ttl })`——`/apidoc/mock` 输出按 `(url, method)` 进程内记忆化，`ttl` 秒后失效重建，`ttl = 0` 表示永久；未配置或未启用时完全不走缓存路径（输出零变化）。api.json / export 在挂载路由时已构建一次，等价于永久缓存
+- **分享链接**：`GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` 深链（`?app=<key>&ep=<接口 url>&method=<方法>[&token=…]`）；文档页每个接口旁有「分享」按钮（写剪贴板，失败降级为可复制的输入框），打开深链即定位到该应用/接口；鉴权开启时链接附带服务端签发的 token（应用独立密码优先于全局密码），打开即免密
+- **代码生成器**：`GET /apidoc/generate?template=<name>` → 渲染后的文本（未知模板 404）；内置 `api.ts`（前端 Api 文件）、`handler.rs`（Rust 接口骨架）、`schema.sql`（按 `tables` 生成建表语句）；`ApidocConfig.codegen` 里的同名模板覆盖内置。模板语法只有两种：`{{变量}}`（未定义则原样保留）与 `{{#each 列表}}…{{/each}}`（可嵌套，如 `tables` × `fields`）
+- **调试事件**：在线调试面板新增可折叠的「前置脚本 / 后置脚本」（持久化到 localStorage）——前置以 `new Function('ctx', code)` 在请求前执行，可改 `ctx.url/method/headers/body` 或返回对象浅合并；后置在响应后执行，可读 `status/ms/text/url/method/ep`，返回字符串则替换展示的响应文本；脚本报错只在结果区提示，不中断请求
 
 ## 架构
 
@@ -99,7 +103,7 @@ apidoc-rust 的实现取向：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 配置（resolver 2）
-├── VERSION                    # 项目版本（v1.5.0）
+├── VERSION                    # 项目版本（v1.6.0）
 ├── crates/
 │   ├── apidoc/                # 单一发布包 apidoc-rust（lib 名 apidoc）
 │   │   ├── src/lib.rs         # 数据模型 + DocRegistry 聚合 + api.json + UI_HTML
@@ -128,7 +132,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.5"     # 或 path = "crates/apidoc"
+apidoc-rust = "1.6"     # 或 path = "crates/apidoc"
 serde_json = "1"      # 输出 api.json 用
 ```
 
@@ -304,7 +308,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 描述文件（application/j
 
 - **markdown**：适合贴进项目 Wiki / 发布说明，按分组输出目录，每个接口带参数表与响应块；
 - **typescript**：前端可直接粘贴为类型定义；未分组接口落入 `defaultGroup` 命名空间（`default` 是 TS 保留字，不能作标识符）；
-- **swagger**：`info.version` 取根目录 `VERSION` 文件内容（当前 1.5.0），可直接导入 Swagger UI 或代码生成器。
+- **swagger**：`info.version` 取根目录 `VERSION` 文件内容（当前 1.6.0），可直接导入 Swagger UI 或代码生成器。
 
 ### 7. actix-web 适配器
 
@@ -312,7 +316,7 @@ Web 框架用 actix-web 时开启 `features = ["actix"]`（与 axum 适配器功
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.5", features = ["actix"] }
+apidoc-rust = { version = "1.6", features = ["actix"] }
 ```
 
 ```rust
@@ -404,6 +408,62 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 - api.json 输出新增 `doc.apps` 树（key / title / items / endpoints）；UI 顶部出现应用/版本选择器，切换后按该节点渲染接口并重拉数据，token 按 appKey 分开存 localStorage
 - `app` 注解引用了未在 `apps` 中配置的 key 时 stderr 警告并落默认应用；无 `app` 注解或未配置 `apps` 时输出与 M5 字节级一致
 
+### 10. 数据表字段引用 · 文档缓存（v2）
+
+```rust
+ApidocConfig {
+    // 表结构由配置提供（Rust 侧不连数据库），注解按 key 引用
+    tables: vec![TableDef {
+        key: "user".into(),
+        title: "用户表".into(),
+        fields: vec![
+            TableField { name: "id".into(), ty: "int".into(), required: true, desc: Some("用户ID".into()), ..Default::default() },
+            TableField { name: "name".into(), ty: "string".into(), mock: Some("erik".into()), ..Default::default() },
+        ],
+    }],
+    // 文档缓存：/apidoc/mock 输出按 (url, method) 记忆化，ttl 秒后重建（0 = 永久）
+    cache: Some(CacheConfig { enable: true, ttl: 60 }),
+    ..Default::default()   // title / description / auth / apps / codegen 照常配
+}
+```
+
+handler 上与 `ref` 同样写法：`#[apidoc::table("user")]`。字段平铺进该接口的 `returned`；`tables` 里没有的 key 只警告不报错。
+
+### 11. 分享链接 · 代码生成（v2）
+
+- `GET /apidoc/share?app=api&url=/api/user/info&method=GET&base=https://example.com` → `{"url":"https://example.com/apidoc?app=api&ep=%2Fapi%2Fuser%2Finfo&method=GET"}`（鉴权开启时链接尾部附 `&token=…`，打开免密）
+- `GET /apidoc/generate?template=api.ts`（或 `handler.rs` / `schema.sql`）→ `text/plain; charset=utf-8`；未知模板 404、缺参数 400
+- 自定义模板（同名覆盖内置）：
+
+```rust
+ApidocConfig {
+    codegen: vec![CodegenTemplate {
+        name: "api.ts".into(),
+        template: "// {{title}}\n{{#each endpoints}}// {{method}} {{url}}\n{{/each}}".into(),
+    }],
+    ..Default::default()
+}
+```
+
+模板可用变量：顶层 `title` / `description`；`{{#each endpoints}}` 内 `title` / `url` / `method` / `group` / `desc` / `author`；`{{#each tables}}` 内 `key` / `title`，其 `{{#each fields}}` 内 `name` / `ty` / `required` / `default` / `desc` / `mock`，另有派生变量 `not_null` / `default_clause` / `comma`（便于直接生成合法 SQL）。
+
+### 12. 调试前置/后置脚本（v2）
+
+文档页「在线调试」面板展开「前置脚本」「后置脚本」（内容存 localStorage）：
+
+```js
+// 前置：请求发出前执行，可改 ctx.url / method / headers / body，或返回对象浅合并
+ctx.headers['X-Token'] = localStorage.getItem('token') || '';
+```
+
+```js
+// 后置：响应回来后执行，ctx = { status, ms, text, url, method, ep }（只读）
+// 返回字符串则替换结果区展示的文本
+return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
+```
+
+脚本报错只在调试结果区提示，不中断请求（前置失败照常发请求，后置失败照常展示原始响应）。
+
 ## 开发计划
 
 | 阶段 | 内容 | 状态 |
@@ -416,6 +476,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 | —  | actix-web 适配器（与 axum 功能 1:1） | ✅ 已完成 |
 | M6a | 密码鉴权（authcode token + 密码遮罩，应用密码优先） | ✅ 已完成 |
 | M6b | 多应用多版本（apps 配置树 + app 注解 + UI 选择器） | ✅ 已完成 |
+| v2 | 数据表字段引用 + 文档缓存 + 分享链接 + 代码生成器 + 调试事件 | ✅ 已完成 |
 
 ## 多语言文档
 

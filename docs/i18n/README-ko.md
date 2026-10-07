@@ -78,9 +78,13 @@ apidoc-rust의 구현 방향:
 - **인증 보안 레드라인**: `password` / `secret_key`는 절대 직렬화되지 않으며, api.json 출력은 인증 미활성화 시와 바이트 수준 동일; auth 미활성화 시 `/apidoc/auth`는 404 반환, 데이터 라우트는 그냥 통과; 앱 설정에 독립 password가 있으면 앱 비밀번호가 전역 비밀번호보다 우선; `secret_key` 기본값 `"apidoc#hgcode"`(활성화 시 미설정이면 stderr 경고 1회), `expire` 기본값 86400초
 - **다중 앱·다중 버전(M6b)**: `ApidocConfig.apps: Vec<AppConfig>`(`key` / `title` / `items` 재귀 하위 버전 / `password`)로 앱 트리 설정, `#[apidoc::app("key")]`로 인터페이스를 지정 앱 key에 연결, key 미지정 인터페이스는 기본 앱에 포함; api.json 출력에 `doc.apps` 트리 추가, UI 상단에 앱/버전 선택기 등장, token은 appKey별로 localStorage에 분리 저장(앱마다 독립 비밀번호 가능)
 
-### 계획 중 (v2)
+### 구현됨 (v2)
 
-- v2: 코드 생성기(인터페이스 생성기), 데이터 테이블 필드 참조, 공유 링크, 디버깅 이벤트, 문서 캐시
+- **데이터 테이블 필드 참조(`table`)**: `#[apidoc::table("user")]`는 `ApidocConfig.tables`에 해당 key로 설정된 테이블의 필드를 `returned`에 **평탄화**해 병합합니다(`ref`와 같은 의미이며, 데이터 소스가 다른 엔드포인트가 아니라 설정 테이블이라는 점만 다릅니다); 필드는 `required` / `default` / `desc` / `mock` 지원; 설정되지 않은 key는 stderr 경고만 발생; 이 주석을 사용하지 않으면 출력은 v1과 바이트 수준 동일
+- **문서 캐시**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — `/apidoc/mock` 출력을 `(url, method)` 기준으로 프로세스 내 메모이제이션하고 `ttl`초 후 만료되어 재생성, `ttl = 0`은 영구를 의미; 미설정이거나 비활성이면 캐시 경로를 전혀 타지 않음(출력 변화 없음). api.json / export는 라우트 마운트 시 이미 한 번 생성되므로 영구 캐시와 동등
+- **공유 링크**: `GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` 딥링크(`?app=<key>&ep=<인터페이스 url>&method=<메서드>[&token=…]`); 문서 페이지의 각 인터페이스 옆에 「공유」 버튼(클립보드에 기록, 실패 시 복사 가능한 입력 상자로 폴백)이 있고, 딥링크를 열면 해당 앱/인터페이스로 바로 이동; 인증 활성화 시 링크에 서버가 발급한 token이 붙어(앱 독립 비밀번호가 전역 비밀번호보다 우선) 열면 비밀번호 불필요
+- **코드 생성기**: `GET /apidoc/generate?template=<name>` → 렌더링된 텍스트(알 수 없는 템플릿은 404); 내장 `api.ts`(프런트엔드 Api 파일), `handler.rs`(Rust 인터페이스 골격), `schema.sql`(`tables` 기준 CREATE TABLE 문 생성); `ApidocConfig.codegen`의 동명 템플릿이 내장을 덮어씀. 템플릿 문법은 두 가지뿐: `{{변수}}`(정의되지 않으면 그대로 유지)와 `{{#each 목록}}…{{/each}}`(중첩 가능, 예: `tables` × `fields`)
+- **디버깅 이벤트**: 온라인 디버깅 패널에 접이식 「사전 스크립트 / 사후 스크립트」(localStorage에 영속화) 추가 — 사전 스크립트는 `new Function('ctx', code)`로 요청 전에 실행되며 `ctx.url/method/headers/body`를 변경하거나 객체를 반환해 얕게 병합할 수 있고; 사후 스크립트는 응답 후 실행되어 `status/ms/text/url/method/ep`를 읽을 수 있으며 문자열을 반환하면 표시되는 응답 텍스트를 교체; 스크립트 오류는 결과 영역에만 표시되고 요청을 중단하지 않음
 
 ## 아키텍처
 
@@ -99,7 +103,7 @@ apidoc-rust의 구현 방향:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 설정(resolver 2)
-├── VERSION                    # 프로젝트 버전(v1.5.0)
+├── VERSION                    # 프로젝트 버전(v1.6.0)
 ├── crates/
 │   ├── apidoc/                # 런타임 코어(프레임워크 무관)
 │   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML
@@ -126,7 +130,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.5"        # 또는 path = "crates/apidoc"
+apidoc-rust = "1.6"        # 또는 path = "crates/apidoc"
 
 serde_json = "1"      # api.json 출력용
 ```
@@ -253,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 설명 파일(application/js
 
 - **markdown**: 프로젝트 Wiki / 릴리스 노트에 붙여넣기 적합, 그룹별 목차 출력, 각 인터페이스에 파라미터 테이블과 응답 블록 포함;
 - **typescript**: 프론트엔드가 바로 타입 정의로 붙여넣기 가능; 그룹 없는 인터페이스는 `defaultGroup` 네임스페이스에 포함(`default`는 TS 예약어라 식별자로 사용 불가);
-- **swagger**: `info.version`은 루트 `VERSION` 파일 내용 사용(현재 1.5.0), Swagger UI나 코드 생성기에 바로 가져오기 가능.
+- **swagger**: `info.version`은 루트 `VERSION` 파일 내용 사용(현재 1.6.0), Swagger UI나 코드 생성기에 바로 가져오기 가능.
 
 ### 7. actix-web 어댑터
 
@@ -261,7 +265,7 @@ Web 프레임워크로 actix-web을 사용할 때 `features = ["actix"]` 연결(
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.5", features = ["actix"] }
+apidoc-rust = { version = "1.6", features = ["actix"] }
 ```
 
 ```rust
@@ -353,6 +357,62 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 - api.json 출력에 `doc.apps` 트리(key / title / items / endpoints) 추가; UI 상단에 앱/버전 선택기가 등장하며, 전환 시 해당 노드 기준으로 인터페이스를 렌더링하고 데이터를 다시 가져옴, token은 appKey별로 localStorage에 분리 저장
 - `app` 주석이 `apps`에 설정되지 않은 key를 참조하면 stderr 경고 후 기본 앱에 포함; `app` 주석이 없거나 `apps` 미설정이면 M5와 바이트 수준 동일한 출력
 
+### 10. 데이터 테이블 필드 참조 · 문서 캐시(v2)
+
+```rust
+ApidocConfig {
+    // 테이블 구조는 설정으로 제공(Rust 측은 DB에 연결하지 않음), 주석은 key로 참조
+    tables: vec![TableDef {
+        key: "user".into(),
+        title: "用户表".into(),
+        fields: vec![
+            TableField { name: "id".into(), ty: "int".into(), required: true, desc: Some("用户ID".into()), ..Default::default() },
+            TableField { name: "name".into(), ty: "string".into(), mock: Some("erik".into()), ..Default::default() },
+        ],
+    }],
+    // 문서 캐시: /apidoc/mock 출력을 (url, method) 기준으로 메모이제이션, ttl초 후 재생성(0 = 영구)
+    cache: Some(CacheConfig { enable: true, ttl: 60 }),
+    ..Default::default()   // title / description / auth / apps / codegen은 평소대로 설정
+}
+```
+
+handler에서는 `ref`와 같은 방식으로 작성합니다: `#[apidoc::table("user")]`. 필드는 해당 인터페이스의 `returned`에 평탄화되어 병합됩니다; `tables`에 없는 key는 경고만 하고 오류를 내지 않습니다.
+
+### 11. 공유 링크 · 코드 생성(v2)
+
+- `GET /apidoc/share?app=api&url=/api/user/info&method=GET&base=https://example.com` → `{"url":"https://example.com/apidoc?app=api&ep=%2Fapi%2Fuser%2Finfo&method=GET"}` (인증 활성화 시 링크 끝에 `&token=…`이 붙어 열면 비밀번호 불필요)
+- `GET /apidoc/generate?template=api.ts`(또는 `handler.rs` / `schema.sql`) → `text/plain; charset=utf-8`; 알 수 없는 템플릿은 404, 파라미터 누락은 400
+- 사용자 정의 템플릿(동명 템플릿이 내장을 덮어씀):
+
+```rust
+ApidocConfig {
+    codegen: vec![CodegenTemplate {
+        name: "api.ts".into(),
+        template: "// {{title}}\n{{#each endpoints}}// {{method}} {{url}}\n{{/each}}".into(),
+    }],
+    ..Default::default()
+}
+```
+
+사용 가능한 템플릿 변수: 최상위 `title` / `description`; `{{#each endpoints}}` 내부 `title` / `url` / `method` / `group` / `desc` / `author`; `{{#each tables}}` 내부 `key` / `title`, 그 안의 `{{#each fields}}` 내부 `name` / `ty` / `required` / `default` / `desc` / `mock`, 그 외 파생 변수 `not_null` / `default_clause` / `comma`(유효한 SQL을 바로 생성하기 편리).
+
+### 12. 디버그 사전/사후 스크립트(v2)
+
+문서 페이지 「온라인 디버깅」 패널에서 「사전 스크립트」「사후 스크립트」를 펼칩니다(내용은 localStorage에 저장):
+
+```js
+// 사전: 요청 전송 전 실행, ctx.url / method / headers / body 변경 가능, 또는 객체를 반환해 얕은 병합
+ctx.headers['X-Token'] = localStorage.getItem('token') || '';
+```
+
+```js
+// 사후: 응답 수신 후 실행, ctx = { status, ms, text, url, method, ep }(읽기 전용)
+// 문자열을 반환하면 결과 영역에 표시되는 텍스트를 교체
+return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
+```
+
+스크립트 오류는 디버깅 결과 영역에만 표시되고 요청을 중단하지 않습니다(사전 실패 시에도 요청은 정상 전송, 사후 실패 시에도 원본 응답을 그대로 표시).
+
 ## 개발 계획
 
 | 단계 | 내용 | 상태 |
@@ -365,6 +425,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 | —  | actix-web 어댑터(axum과 기능 1:1) | ✅ 완료 |
 | M6a | 비밀번호 인증(authcode token + 비밀번호 마스크, 앱 비밀번호 우선) | ✅ 완료 |
 | M6b | 다중 앱·다중 버전(apps 설정 트리 + app 주석 + UI 선택기) | ✅ 완료 |
+| v2 | 데이터 테이블 필드 참조 + 문서 캐시 + 공유 링크 + 코드 생성기 + 디버깅 이벤트 | ✅ 완료 |
 
 ## 다국어 문서
 

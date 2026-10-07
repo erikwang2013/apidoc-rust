@@ -78,9 +78,13 @@ apidoc-rust's implementation approach:
 - **Auth security red lines**: `password` / `secret_key` are never serialized — the api.json output is byte-identical to when auth is disabled; with auth disabled, `/apidoc/auth` returns 404 and data routes pass through directly; when an app config has its own password, the app password takes precedence over the global one; `secret_key` defaults to `"apidoc#hgcode"` (stderr warning once when enabled but unconfigured), `expire` defaults to 86400 seconds
 - **Multi-app multi-version (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / recursive sub-versions in `items` / `password`) configures an app tree; `#[apidoc::app("key")]` attaches endpoints to a specific app key, endpoints without a key land in the default app; the api.json output gains the `doc.apps` tree, an app/version selector appears at the top of the UI, and tokens are stored in localStorage separately per appKey (different apps can have independent passwords)
 
-### Planned (v2)
+### Implemented (v2)
 
-- v2: code generator (interface generator), data-table field references, share links, debug events, documentation cache
+- **Data-table field references (`table`)**: `#[apidoc::table("user")]` **flattens** the fields of the table configured under that key in `ApidocConfig.tables` into `returned` (same semantics as `ref`; the only difference is that the data source is a configuration table rather than another endpoint); fields support `required` / `default` / `desc` / `mock`; an unconfigured key only produces a stderr warning; the output is byte-identical to v1 when the annotation is unused
+- **Documentation caching**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — the `/apidoc/mock` output is memoized in-process by `(url, method)` and rebuilt after `ttl` seconds, with `ttl = 0` meaning permanent; when unconfigured or disabled the cache path is bypassed entirely (zero output change). api.json / export are already built once when the routes are mounted, which is equivalent to permanent caching
+- **Share links**: `GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` deep link (`?app=<key>&ep=<endpoint url>&method=<method>[&token=…]`); every endpoint in the docs page has a "Share" button (writes to the clipboard, falling back to a copyable input field when that fails), and opening the deep link jumps straight to that app/endpoint; with auth enabled the link carries a server-issued token (an app's independent password takes precedence over the global one), so it opens without a password
+- **Code generator**: `GET /apidoc/generate?template=<name>` → the rendered text (404 for an unknown template); built-in templates `api.ts` (frontend Api file), `handler.rs` (Rust endpoint skeleton) and `schema.sql` (generates CREATE TABLE statements from `tables`); a template with the same name in `ApidocConfig.codegen` overrides the built-in one. The template syntax has only two forms: `{{variable}}` (kept as-is when undefined) and `{{#each list}}…{{/each}}` (nestable, e.g. `tables` × `fields`)
+- **Debug events**: the online debugging panel gains collapsible "Pre-script / Post-script" editors (persisted to localStorage) — the pre-script runs before the request via `new Function('ctx', code)` and can modify `ctx.url/method/headers/body` or return an object for a shallow merge; the post-script runs after the response and can read `status/ms/text/url/method/ep`, returning a string to replace the displayed response text; script errors are only reported in the result area and never abort the request
 
 ## Architecture
 
@@ -99,7 +103,7 @@ apidoc-rust's implementation approach:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace config (resolver 2)
-├── VERSION                    # project version (v1.5.0)
+├── VERSION                    # project version (v1.6.0)
 ├── crates/
 │   ├── apidoc/                # runtime core (framework-agnostic)
 │   │   ├── src/lib.rs         # data model + DocRegistry aggregation + api.json + UI_HTML
@@ -126,7 +130,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.5"        # or path = "crates/apidoc"
+apidoc-rust = "1.6"        # or path = "crates/apidoc"
 
 serde_json = "1"      # for api.json output
 ```
@@ -253,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 description file (applicatio
 
 - **markdown**: great for pasting into a project Wiki / release notes; outputs a catalog by group, each endpoint with parameter tables and response blocks;
 - **typescript**: the frontend can paste it directly as type definitions; ungrouped endpoints fall into the `defaultGroup` namespace (`default` is a TS reserved word and cannot be an identifier);
-- **swagger**: `info.version` is read from the root `VERSION` file (currently 1.5.0), importable directly into Swagger UI or code generators.
+- **swagger**: `info.version` is read from the root `VERSION` file (currently 1.6.0), importable directly into Swagger UI or code generators.
 
 ### 7. actix-web adapter
 
@@ -261,7 +265,7 @@ When using actix-web, add `features = ["actix"]` (1:1 feature parity with the ax
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.5", features = ["actix"] }
+apidoc-rust = { version = "1.6", features = ["actix"] }
 ```
 
 ```rust
@@ -353,6 +357,62 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 - The api.json output gains the `doc.apps` tree (key / title / items / endpoints); an app/version selector appears at the top of the UI — switching renders the endpoints of that node and re-fetches the data, and tokens are stored in localStorage separately per appKey
 - When the `app` annotation references a key not configured in `apps`, a stderr warning is issued and the endpoint lands in the default app; without `app` annotations or without `apps` configured, the output is byte-identical to M5
 
+### 10. Data-Table Field References · Documentation Cache (v2)
+
+```rust
+ApidocConfig {
+    // table structure is provided by configuration (the Rust side does not connect to a database); annotations reference it by key
+    tables: vec![TableDef {
+        key: "user".into(),
+        title: "用户表".into(),
+        fields: vec![
+            TableField { name: "id".into(), ty: "int".into(), required: true, desc: Some("用户ID".into()), ..Default::default() },
+            TableField { name: "name".into(), ty: "string".into(), mock: Some("erik".into()), ..Default::default() },
+        ],
+    }],
+    // documentation cache: the /apidoc/mock output is memoized by (url, method) and rebuilt after ttl seconds (0 = permanent)
+    cache: Some(CacheConfig { enable: true, ttl: 60 }),
+    ..Default::default()   // title / description / auth / apps / codegen are configured as usual
+}
+```
+
+In a handler it is written exactly like `ref`: `#[apidoc::table("user")]`. The fields are flattened into that endpoint's `returned`; a key missing from `tables` only warns, it does not error.
+
+### 11. Share Links · Code Generation (v2)
+
+- `GET /apidoc/share?app=api&url=/api/user/info&method=GET&base=https://example.com` → `{"url":"https://example.com/apidoc?app=api&ep=%2Fapi%2Fuser%2Finfo&method=GET"}` (with auth enabled, `&token=…` is appended to the link so it opens without a password)
+- `GET /apidoc/generate?template=api.ts` (or `handler.rs` / `schema.sql`) → `text/plain; charset=utf-8`; unknown template 404, missing parameter 400
+- Custom templates (a template with the same name overrides the built-in one):
+
+```rust
+ApidocConfig {
+    codegen: vec![CodegenTemplate {
+        name: "api.ts".into(),
+        template: "// {{title}}\n{{#each endpoints}}// {{method}} {{url}}\n{{/each}}".into(),
+    }],
+    ..Default::default()
+}
+```
+
+Available template variables: top-level `title` / `description`; inside `{{#each endpoints}}`: `title` / `url` / `method` / `group` / `desc` / `author`; inside `{{#each tables}}`: `key` / `title`, and inside its `{{#each fields}}`: `name` / `ty` / `required` / `default` / `desc` / `mock`, plus the derived variables `not_null` / `default_clause` / `comma` (handy for generating valid SQL directly).
+
+### 12. Debug Pre/Post Scripts (v2)
+
+In the docs page, expand "Pre-script" / "Post-script" in the "Online Debugging" panel (contents stored in localStorage):
+
+```js
+// pre-script: runs before the request is sent; can modify ctx.url / method / headers / body, or return an object for a shallow merge
+ctx.headers['X-Token'] = localStorage.getItem('token') || '';
+```
+
+```js
+// post-script: runs after the response arrives; ctx = { status, ms, text, url, method, ep } (read-only)
+// returning a string replaces the text shown in the result area
+return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
+```
+
+Script errors are only reported in the debug result area and never abort the request (a failing pre-script still sends the request, a failing post-script still shows the raw response).
+
 ## Roadmap
 
 | Phase | Content | Status |
@@ -365,6 +425,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 | —  | actix-web adapter (1:1 feature parity with axum) | ✅ Done |
 | M6a | password authentication (authcode token + password overlay, app password takes precedence) | ✅ Done |
 | M6b | multi-app multi-version (apps config tree + app annotation + UI selector) | ✅ Done |
+| v2 | data-table field references + documentation caching + share links + code generator + debug events | ✅ Done |
 
 ## Multilingual Documentation
 

@@ -119,7 +119,7 @@ fn boundary_status() {}
 #[test]
 fn new_fields_serialize_with_exact_json_names() {
     let doc = ApiDoc {
-        config: ApidocConfig { title: "t".into(), description: None, auth: None, apps: Vec::new() },
+        config: ApidocConfig { title: "t".into(), description: None, auth: None, apps: Vec::new(), ..Default::default() },
         apps: Vec::new(), endpoints: DocRegistry::collect(),
     };
     let v: Value = serde_json::to_value(&doc).unwrap();
@@ -150,7 +150,7 @@ fn new_fields_serialize_with_exact_json_names() {
 #[test]
 fn new_fields_omitted_from_json_when_default() {
     let doc = ApiDoc {
-        config: ApidocConfig { title: "t".into(), description: None, auth: None, apps: Vec::new() },
+        config: ApidocConfig { title: "t".into(), description: None, auth: None, apps: Vec::new(), ..Default::default() },
         apps: Vec::new(), endpoints: DocRegistry::collect(),
     };
     let v: Value = serde_json::to_value(&doc).unwrap();

@@ -26,7 +26,7 @@ fn app_ep() {}
 
 fn app(auth: Option<AuthConfig>, apps: Vec<AppConfig>) -> Router {
     Router::new()
-        .merge(apidoc_routes(ApidocConfig { title: "t".into(), description: None, auth, apps }))
+        .merge(apidoc_routes(ApidocConfig { title: "t".into(), description: None, auth, apps, ..Default::default() }))
         .layer(cors_layer(CorsConfig::default()))
 }
 

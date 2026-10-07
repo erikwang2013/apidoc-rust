@@ -78,9 +78,13 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 - **الخطوط الحمراء لأمان المصادقة**: `password` / `secret_key` لا يُسلسلان أبدًا — إخراج api.json مطابق بايتًا ببايت لحالة عدم تفعيل المصادقة؛ عند عدم تفعيل المصادقة يعيد `/apidoc/auth` 404 وتُمرَّر مسارات البيانات مباشرة؛ إذا كان لإعداد تطبيق كلمة مرور مستقلة فلها الأولوية على كلمة المرور العامة؛ القيمة الافتراضية لـ `secret_key` هي `"apidoc#hgcode"` (تحذير stderr لمرة واحدة عند التفعيل دون إعداد)، والقيمة الافتراضية لـ `expire` هي 86400 ثانية
 - **تطبيقات وإصدارات متعددة (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / `items` إصدارات فرعية متكررة / `password`) يهيئ شجرة التطبيقات، و`#[apidoc::app("key")]` يعلّق الواجهات على مفتاح تطبيق معين، والواجهات بدون مفتاح تقع في التطبيق الافتراضي؛ إخراج api.json يضيف شجرة `doc.apps`، ويظهر منتقي تطبيق/إصدار أعلى الواجهة، وتُخزَّن الـ tokens منفصلة في localStorage حسب appKey (يمكن لتطبيقات مختلفة امتلاك كلمات مرور مستقلة)
 
-### قيد التخطيط (v2)
+### تم تنفيذه (v2)
 
-- v2: مولّد كود (مولّد واجهات)، مراجع لحقول جداول البيانات، روابط مشاركة، أحداث تصحيح، تخزين مؤقت للوثائق
+- **مراجع حقول جداول البيانات (`table`)**: تُدرج `#[apidoc::table("user")]` الحقول **مسطَّحة** في `returned` وفق مفتاح الجدول المهيأ في `ApidocConfig.tables` (بالدلالة نفسها التي لـ `ref`، والفرق أن مصدر البيانات جدول إعداد وليس واجهة أخرى)؛ وتدعم الحقول `required` / `default` / `desc` / `mock`؛ والمفتاح غير المهيأ يُصدر تحذير stderr فقط؛ وعند عدم استخدام هذا التعليق يبقى الإخراج مطابقًا بايتًا ببايت لـ v1
+- **تخزين الوثائق مؤقتًا**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })`——يُحفَظ إخراج `/apidoc/mock` في ذاكرة العملية وفق `(url, method)`، وينتهي مفعوله بعد `ttl` ثانية ليُعاد بناؤه، حيث `ttl = 0` تعني الدوام؛ وعند عدم التهيئة أو عدم التفعيل لا يُسلك مسار التخزين المؤقت إطلاقًا (صفر تغيير في الإخراج). أما api.json / export فتُبنى مرة واحدة عند تركيب المسارات، أي ما يعادل تخزينًا مؤقتًا دائمًا
+- **روابط المشاركة**: `GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` رابط عميق (`?app=<key>&ep=<接口 url>&method=<方法>[&token=…]`)؛ مع زر «مشاركة» بجوار كل واجهة في صفحة الوثائق (ينسخ إلى الحافظة، وعند الفشل يتحول إلى حقل قابل للنسخ)، وفتح الرابط العميق ينقل مباشرة إلى التطبيق/الواجهة المطلوبة؛ وعند تفعيل المصادقة يُرفق بالرابط token يُصدره الخادم (كلمة مرور التطبيق المستقلة لها الأولوية على العامة)، فيُفتح دون كلمة مرور
+- **مولّد الأكواد**: `GET /apidoc/generate?template=<name>` → نص بعد المعالجة (قالب غير معروف 404)؛ قوالب مدمجة: `api.ts` (ملف Api للواجهة الأمامية)، `handler.rs` (هيكل واجهة Rust)، `schema.sql` (يولّد عبارات CREATE TABLE وفق `tables`)؛ وقالب بالاسم نفسه في `ApidocConfig.codegen` يطغى على المدمج. صيغة القوالب اثنتان فقط: `{{变量}}` (يبقى كما هو إن لم يُعرَّف) و`{{#each 列表}}…{{/each}}` (قابل للتداخل، مثل `tables` × `fields`)
+- **أحداث التصحيح**: أُضيف إلى لوحة التصحيح أونلاين قسم قابل للطي «نصوص ما قبل الطلب / ما بعد الطلب» (يُحفظ في localStorage)——النص القبلي يُنفَّذ قبل الطلب عبر `new Function('ctx', code)` ويمكنه تعديل `ctx.url/method/headers/body` أو إرجاع كائن يُدمج دمجًا سطحيًا؛ والنص البعدي يُنفَّذ بعد الاستجابة ويقرأ `status/ms/text/url/method/ep`، وإذا أرجع نصًا استُبدل به النص المعروض للاستجابة؛ وخطأ السكريبت يظهر في منطقة النتائج فقط دون قطع الطلب
 
 ## البنية
 
@@ -99,7 +103,7 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 ```
 apidoc-rust/
 ├── Cargo.toml                 # إعداد workspace (resolver 2)
-├── VERSION                    # إصدار المشروع (v1.5.0)
+├── VERSION                    # إصدار المشروع (v1.6.0)
 ├── crates/
 │   ├── apidoc/                # النواة في زمن التشغيل (مستقلة عن الإطار)
 │   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json + UI_HTML
@@ -126,7 +130,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.5"        # أو path = "crates/apidoc"
+apidoc-rust = "1.6"        # أو path = "crates/apidoc"
 
 serde_json = "1"      # لاستخدام إخراج api.json
 ```
@@ -253,7 +257,7 @@ GET /apidoc/export?format=swagger   # ملف وصف OpenAPI 3.0.0 (application/j
 
 - **markdown**: مناسب للصقه في Wiki المشروع / ملاحظات الإصدار، يخرج فهرسًا مجمّعًا حسب المجموعة، وكل واجهة مع جدول معاملات وكتلة استجابة؛
 - **typescript**: الواجهة الأمامية يمكنها لصقه مباشرة كتعريفات أنواع؛ الواجهات غير المجمّعة تقع في نطاق `defaultGroup` (`default` كلمة محجوزة في TS، لا يمكن استخدامها كمعرّف)؛
-- **swagger**: `info.version` مأخوذ من محتوى ملف `VERSION` في جذر المشروع (حاليًا 1.5.0)، ويمكن استيراده مباشرة إلى Swagger UI أو مولّدات الكود.
+- **swagger**: `info.version` مأخوذ من محتوى ملف `VERSION` في جذر المشروع (حاليًا 1.6.0)، ويمكن استيراده مباشرة إلى Swagger UI أو مولّدات الكود.
 
 ### 7. محول actix-web
 
@@ -261,7 +265,7 @@ GET /apidoc/export?format=swagger   # ملف وصف OpenAPI 3.0.0 (application/j
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.5", features = ["actix"] }
+apidoc-rust = { version = "1.6", features = ["actix"] }
 ```
 
 ```rust
@@ -353,6 +357,62 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 - إخراج api.json يضيف شجرة `doc.apps` (key / title / items / endpoints)؛ يظهر منتقي تطبيق/إصدار أعلى الواجهة — عند التبديل تُعرض واجهات ذلك العقدة وتُعاد جلب البيانات، وتُخزَّن الـ tokens منفصلة في localStorage حسب appKey
 - عندما تشير تعليقة `app` إلى مفتاح غير مهيأ في `apps` يُصدر تحذير stderr وتقع الواجهة في التطبيق الافتراضي؛ بدون تعليقات `app` أو بدون تهيئة `apps` يكون الإخراج مطابقًا بايتًا ببايت لـ M5
 
+### 10. مراجع حقول جداول البيانات · تخزين الوثائق مؤقتًا (v2)
+
+```rust
+ApidocConfig {
+    // بنية الجدول تأتي من الإعداد (جانب Rust لا يتصل بقاعدة البيانات)، ويشير التعليق عبر key
+    tables: vec![TableDef {
+        key: "user".into(),
+        title: "用户表".into(),
+        fields: vec![
+            TableField { name: "id".into(), ty: "int".into(), required: true, desc: Some("用户ID".into()), ..Default::default() },
+            TableField { name: "name".into(), ty: "string".into(), mock: Some("erik".into()), ..Default::default() },
+        ],
+    }],
+    // تخزين الوثائق مؤقتًا: إخراج /apidoc/mock يُحفَظ وفق (url, method) ويُعاد بناؤه بعد ttl ثانية (0 = دائم)
+    cache: Some(CacheConfig { enable: true, ttl: 60 }),
+    ..Default::default()   // title / description / auth / apps / codegen تُهيأ كالمعتاد
+}
+```
+
+على الـ handler بالكتابة نفسها التي لـ `ref`: `#[apidoc::table("user")]`. تُدرج الحقول مسطَّحة في `returned` لتلك الواجهة؛ والمفتاح غير الموجود في `tables` يُصدر تحذيرًا فقط دون خطأ.
+
+### 11. روابط المشاركة · توليد الأكواد (v2)
+
+- `GET /apidoc/share?app=api&url=/api/user/info&method=GET&base=https://example.com` → `{"url":"https://example.com/apidoc?app=api&ep=%2Fapi%2Fuser%2Finfo&method=GET"}` (عند تفعيل المصادقة يُضاف `&token=…` في نهاية الرابط، فيُفتح دون كلمة مرور)
+- `GET /apidoc/generate?template=api.ts` (أو `handler.rs` / `schema.sql`) → `text/plain; charset=utf-8`؛ قالب غير معروف 404، ومعامل مفقود 400
+- قوالب مخصصة (تطغى على المدمج بالاسم نفسه):
+
+```rust
+ApidocConfig {
+    codegen: vec![CodegenTemplate {
+        name: "api.ts".into(),
+        template: "// {{title}}\n{{#each endpoints}}// {{method}} {{url}}\n{{/each}}".into(),
+    }],
+    ..Default::default()
+}
+```
+
+المتغيرات المتاحة في القوالب: في المستوى الأعلى `title` / `description`؛ وداخل `{{#each endpoints}}`: `title` / `url` / `method` / `group` / `desc` / `author`؛ وداخل `{{#each tables}}`: `key` / `title`، وداخل `{{#each fields}}` التابعة لها: `name` / `ty` / `required` / `default` / `desc` / `mock`، إضافة إلى المتغيرات المشتقة `not_null` / `default_clause` / `comma` (لتوليد SQL صالح مباشرة).
+
+### 12. نصوص ما قبل/ما بعد الطلب (v2)
+
+في صفحة الوثائق، افتح «نصوص ما قبل الطلب» و«نصوص ما بعد الطلب» ضمن لوحة «تصحيح أونلاين» (يُحفظ المحتوى في localStorage):
+
+```js
+// ما قبل الطلب: يُنفَّذ قبل إرسال الطلب، ويمكنه تعديل ctx.url / method / headers / body أو إرجاع كائن يُدمج دمجًا سطحيًا
+ctx.headers['X-Token'] = localStorage.getItem('token') || '';
+```
+
+```js
+// ما بعد الطلب: يُنفَّذ بعد عودة الاستجابة، ctx = { status, ms, text, url, method, ep } (للقراءة فقط)
+// وإرجاع نص يستبدل النص المعروض في منطقة النتائج
+return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
+```
+
+خطأ السكريبت يظهر في منطقة نتائج التصحيح فقط ولا يقطع الطلب (فشل النص القبلي يعني إرسال الطلب كالمعتاد، وفشل النص البعدي يعني عرض الاستجابة الأصلية كالمعتاد).
+
 ## خطة التطوير
 
 | المرحلة | المحتوى | الحالة |
@@ -365,6 +425,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 | —  | محول actix-web (وظائف متطابقة 1:1 مع axum) | ✅ مكتمل |
 | M6a | مصادقة كلمة المرور (token authcode + قناع كلمة المرور، كلمة مرور التطبيق لها الأولوية) | ✅ مكتمل |
 | M6b | تطبيقات وإصدارات متعددة (شجرة إعداد apps + تعليقة app + منتقي الواجهة) | ✅ مكتمل |
+| v2 | مراجع حقول جداول البيانات + تخزين الوثائق مؤقتًا + روابط المشاركة + مولّد الأكواد + أحداث التصحيح | ✅ مكتمل |
 
 ## وثائق متعددة اللغات
 

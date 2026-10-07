@@ -49,6 +49,9 @@ async fn main() {
             title: "demo api".to_string(),
             description: Some("apidoc::axum 演示".to_string()),
             auth: None,
+            tables: Vec::new(),
+            cache: None,
+            codegen: Vec::new(),
             apps: Vec::new(),
         }))
         // 收紧模式演示：改为 CorsConfig { allow_origins: vec!["http://localhost:3000".into()] }

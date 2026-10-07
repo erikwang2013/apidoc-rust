@@ -36,6 +36,9 @@ fn config() -> ApidocConfig {
         title: "t".into(),
         description: None,
         auth: None,
+        tables: Vec::new(),
+        cache: None,
+        codegen: Vec::new(),
         apps: vec![AppConfig {
             key: "api".into(),
             title: "API".into(),

@@ -78,9 +78,13 @@ apidoc-rust の実装方針：
 - **認証の安全ライン**：`password` / `secret_key` は決してシリアライズされず、api.json の出力は認証を無効にした場合とバイトレベルで一致；auth が無効のとき `/apidoc/auth` は 404 を返し、データルートは直接通過；アプリ設定の独立 password がある場合はアプリのパスワードがグローバルのパスワードより優先；`secret_key` のデフォルトは `"apidoc#hgcode"`（有効かつ未設定のとき stderr に警告が 1 回）、`expire` のデフォルトは 86400 秒
 - **複数アプリ・複数バージョン（M6b）**：`ApidocConfig.apps: Vec<AppConfig>`（`key` / `title` / `items` 再帰サブバージョン / `password`）でアプリツリーを設定、`#[apidoc::app("key")]` でインターフェースを指定のアプリ key に接続、key 未指定のインターフェースはデフォルトアプリに落ちる；api.json の出力に `doc.apps` ツリーが追加され、UI 上部にアプリ/バージョン選択セレクタが出現、token は appKey ごとに localStorage を分けて保存（アプリごとに独立したパスワードを持てる）
 
-### 計画中（v2）
+### 実装済み（v2）
 
-- v2：コードジェネレータ（インターフェースジェネレータ）、データテーブルフィールド参照、共有リンク、デバッグイベント、ドキュメントキャッシュ
+- **データテーブルフィールド参照（`table`）**：`#[apidoc::table("user")]` は `ApidocConfig.tables` にその key で設定したテーブルのフィールドを `returned` に**平坦化**してマージします（`ref` と同じ意味で、データソースが他のエンドポイントではなく設定テーブルである点だけが異なります）；フィールドは `required` / `default` / `desc` / `mock` に対応；未設定の key は stderr 警告のみ；この注釈を使わない場合の出力は v1 とバイトレベルで一致
+- **ドキュメントキャッシュ**：`ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — `/apidoc/mock` の出力を `(url, method)` 単位でプロセス内メモ化し、`ttl` 秒後に失効して再生成、`ttl = 0` は永久を意味します；未設定または無効時はキャッシュ経路を一切通しません（出力は変化なし）。api.json / export はルートのマウント時に一度構築済みで、永久キャッシュと等価です
+- **共有リンク**：`GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` のディープリンク（`?app=<key>&ep=<インターフェース url>&method=<メソッド>[&token=…]`）；ドキュメントページの各インターフェースの横に「共有」ボタンがあり（クリップボードに書き込み、失敗時はコピー可能な入力欄にフォールバック）、ディープリンクを開くとそのアプリ/インターフェースへ直接ジャンプします；認証が有効なときはリンクにサーバー発行の token が付き（アプリ独立パスワードがグローバルより優先）、開くとパスワード不要です
+- **コードジェネレータ**：`GET /apidoc/generate?template=<name>` → レンダリング済みテキスト（未知のテンプレートは 404）；内蔵 `api.ts`（フロントエンド Api ファイル）、`handler.rs`（Rust インターフェースの雛形）、`schema.sql`（`tables` から CREATE TABLE 文を生成）；`ApidocConfig.codegen` の同名テンプレートが内蔵を上書きします。テンプレート構文は 2 種類のみ：`{{変数}}`（未定義ならそのまま保持）と `{{#each リスト}}…{{/each}}`（ネスト可、例：`tables` × `fields`）
+- **デバッグイベント**：オンラインデバッグパネルに折りたたみ式の「前処理スクリプト / 後処理スクリプト」（localStorage に永続化）を追加 — 前処理スクリプトは `new Function('ctx', code)` によりリクエスト前に実行され、`ctx.url/method/headers/body` を変更したり、オブジェクトを返して浅くマージできます；後処理スクリプトはレスポンス後に実行され `status/ms/text/url/method/ep` を読み取れ、文字列を返すと表示中のレスポンステキストを置き換えます；スクリプトのエラーは結果エリアに提示されるだけで、リクエストは中断されません
 
 ## アーキテクチャ
 
@@ -99,7 +103,7 @@ apidoc-rust の実装方針：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 設定（resolver 2）
-├── VERSION                    # プロジェクトバージョン（v1.5.0）
+├── VERSION                    # プロジェクトバージョン（v1.6.0）
 ├── crates/
 │   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
 │   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML
@@ -126,7 +130,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.5"        # または path = "crates/apidoc"
+apidoc-rust = "1.6"        # または path = "crates/apidoc"
 
 serde_json = "1"      # api.json 出力用
 ```
@@ -253,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 記述ファイル（applica
 
 - **markdown**：プロジェクト Wiki / リリースノートに貼り付けるのに適しており、グループごとにディレクトリを出力し、各インターフェースにパラメータ表とレスポンスブロック付き；
 - **typescript**：フロントエンドがそのまま型定義として貼り付け可能；未グループのインターフェースは `defaultGroup` 名前空間に入る（`default` は TS の予約語のため識別子にできない）；
-- **swagger**：`info.version` はルートの `VERSION` ファイルの内容を取得（現在 1.5.0）、そのまま Swagger UI やコードジェネレータにインポート可能。
+- **swagger**：`info.version` はルートの `VERSION` ファイルの内容を取得（現在 1.6.0）、そのまま Swagger UI やコードジェネレータにインポート可能。
 
 ### 7. actix-web アダプタ
 
@@ -261,7 +265,7 @@ Web フレームワークに actix-web を使う場合は `features = ["actix"]`
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.5", features = ["actix"] }
+apidoc-rust = { version = "1.6", features = ["actix"] }
 ```
 
 ```rust
@@ -353,6 +357,62 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 - api.json の出力に `doc.apps` ツリー（key / title / items / endpoints）が追加；UI 上部にアプリ/バージョン選択セレクタが出現し、切り替えるとそのノードでインターフェースを描画してデータを再取得、token は appKey ごとに localStorage を分けて保存
 - `app` アノテーションが `apps` に設定されていない key を参照した場合は stderr に警告しデフォルトアプリに落ちる；`app` アノテーションなし、または `apps` 未設定の場合は M5 とバイトレベルで一致する出力
 
+### 10. データテーブルフィールド参照 · ドキュメントキャッシュ（v2）
+
+```rust
+ApidocConfig {
+    // テーブル構造は設定で提供（Rust 側はデータベースに接続しない）、注釈は key で参照
+    tables: vec![TableDef {
+        key: "user".into(),
+        title: "用户表".into(),
+        fields: vec![
+            TableField { name: "id".into(), ty: "int".into(), required: true, desc: Some("用户ID".into()), ..Default::default() },
+            TableField { name: "name".into(), ty: "string".into(), mock: Some("erik".into()), ..Default::default() },
+        ],
+    }],
+    // ドキュメントキャッシュ: /apidoc/mock の出力を (url, method) 単位でメモ化し、ttl 秒後に再構築（0 = 永久）
+    cache: Some(CacheConfig { enable: true, ttl: 60 }),
+    ..Default::default()   // title / description / auth / apps / codegen は通常どおり設定
+}
+```
+
+handler では `ref` と同じ書き方です：`#[apidoc::table("user")]`。フィールドはそのインターフェースの `returned` に平坦化してマージされます；`tables` に存在しない key は警告のみでエラーにはなりません。
+
+### 11. 共有リンク · コード生成（v2）
+
+- `GET /apidoc/share?app=api&url=/api/user/info&method=GET&base=https://example.com` → `{"url":"https://example.com/apidoc?app=api&ep=%2Fapi%2Fuser%2Finfo&method=GET"}`（認証が有効なときはリンク末尾に `&token=…` が付き、開くとパスワード不要）
+- `GET /apidoc/generate?template=api.ts`（または `handler.rs` / `schema.sql`）→ `text/plain; charset=utf-8`；未知のテンプレートは 404、パラメータ欠落は 400
+- カスタムテンプレート（同名テンプレートが内蔵を上書き）：
+
+```rust
+ApidocConfig {
+    codegen: vec![CodegenTemplate {
+        name: "api.ts".into(),
+        template: "// {{title}}\n{{#each endpoints}}// {{method}} {{url}}\n{{/each}}".into(),
+    }],
+    ..Default::default()
+}
+```
+
+使用できるテンプレート変数：トップレベルは `title` / `description`；`{{#each endpoints}}` 内は `title` / `url` / `method` / `group` / `desc` / `author`；`{{#each tables}}` 内は `key` / `title`、その中の `{{#each fields}}` 内は `name` / `ty` / `required` / `default` / `desc` / `mock`、ほかに派生変数 `not_null` / `default_clause` / `comma`（有効な SQL をそのまま生成するのに便利）。
+
+### 12. デバッグ前処理/後処理スクリプト（v2）
+
+ドキュメントページの「オンラインデバッグ」パネルで「前処理スクリプト」「後処理スクリプト」を展開します（内容は localStorage に保存）：
+
+```js
+// 前処理：リクエスト送信前に実行、ctx.url / method / headers / body を変更可能、またはオブジェクトを返して浅くマージ
+ctx.headers['X-Token'] = localStorage.getItem('token') || '';
+```
+
+```js
+// 後処理：レスポンス受信後に実行、ctx = { status, ms, text, url, method, ep }（読み取り専用）
+// 文字列を返すと結果エリアに表示されるテキストを置き換え
+return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
+```
+
+スクリプトのエラーはデバッグ結果エリアに提示されるだけで、リクエストは中断されません（前処理が失敗してもリクエストは通常どおり送信され、後処理が失敗しても元のレスポンスがそのまま表示されます）。
+
 ## 開発ロードマップ
 
 | フェーズ | 内容 | ステータス |
@@ -365,6 +425,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 | —  | actix-web アダプタ（axum と機能 1:1） | ✅ 完了 |
 | M6a | パスワード認証（authcode token + パスワードマスク、アプリのパスワード優先） | ✅ 完了 |
 | M6b | 複数アプリ・複数バージョン（apps 設定ツリー + app アノテーション + UI セレクタ） | ✅ 完了 |
+| v2 | データテーブルフィールド参照 + ドキュメントキャッシュ + 共有リンク + コードジェネレータ + デバッグイベント | ✅ 完了 |
 
 ## 多言語ドキュメント
 

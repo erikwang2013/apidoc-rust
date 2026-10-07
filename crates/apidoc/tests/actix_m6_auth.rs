@@ -31,7 +31,7 @@ fn enc(s: &str) -> String {
 async fn get(auth: Option<AuthConfig>, apps: Vec<AppConfig>, uri: &str) -> (StatusCode, String) {
     let svc = actix_test::init_service(
         App::new()
-            .service(apidoc_routes(ApidocConfig { title: "t".into(), description: None, auth, apps }))
+            .service(apidoc_routes(ApidocConfig { title: "t".into(), description: None, auth, apps, ..Default::default() }))
             .wrap(cors_layer(CorsConfig::default())),
     )
     .await;

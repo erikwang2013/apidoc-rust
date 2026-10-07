@@ -47,6 +47,10 @@ td.name { font-family:ui-monospace,Menlo,monospace; white-space:nowrap; }
 button { padding:4px 12px; border:1px solid var(--border); border-radius:4px; background:#fff; cursor:pointer; font-size:13px; }
 button:hover { background:#f0f3f8; }
 #debug-result pre { white-space:pre-wrap; background:#f8f9fb; border:1px solid var(--border); border-radius:6px; padding:10px 12px; font-family:ui-monospace,Menlo,monospace; font-size:13px; margin:8px 0 0; }
+/* v2 调试事件：前置/后置脚本（可折叠） */
+.debug-script { margin:6px 0; }
+.debug-script summary { cursor:pointer; font-size:13px; color:var(--muted); }
+.debug-script textarea { width:100%; margin-top:6px; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-family:ui-monospace,Menlo,monospace; font-size:13px; resize:vertical; }
 /* M6a 密码遮罩：全屏覆盖层，非受控状态 display:none */
 #mask { display:none; position:fixed; inset:0; background:var(--bg); z-index:10; align-items:center; justify-content:center; }
 #mask-box { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:28px 32px; width:320px; text-align:center; }

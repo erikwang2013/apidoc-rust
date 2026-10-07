@@ -1,7 +1,7 @@
 //! Attribute macros for apidoc: title / desc / method / url / param / query /
 //! returned (M1), tag / group / author / header / route_param /
 //! response_status / success / error / not_debug / md / sort / ref (M3),
-//! and app (M6b).
+//! app (M6b), and table (v2).
 //!
 //! Each macro keeps the annotated function unchanged and emits a statically
 //! registered `DocFragmentEntry` on the distributed slice `apidoc::DOC_FRAGMENTS`,
@@ -175,8 +175,15 @@ pub fn app(args: TokenStream, item: TokenStream) -> TokenStream {
     simple_fragment("app", args, item)
 }
 
-/// title / desc / method / url / group / author / md / ref: a single string
-/// literal plus validation.
+/// v2: 引用 ApidocConfig.tables 中的数据表 key，字段在 collect_doc 时平铺并入
+/// returned（key 未配置只警告不报错，与 ref 同策略）。
+#[proc_macro_attribute]
+pub fn table(args: TokenStream, item: TokenStream) -> TokenStream {
+    simple_fragment("table", args, item)
+}
+
+/// title / desc / method / url / group / author / md / ref / app / table:
+/// a single string literal plus validation.
 fn simple_fragment(kind: &str, args: TokenStream, item: TokenStream) -> TokenStream {
     let lit = parse_macro_input!(args as LitStr);
     let value = lit.value();
@@ -191,7 +198,7 @@ fn simple_fragment(kind: &str, args: TokenStream, item: TokenStream) -> TokenStr
                 HTTP_METHODS, value
             ),
         )),
-        "group" | "author" | "ref" | "app" if value.trim().is_empty() => Some(syn::Error::new(
+        "group" | "author" | "ref" | "app" | "table" if value.trim().is_empty() => Some(syn::Error::new(
             lit.span(),
             format!("apidoc::{kind} must not be empty"),
         )),

@@ -78,9 +78,13 @@ Abordagem de implementação do apidoc-rust:
 - **Linhas vermelhas de segurança da autenticação**: `password` / `secret_key` nunca são serializados — a saída do api.json é idêntica byte a byte à versão sem autenticação; com auth desativado, `/apidoc/auth` retorna 404 e as rotas de dados liberam direto; quando um aplicativo define password próprio, a senha do aplicativo tem prioridade sobre a global; `secret_key` padrão `"apidoc#hgcode"` (aviso único no stderr se ativado e não configurado), `expire` padrão 86400 segundos
 - **Múltiplos aplicativos e versões (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / `items` com subversões recursivas / `password`) configura a árvore de aplicativos; `#[apidoc::app("key")]` vincula o endpoint ao key de um aplicativo; endpoints sem key caem no aplicativo padrão; a saída do api.json ganha a árvore `doc.apps`, o seletor de aplicativo/versão aparece no topo da UI, e o token é guardado no localStorage separado por appKey (aplicativos diferentes podem ter senhas independentes)
 
-### Planejado (v2)
+### Implementado (v2)
 
-- v2: gerador de código (gerador de endpoints), referência de campos de tabelas de dados, links de compartilhamento, eventos de depuração, cache de documentação
+- **Referência de campos de tabelas de dados (`table`)**: `#[apidoc::table("user")]` mescla (achatando-os) os campos da tabela configurada pela key em `ApidocConfig.tables` dentro de `returned` (mesma semântica do `ref`; a diferença é que a fonte de dados é uma tabela de configuração e não outro endpoint); os campos suportam `required` / `default` / `desc` / `mock`; uma key não configurada gera apenas um aviso no stderr; sem usar essa anotação, a saída é idêntica byte a byte à da v1
+- **Cache de documentação**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — a saída de `/apidoc/mock` é memorizada no processo por `(url, method)` e reconstruída após `ttl` segundos; `ttl = 0` significa permanente; se não configurado ou desativado, o caminho de cache não é usado (saída inalterada). api.json / export já são construídos uma vez ao montar as rotas, o que equivale a um cache permanente
+- **Links de compartilhamento**: `GET /apidoc/share?app=&url=&method=&base=` → link profundo `{"url":"…"}` (`?app=<key>&ep=<url do endpoint>&method=<método>[&token=…]`); na página de documentação cada endpoint tem um botão «Compartilhar» (escreve na área de transferência; em caso de falha, recorre a um campo de texto copiável); abrir o link profundo posiciona no aplicativo/endpoint correspondente; com a autenticação ativada o link inclui o token emitido pelo servidor (a senha independente do aplicativo prevalece sobre a global) e abre sem exigir senha
+- **Gerador de código**: `GET /apidoc/generate?template=<name>` → o texto renderizado (template desconhecido → 404); inclui `api.ts` (arquivo Api do frontend), `handler.rs` (esqueleto de endpoint em Rust) e `schema.sql` (instruções de criação de tabela geradas a partir de `tables`); um template de mesmo nome em `ApidocConfig.codegen` substitui o embutido. A sintaxe de template tem apenas duas formas: `{{variável}}` (se não definida, é mantida como está) e `{{#each lista}}…{{/each}}` (aninhável, ex.: `tables` × `fields`)
+- **Eventos de depuração**: o painel de depuração on-line ganha os blocos recolhíveis «Script prévio» / «Script posterior» (persistidos no localStorage) — o prévio é executado antes da requisição com `new Function('ctx', code)` e pode alterar `ctx.url/method/headers/body` ou devolver um objeto para mesclagem superficial; o posterior é executado após a resposta e pode ler `status/ms/text/url/method/ep`; se devolver uma string, ela substitui o texto de resposta exibido; erro no script é apenas avisado na área de resultados e não interrompe a requisição
 
 ## Arquitetura
 
@@ -99,7 +103,7 @@ Abordagem de implementação do apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuração do workspace (resolver 2)
-├── VERSION                    # versão do projeto (v1.5.0)
+├── VERSION                    # versão do projeto (v1.6.0)
 ├── crates/
 │   ├── apidoc/                # núcleo em tempo de execução (independente de framework)
 │   │   ├── src/lib.rs         # modelo de dados + agregação DocRegistry + api.json + UI_HTML
@@ -126,7 +130,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.5"        # ou path = "crates/apidoc"
+apidoc-rust = "1.6"        # ou path = "crates/apidoc"
 
 serde_json = "1"      # usado para gerar o api.json
 ```
@@ -253,7 +257,7 @@ GET /apidoc/export?format=swagger   # arquivo descritivo OpenAPI 3.0.0 (applicat
 
 - **markdown**: ideal para colar no Wiki do projeto / notas de versão, índice por grupos, cada endpoint com tabela de parâmetros e bloco de resposta;
 - **typescript**: o front pode colar diretamente as definições de tipos; endpoints sem grupo caem no namespace `defaultGroup` (`default` é palavra reservada de TS, não pode ser usado como identificador);
-- **swagger**: `info.version` vem do conteúdo do arquivo `VERSION` da raiz (atualmente 1.5.0), importável diretamente no Swagger UI ou em um gerador de código.
+- **swagger**: `info.version` vem do conteúdo do arquivo `VERSION` da raiz (atualmente 1.6.0), importável diretamente no Swagger UI ou em um gerador de código.
 
 ### 7. Adaptador actix-web
 
@@ -261,7 +265,7 @@ Se o framework Web for actix-web, conecte `features = ["actix"]` (funcionalidade
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.5", features = ["actix"] }
+apidoc-rust = { version = "1.6", features = ["actix"] }
 ```
 
 ```rust
@@ -353,6 +357,62 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 - A saída do api.json ganha a árvore `doc.apps` (key / title / items / endpoints); o seletor de aplicativo/versão aparece no topo da UI — ao alternar, os endpoints são renderizados pelo nó escolhido e os dados são recarregados; o token é guardado no localStorage separado por appKey
 - Se a anotação `app` referenciar um key não configurado em `apps`, há um aviso no stderr e o endpoint cai no aplicativo padrão; sem anotação `app` ou sem `apps` configurado, a saída é idêntica byte a byte à do M5
 
+### 10. Referência de campos de tabelas de dados · Cache de documentação (v2)
+
+```rust
+ApidocConfig {
+    // A estrutura da tabela vem da configuração (o lado Rust não se conecta ao banco de dados); as anotações referenciam por key
+    tables: vec![TableDef {
+        key: "user".into(),
+        title: "用户表".into(),
+        fields: vec![
+            TableField { name: "id".into(), ty: "int".into(), required: true, desc: Some("用户ID".into()), ..Default::default() },
+            TableField { name: "name".into(), ty: "string".into(), mock: Some("erik".into()), ..Default::default() },
+        ],
+    }],
+    // Cache de documentação: a saída de /apidoc/mock é memorizada por (url, method) e reconstruída após ttl segundos (0 = permanente)
+    cache: Some(CacheConfig { enable: true, ttl: 60 }),
+    ..Default::default()   // title / description / auth / apps / codegen configurados como sempre
+}
+```
+
+No handler usa-se a mesma forma do `ref`: `#[apidoc::table("user")]`. Os campos são achatados no `returned` daquele endpoint; uma key ausente em `tables` gera apenas um aviso, não um erro.
+
+### 11. Links de compartilhamento · Geração de código (v2)
+
+- `GET /apidoc/share?app=api&url=/api/user/info&method=GET&base=https://example.com` → `{"url":"https://example.com/apidoc?app=api&ep=%2Fapi%2Fuser%2Finfo&method=GET"}` (com a autenticação ativada, o link leva `&token=…` no final e abre sem senha)
+- `GET /apidoc/generate?template=api.ts` (ou `handler.rs` / `schema.sql`) → `text/plain; charset=utf-8`; template desconhecido → 404, parâmetro ausente → 400
+- Template personalizado (o mesmo nome sobrescreve o embutido):
+
+```rust
+ApidocConfig {
+    codegen: vec![CodegenTemplate {
+        name: "api.ts".into(),
+        template: "// {{title}}\n{{#each endpoints}}// {{method}} {{url}}\n{{/each}}".into(),
+    }],
+    ..Default::default()
+}
+```
+
+Variáveis disponíveis nos templates: no nível superior `title` / `description`; dentro de `{{#each endpoints}}`, `title` / `url` / `method` / `group` / `desc` / `author`; dentro de `{{#each tables}}`, `key` / `title`, e dentro do seu `{{#each fields}}`, `name` / `ty` / `required` / `default` / `desc` / `mock`; há ainda variáveis derivadas `not_null` / `default_clause` / `comma` (para gerar SQL válido diretamente).
+
+### 12. Scripts de pré/pós-depuração (v2)
+
+Na página de documentação, o painel «Depuração on-line» expande «Script prévio» e «Script posterior» (conteúdo guardado no localStorage):
+
+```js
+// Prévio: executado antes do envio da requisição; pode alterar ctx.url / method / headers / body, ou devolver um objeto para mesclagem superficial
+ctx.headers['X-Token'] = localStorage.getItem('token') || '';
+```
+
+```js
+// Posterior: executado quando a resposta chega; ctx = { status, ms, text, url, method, ep } (somente leitura)
+// Se devolver uma string, ela substitui o texto exibido na área de resultados
+return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
+```
+
+Erro de script é apenas avisado na área de resultados de depuração e não interrompe a requisição (se o prévio falhar, a requisição é enviada mesmo assim; se o posterior falhar, a resposta original é exibida como está).
+
 ## Roteiro de desenvolvimento
 
 | Fase | Conteúdo | Status |
@@ -365,6 +425,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 | —  | adaptador actix-web (funcionalidade 1:1 com axum) | ✅ Concluído |
 | M6a | autenticação por senha (token authcode + máscara de senha, senha do aplicativo com prioridade) | ✅ Concluído |
 | M6b | múltiplos aplicativos e versões (árvore de configuração apps + anotação app + seletor na UI) | ✅ Concluído |
+| v2 | referência de campos de tabelas de dados + cache de documentação + links de compartilhamento + gerador de código + eventos de depuração | ✅ Concluído |
 
 ## Documentação multilíngue
 

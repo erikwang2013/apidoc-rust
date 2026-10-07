@@ -46,6 +46,32 @@ function prefillFromMock(mock, kind, path, input) {
   if (v !== undefined) input.value = typeof v === 'string' ? v : JSON.stringify(v);
 }
 
+// 结果提示框（琥珀警示）：CORS 失败、前置/后置脚本抛错共用
+function warnBox(text) {
+  const w = el('div', null, text);
+  w.style.background = '#fef3c7';
+  w.style.border = '1px solid #f59e0b';
+  w.style.borderRadius = '6px';
+  w.style.padding = '10px 12px';
+  w.style.color = '#92400e';
+  w.style.marginTop = '8px';
+  return w;
+}
+// 调试事件（对齐 apidoc-php 前置/后置事件）：new Function 执行用户脚本。
+// 返回 { ctx, ret, error }；error 非空表示脚本抛错，调用方继续正常流程。
+// 返回值是对象时浅合并回 ctx（前置改请求）；是字符串时由后置替换展示文本。
+
+function runScript(code, ctx) {
+  if (!code || !code.trim()) return { ctx, ret: undefined, error: null };
+  try {
+    const ret = new Function('ctx', code)(ctx);
+    if (ret && typeof ret === 'object') Object.assign(ctx, ret);
+    return { ctx, ret, error: null };
+  } catch (e) {
+    return { ctx, ret: undefined, error: e && e.message ? e.message : String(e) };
+  }
+}
+
 function debugForm(ep) {
   const form = el('div');
   const baseRow = el('div', 'debug-row');
@@ -122,6 +148,23 @@ function debugForm(ep) {
     box.appendChild(inner);
     form.appendChild(box);
   }
+  // 前置/后置调试事件：可折叠文本域，值持久化到 localStorage（键名同 apidoc_token 风格）
+  const scriptBox = (label, key, hint) => {
+    const det = el('details', 'debug-script');
+    det.appendChild(el('summary', null, label));
+    const ta = document.createElement('textarea');
+    ta.rows = 4;
+    ta.placeholder = hint;
+    ta.value = localStorage.getItem(key) || '';
+    ta.oninput = () => localStorage.setItem(key, ta.value);
+    det.appendChild(ta);
+    form.appendChild(det);
+    return ta;
+  };
+  const preTa = scriptBox('前置脚本（发送请求前执行）', 'apidoc_pre_script',
+    '可用 ctx：url / method / headers / body / ep。改 ctx 即改本次请求；返回对象会浅合并回 ctx。\n例：ctx.headers["X-Trace"] = "t1";');
+  const postTa = scriptBox('后置脚本（响应回来后执行）', 'apidoc_post_script',
+    '可用 ctx：status / ms / text / url / method / ep（只读）。返回字符串会替换展示的响应文本，抛错只提示、不影响原始响应。\n例：return "状态 " + ctx.status;');
   // 提交：组装 URL/query/body 后 fetch 直发
   const resultBox = el('div');
   resultBox.id = 'debug-result';
@@ -185,37 +228,40 @@ function debugForm(ep) {
       if (Object.keys(obj).length) body = JSON.stringify(obj);
     }
     // headers：非空值才发送；JSON body 自动补 Content-Type
-    const headers = {};
+    let headers = {};
     for (const h of headerRows) {
       const v = h.input.value.trim();
       if (v) headers[h.name] = v;
     }
     if (body) headers['Content-Type'] = 'application/json';
     const out = el('div');
+    // 前置调试事件：脚本抛错只提示，仍按原值发请求
+    const preRun = runScript(preTa.value, { url: fullUrl, method: ep.method, headers, body, ep });
+    if (preRun.error) out.appendChild(warnBox('前置脚本执行失败：' + preRun.error));
+    fullUrl = preRun.ctx.url;
+    headers = preRun.ctx.headers;
+    body = preRun.ctx.body;
     const t0 = performance.now();
     try {
-      const res = await fetch(fullUrl, { method: ep.method, headers, body });
+      const res = await fetch(fullUrl, { method: preRun.ctx.method || ep.method, headers, body });
       const text = await res.text();
       const ms = Math.round(performance.now() - t0);
+      // 后置调试事件：ctx 只读；脚本抛错只提示，仍展示原始响应
+      const postRun = runScript(postTa.value, { status: res.status, ms, text, url: fullUrl, method: ep.method, ep });
+      if (postRun.error) out.appendChild(warnBox('后置脚本执行失败：' + postRun.error));
+      const shown = typeof postRun.ret === 'string' ? postRun.ret : text;
       out.appendChild(el('p', null, res.status + ' ' + res.statusText + '（' + ms + 'ms）'));
       const pre = document.createElement('pre');
       try {
-        pre.textContent = JSON.stringify(JSON.parse(text), null, 2);
+        pre.textContent = JSON.stringify(JSON.parse(shown), null, 2);
       } catch (e) {
-        pre.textContent = text;
+        pre.textContent = shown;
       }
       out.appendChild(pre);
     } catch (e) {
       // CORS 与网络失败无法区分，一条提示覆盖两种
       console.error(e);
-      const warn = el('div');
-      warn.style.background = '#fef3c7';
-      warn.style.border = '1px solid #f59e0b';
-      warn.style.borderRadius = '6px';
-      warn.style.padding = '10px 12px';
-      warn.style.color = '#92400e';
-      warn.textContent = '请求失败：目标服务未开启 CORS、或网络不可达。请确认目标接口所在服务调用了 apidoc_axum::cors_layer 且对当前 Origin 放行（含预检 OPTIONS），并检查 Base URL 是否正确。浏览器控制台有详细错误。';
-      out.appendChild(warn);
+      out.appendChild(warnBox('请求失败：目标服务未开启 CORS、或网络不可达。请确认目标接口所在服务调用了 apidoc_axum::cors_layer 且对当前 Origin 放行（含预检 OPTIONS），并检查 Base URL 是否正确。浏览器控制台有详细错误。'));
     }
     resultBox.textContent = '';
     resultBox.appendChild(out);

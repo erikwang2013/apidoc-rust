@@ -84,6 +84,9 @@ fn config_auth_and_apps_omitted_when_absent() {
         title: "t".into(),
         description: None,
         auth: None,
+        tables: Vec::new(),
+        cache: None,
+        codegen: Vec::new(),
         apps: Vec::new(),
     });
     let v: Value = serde_json::to_value(&doc).unwrap();

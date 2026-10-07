@@ -4,7 +4,8 @@
 use crate::auth::{self, AuthConfig};
 use crate::export;
 use crate::mock::{generate_mock, mock_specs, MockEndpointSpec};
-use crate::{AppConfig, ApidocConfig, DocRegistry};
+use crate::{cache, codegen, share};
+use crate::{AppConfig, ApidocConfig, CacheConfig, CodegenTemplate, DocRegistry};
 use axum::extract::Query;
 use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::{Html, IntoResponse};
@@ -68,6 +69,19 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
     // 鉴权配置与应用树按需捕获（password/secret_key 只在构建期内存中）
     let auth_cfg: Option<Arc<AuthConfig>> = doc.config.auth.clone().map(Arc::new);
     let app_cfgs: Arc<Vec<AppConfig>> = Arc::new(doc.config.apps.clone());
+    // v2：分享链接要按 url+method 找 endpoint，代码生成要整个文档模型 ——
+    // ApiDoc 无 Clone（核心约束），用 Arc 捕获（构建期不可变，共享安全）。
+    let doc = Arc::new(doc);
+    let codegen_cfgs: Arc<Vec<CodegenTemplate>> = Arc::new(doc.config.codegen.clone());
+    // v2 文档缓存：仅 mock 每请求有实际计算（api.json/export 构建期已物化一次，
+    // 恒等重建无意义）——开启后按 (url,method) 记忆化 mock 输出。
+    let cache_cfg: Option<CacheConfig> = doc.config.cache.clone();
+    // v2 分享 token 签发只看 auth + apps，构造轻量快照避免再 clone 整个 doc。
+    let share_cfg = Arc::new(ApidocConfig {
+        auth: doc.config.auth.clone(),
+        apps: doc.config.apps.clone(),
+        ..Default::default()
+    });
     // 数据路由守卫，失败 401；auth 未启用恒放行。无捕获闭包为 Copy，
     // 可被三个 handler 各自 move 一份
     let denied = || (StatusCode::UNAUTHORIZED, auth::DENIED_BODY).into_response();
@@ -96,6 +110,93 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
             "/apidoc/pet.svg",
             get(|| async {
                 ([(header::CONTENT_TYPE, "image/svg+xml")], crate::PET_SVG)
+            }),
+        )
+        // v2：GET /apidoc/share?app=&url=&method=&base= → {"url":"..."}
+        // 生成指定应用/接口的分享深链；鉴权开启时附带服务端签发的 token（打开免密）。
+        .route(
+            "/apidoc/share",
+            get({
+                let auth_cfg = auth_cfg.clone();
+                let app_cfgs = app_cfgs.clone();
+                let doc = doc.clone();
+                let share_cfg = share_cfg.clone();
+                move |Query(q): Query<HashMap<String, String>>| {
+                    let auth_cfg = auth_cfg.clone();
+                    let app_cfgs = app_cfgs.clone();
+                    let doc = doc.clone();
+                    let share_cfg = share_cfg.clone();
+                    async move {
+                        // 守卫必须校验"被分享的那个应用"：本路由用 `app` 指定应用（与 UI 深链
+                        // 参数一致），若沿用其它路由的 `appKey` 守卫，守卫看不到应用名 → 落全局
+                        // 分支放行 → 本路由就变成"无凭据铸造应用 token"的口子（全局鉴权关闭时
+                        // 直接绕过应用密码；全局 token 持有者也能借此提权到任意独立密码应用）。
+                        let guard_app = q
+                            .get("app")
+                            .or_else(|| q.get("appKey"))
+                            .map(String::as_str);
+                        if !auth::auth_guard_ok(
+                            q.get("token").map(String::as_str).unwrap_or(""),
+                            guard_app,
+                            auth_cfg.as_deref(),
+                            &app_cfgs,
+                        ) {
+                            return denied();
+                        }
+                        let app_key = q.get("app").map(String::as_str);
+                        let url = q.get("url").map(String::as_str);
+                        if app_key.is_none() && url.is_none() {
+                            return StatusCode::BAD_REQUEST.into_response();
+                        }
+                        let method = q.get("method").map(String::as_str).unwrap_or("GET");
+                        let ep = url.and_then(|u| {
+                            doc.endpoints.iter().find(|e| e.url == u && e.method == method)
+                        });
+                        let token = share::token_for(&share_cfg, app_key);
+                        let base = q.get("base").map(String::as_str).unwrap_or("");
+                        let body = serde_json::json!({
+                            "url": share::build_url(base, app_key, ep, token.as_deref())
+                        })
+                        .to_string();
+                        let mut headers = HeaderMap::new();
+                        headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
+                        (headers, body).into_response()
+                    }
+                }
+            }),
+        )
+        // v2：GET /apidoc/generate?template=<name> → 渲染后的代码；未知模板 404。
+        .route(
+            "/apidoc/generate",
+            get({
+                let auth_cfg = auth_cfg.clone();
+                let app_cfgs = app_cfgs.clone();
+                let doc = doc.clone();
+                let codegen_cfgs = codegen_cfgs.clone();
+                move |Query(q): Query<HashMap<String, String>>| {
+                    let auth_cfg = auth_cfg.clone();
+                    let app_cfgs = app_cfgs.clone();
+                    let doc = doc.clone();
+                    let codegen_cfgs = codegen_cfgs.clone();
+                    async move {
+                        if !guard(&q, auth_cfg.as_deref(), &app_cfgs) {
+                            return denied();
+                        }
+                        let Some(name) = q.get("template").map(String::as_str) else {
+                            return StatusCode::BAD_REQUEST.into_response();
+                        };
+                        let Some(tpl) = codegen::find(name, &codegen_cfgs) else {
+                            return StatusCode::NOT_FOUND.into_response();
+                        };
+                        let body = codegen::render(tpl, &doc);
+                        let mut headers = HeaderMap::new();
+                        headers.insert(
+                            header::CONTENT_TYPE,
+                            HeaderValue::from_static("text/plain; charset=utf-8"),
+                        );
+                        (headers, body).into_response()
+                    }
+                }
             }),
         )
         // M6a：GET /apidoc/auth?password=<md5>&appKey=...（appKey 应用密码优先）
@@ -159,9 +260,11 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
             let auth_cfg = auth_cfg.clone();
             let app_cfgs = app_cfgs.clone();
             let mocks = mocks.clone();
+            let cache_cfg = cache_cfg.clone();
             move |Query(q): Query<HashMap<String, String>>| {
                 let auth_cfg = auth_cfg.clone();
                 let app_cfgs = app_cfgs.clone();
+                let cache_cfg = cache_cfg.clone();
                 async move {
                     if !guard(&q, auth_cfg.as_deref(), &app_cfgs) {
                         return denied();
@@ -169,10 +272,19 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
                     let url = q.get("url").map(String::as_str).unwrap_or("");
                     let method = q.get("method").map(String::as_str).unwrap_or("");
                     let (status, body) = match mocks.iter().find(|s| s.url == url && s.method == method) {
-                        Some(spec) => (
-                            StatusCode::OK,
-                            serde_json::to_string(&generate_mock(spec)).expect("mock must serialize"),
-                        ),
+                        Some(spec) => {
+                            let build = || {
+                                serde_json::to_string(&generate_mock(spec)).expect("mock must serialize")
+                            };
+                            // v2 文档缓存：开启时按 (url,method) 记忆化；未开启走原路径（字节级一致）
+                            let body = match &cache_cfg {
+                                Some(c) if c.enable => {
+                                    cache::memo(&format!("mock:{url}:{method}"), c.ttl, build)
+                                }
+                                _ => build(),
+                            };
+                            (StatusCode::OK, body)
+                        }
                         None => (StatusCode::NOT_FOUND, r#"{"error":"endpoint not found"}"#.to_string()),
                     };
                     let mut headers = HeaderMap::new();

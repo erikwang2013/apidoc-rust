@@ -19,6 +19,7 @@ fn endpoint_json_field_names_are_exact() {
         config: ApidocConfig {
             title: "t".into(),
             description: None, auth: None, apps: Vec::new(),
+            ..Default::default()
         },
         apps: Vec::new(), endpoints: DocRegistry::collect(),
     };
@@ -74,6 +75,9 @@ fn config_description_serializes_when_present() {
             title: "t".into(),
             description: Some("d".into()),
             auth: None,
+            tables: Vec::new(),
+            cache: None,
+            codegen: Vec::new(),
             apps: Vec::new(),
         },
         apps: Vec::new(), endpoints: Vec::new(),

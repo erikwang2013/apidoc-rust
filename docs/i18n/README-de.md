@@ -78,9 +78,13 @@ Der Umsetzungsansatz von apidoc-rust:
 - **Sicherheits-Rotlinien der Authentifizierung**: `password` / `secret_key` werden nie serialisiert — die api.json-Ausgabe ist byte-identisch zum Zustand ohne aktivierte Authentifizierung; bei deaktivierter Auth liefert `/apidoc/auth` 404 und die Datenrouten sind direkt durchlässig; hat eine App-Konfiguration ein eigenes Passwort, hat das App-Passwort Vorrang vor dem globalen; `secret_key` hat als Standard `"apidoc#hgcode"` (bei aktivierter, aber nicht konfigurierter Auth einmalige stderr-Warnung), `expire` hat als Standard 86400 Sekunden
 - **Mehrere Anwendungen und Versionen (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / rekursive Unterversionen in `items` / `password`) konfiguriert den App-Baum; `#[apidoc::app("key")]` hängt Schnittstellen an eine bestimmte App-Key, Schnittstellen ohne Key landen in der Standard-App; die api.json-Ausgabe erhält den `doc.apps`-Baum, oben in der UI erscheint ein App-/Versions-Auswahlfeld, und Tokens werden je appKey getrennt im localStorage gespeichert (verschiedene Apps können unabhängige Passwörter haben)
 
-### Geplant (v2)
+### Umgesetzt (v2)
 
-- v2: Code-Generator (Schnittstellen-Generator), Referenzen auf Datenbankfelder, Teilen-Links, Debug-Events, Dokumentations-Cache
+- **Feldreferenzen auf Datenbanktabellen (`table`)**: `#[apidoc::table("user")]` **faltet** die Felder der per Key in `ApidocConfig.tables` konfigurierten Tabelle in `returned` ein (gleiche Semantik wie `ref`, Unterschied: Datenquelle ist die konfigurierte Tabelle statt eines anderen Endpunkts); Felder unterstützen `required` / `default` / `desc` / `mock`; ein nicht konfigurierter Key erzeugt nur eine stderr-Warnung; ohne diese Annotation ist die Ausgabe byte-identisch zu v1
+- **Dokumentations-Cache**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — die `/apidoc/mock`-Ausgabe wird prozessintern nach `(url, method)` memoisiert und nach `ttl` Sekunden neu aufgebaut, `ttl = 0` bedeutet dauerhaft; ohne Konfiguration oder bei deaktiviertem Cache wird der Cache-Pfad gar nicht erst beschritten (keinerlei Ausgabänderung). api.json / export werden beim Einhängen der Routen einmal erzeugt — das entspricht einem permanenten Cache
+- **Teilen-Links**: `GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` als Deep-Link (`?app=<key>&ep=<Endpunkt-URL>&method=<Methode>[&token=…]`); neben jeder Schnittstelle auf der Dokumentationsseite gibt es einen „Teilen"-Button (schreibt in die Zwischenablage, bei Fehlern ersatzweise ein kopierbares Eingabefeld), und das Öffnen des Deep-Links springt direkt zu dieser App/Schnittstelle; bei aktivierter Authentifizierung trägt der Link ein serverseitig ausgestelltes Token (App-Passwort hat Vorrang vor dem globalen) und öffnet ohne Passworteingabe
+- **Code-Generator**: `GET /apidoc/generate?template=<name>` → gerenderter Text (unbekanntes Template — 404); eingebaut sind `api.ts` (Frontend-Api-Datei), `handler.rs` (Rust-Schnittstellengerüst) und `schema.sql` (CREATE-TABLE-Anweisungen aus `tables`); ein gleichnamiges Template in `ApidocConfig.codegen` überschreibt das eingebaute. Die Template-Syntax kennt nur zwei Konstrukte: `{{变量}}` (bleibt unverändert, wenn nicht definiert) und `{{#each 列表}}…{{/each}}` (verschachtelbar, z. B. `tables` × `fields`)
+- **Debug-Events**: Das Online-Debugging-Panel erhält ausklappbare „Vor-Skript / Nach-Skript"-Bereiche (in localStorage persistiert) — das Vor-Skript läuft vor der Anfrage über `new Function('ctx', code)` und kann `ctx.url/method/headers/body` ändern oder ein Objekt für eine flache Zusammenführung zurückgeben; das Nach-Skript läuft nach der Antwort, kann `status/ms/text/url/method/ep` lesen und durch die Rückgabe eines Strings den angezeigten Antworttext ersetzen; Skriptfehler werden nur im Ergebnisbereich gemeldet und brechen die Anfrage nicht ab
 
 ## Architektur
 
@@ -99,7 +103,7 @@ Der Umsetzungsansatz von apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Workspace-Konfiguration (resolver 2)
-├── VERSION                    # Projektversion (v1.5.0)
+├── VERSION                    # Projektversion (v1.6.0)
 ├── crates/
 │   ├── apidoc/                # Laufzeitkern (frameworkunabhängig)
 │   │   ├── src/lib.rs         # Datenmodell + DocRegistry-Aggregation + api.json + UI_HTML
@@ -126,7 +130,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.5"        # oder path = "crates/apidoc"
+apidoc-rust = "1.6"        # oder path = "crates/apidoc"
 
 serde_json = "1"      # für die Ausgabe von api.json
 ```
@@ -253,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI-3.0.0-Beschreibungsdatei (applicat
 
 - **markdown**: geeignet zum Einfügen in Projekt-Wiki / Release-Notizen, Ausgabe eines Verzeichnisses nach Gruppen, jede Schnittstelle mit Parametertabelle und Antwortblock;
 - **typescript**: das Frontend kann es direkt als Typdefinitionen einfügen; nicht gruppierte Schnittstellen landen im Namensraum `defaultGroup` (`default` ist ein TS-Schlüsselwort und kann kein Bezeichner sein);
-- **swagger**: `info.version` stammt aus der Datei `VERSION` im Wurzelverzeichnis (aktuell 1.5.0), direkt importierbar in Swagger UI oder Code-Generatoren.
+- **swagger**: `info.version` stammt aus der Datei `VERSION` im Wurzelverzeichnis (aktuell 1.6.0), direkt importierbar in Swagger UI oder Code-Generatoren.
 
 ### 7. actix-web-Adapter
 
@@ -261,7 +265,7 @@ Bei Verwendung von actix-web `features = ["actix"]` einbinden (funktional 1:1 zu
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.5", features = ["actix"] }
+apidoc-rust = { version = "1.6", features = ["actix"] }
 ```
 
 ```rust
@@ -353,6 +357,62 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 - Die api.json-Ausgabe erhält den `doc.apps`-Baum (key / title / items / endpoints); oben in der UI erscheint ein App-/Versions-Auswahlfeld — beim Wechsel werden die Schnittstellen dieses Knotens gerendert und die Daten neu geladen, Tokens werden je appKey getrennt im localStorage gespeichert
 - Verweist die `app`-Annotation auf einen nicht in `apps` konfigurierten Key, erfolgt eine stderr-Warnung und die Schnittstelle landet in der Standard-App; ohne `app`-Annotationen oder ohne konfiguriertes `apps` ist die Ausgabe byte-identisch zu M5
 
+### 10. Feldreferenzen auf Datenbanktabellen · Dokumentations-Cache (v2)
+
+```rust
+ApidocConfig {
+    // Tabellenstruktur kommt aus der Konfiguration (die Rust-Seite verbindet sich nicht mit der Datenbank), die Annotation referenziert per Key
+    tables: vec![TableDef {
+        key: "user".into(),
+        title: "用户表".into(),
+        fields: vec![
+            TableField { name: "id".into(), ty: "int".into(), required: true, desc: Some("用户ID".into()), ..Default::default() },
+            TableField { name: "name".into(), ty: "string".into(), mock: Some("erik".into()), ..Default::default() },
+        ],
+    }],
+    // Dokumentations-Cache: /apidoc/mock-Ausgabe wird nach (url, method) memoisiert und nach ttl Sekunden neu aufgebaut (0 = dauerhaft)
+    cache: Some(CacheConfig { enable: true, ttl: 60 }),
+    ..Default::default()   // title / description / auth / apps / codegen werden wie gewohnt konfiguriert
+}
+```
+
+Am Handler dieselbe Schreibweise wie bei `ref`: `#[apidoc::table("user")]`. Die Felder werden in `returned` dieser Schnittstelle eingefaltet; ein in `tables` fehlender Key erzeugt nur eine Warnung, keinen Fehler.
+
+### 11. Teilen-Links · Code-Generierung (v2)
+
+- `GET /apidoc/share?app=api&url=/api/user/info&method=GET&base=https://example.com` → `{"url":"https://example.com/apidoc?app=api&ep=%2Fapi%2Fuser%2Finfo&method=GET"}` (bei aktivierter Authentifizierung wird `&token=…` angehängt, das Öffnen erfolgt ohne Passwort)
+- `GET /apidoc/generate?template=api.ts` (oder `handler.rs` / `schema.sql`) → `text/plain; charset=utf-8`; unbekanntes Template — 404, fehlender Parameter — 400
+- Eigene Templates (gleichnamige überschreiben die eingebauten):
+
+```rust
+ApidocConfig {
+    codegen: vec![CodegenTemplate {
+        name: "api.ts".into(),
+        template: "// {{title}}\n{{#each endpoints}}// {{method}} {{url}}\n{{/each}}".into(),
+    }],
+    ..Default::default()
+}
+```
+
+Verfügbare Template-Variablen: oberste Ebene `title` / `description`; innerhalb `{{#each endpoints}}` `title` / `url` / `method` / `group` / `desc` / `author`; innerhalb `{{#each tables}}` `key` / `title` und darin innerhalb `{{#each fields}}` `name` / `ty` / `required` / `default` / `desc` / `mock`; dazu die abgeleiteten Variablen `not_null` / `default_clause` / `comma` (für direkt gültiges SQL).
+
+### 12. Debug-Vor- und Nachskripte (v2)
+
+Auf der Dokumentationsseite lassen sich im Panel „Online-Debugging" die Bereiche „Vor-Skript" und „Nach-Skript" ausklappen (Inhalt wird in localStorage gespeichert):
+
+```js
+// Vor-Skript: läuft vor dem Absenden der Anfrage, kann ctx.url / method / headers / body ändern oder ein Objekt für eine flache Zusammenführung zurückgeben
+ctx.headers['X-Token'] = localStorage.getItem('token') || '';
+```
+
+```js
+// Nach-Skript: läuft nach der Antwort, ctx = { status, ms, text, url, method, ep } (nur lesend)
+// die Rückgabe eines Strings ersetzt den im Ergebnisbereich angezeigten Text
+return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
+```
+
+Skriptfehler werden nur im Debug-Ergebnisbereich gemeldet und brechen die Anfrage nicht ab (bei fehlgeschlagenem Vor-Skript wird die Anfrage wie gewohnt gesendet, bei fehlgeschlagenem Nach-Skript die Originalantwort wie gewohnt angezeigt).
+
 ## Entwicklungsplan
 
 | Phase | Inhalt | Status |
@@ -365,6 +425,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 | —  | actix-web-Adapter (funktional 1:1 zu axum) | ✅ Abgeschlossen |
 | M6a | Passwort-Authentifizierung (authcode-Token + Passwort-Overlay, App-Passwort hat Vorrang) | ✅ Abgeschlossen |
 | M6b | Mehrere Anwendungen und Versionen (apps-Konfigurationsbaum + app-Annotation + UI-Auswahl) | ✅ Abgeschlossen |
+| v2 | Feldreferenzen auf Datenbanktabellen + Dokumentations-Cache + Teilen-Links + Code-Generator + Debug-Events | ✅ Abgeschlossen |
 
 ## Mehrsprachige Dokumentation
 

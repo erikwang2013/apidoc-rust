@@ -97,6 +97,7 @@ function render(ep) {
   line.appendChild(badge(ep.method));
   if (ep.response_status) for (const s of ep.response_status) line.appendChild(statusBadge(s));
   line.appendChild(el('code', null, ep.url));
+  line.appendChild(shareButton(ep));
   detail.appendChild(line);
   if (ep.desc) detail.appendChild(el('p', 'desc', ep.desc));
   if (ep.tags && ep.tags.length) {
@@ -138,6 +139,43 @@ const authQuery = () => {
 };
 
 const mask = document.getElementById('mask');
+
+// v2 分享深链：?app=<key>&ep=<接口 url>&method=<方法>&token=<t>
+// token 先落盘（按 appKey 分键）→ 选中目标应用 → 首次渲染后定位到该接口。
+const shareParams = new URLSearchParams(location.search);
+let deepAppDone = false;
+let deepEpDone = false;
+
+// v2 分享按钮：向 /apidoc/share 换取深链，优先写剪贴板；失败则展示可复制的输入框
+function shareButton(ep) {
+  const btn = el('button', null, '分享');
+  btn.onclick = async () => {
+    btn.textContent = '生成中…';
+    const q = new URLSearchParams();
+    if (APIDOC_APP) q.set('app', APIDOC_APP);
+    q.set('url', ep.url);
+    q.set('method', ep.method);
+    q.set('base', location.origin);
+    const aq = authQuery();
+    const res = await fetch(base + 'share?' + q.toString() + (aq ? '&' + aq : ''));
+    if (!res.ok) { btn.textContent = '分享失败'; return; }
+    const link = (await res.json()).url;
+    try {
+      await navigator.clipboard.writeText(link);
+      btn.textContent = '已复制';
+    } catch (e) {
+      btn.textContent = '分享';
+      const box = document.createElement('input');
+      box.readOnly = true;
+      box.value = link;
+      btn.parentNode.appendChild(box);
+      box.select();
+    }
+    setTimeout(() => { btn.textContent = '分享'; }, 1500);
+  };
+  return btn;
+}
+
 
 const maskMsg = document.getElementById('mask-msg');
 
@@ -263,12 +301,25 @@ function selectedEps(doc) {
 // 拉取 api.json：401 视为需要鉴权（token 缺失/过期），展示密码遮罩
 
 async function load() {
+  // v2 深链：token 先落盘（按 appKey 分键，与 mask 登录后的键一致）
+  const st = shareParams.get('token');
+  if (st) {
+    const ak = shareParams.get('app') || '';
+    localStorage.setItem('apidoc_token' + (ak ? '_' + ak : ''), st);
+    shareParams.delete('token');
+  }
   const res = await fetch(base + 'api.json' + (authQuery() ? '?' + authQuery() : ''));
   if (res.status === 401) { showMask(''); return; }
   const doc = await res.json();
   document.getElementById('title').textContent = doc.config.title || 'API Documentation';
   document.getElementById('subtitle').textContent = doc.config.description || '';
   if (!appsList.length) buildSelector(doc);
+  // v2 深链：首次加载后按 ?app= 选中目标应用（只做一次，避免与切换逻辑互相触发）
+  if (!deepAppDone && shareParams.get('app')) {
+    deepAppDone = true;
+    const i = appsList.findIndex(a => a.node && a.node.key === shareParams.get('app'));
+    if (i >= 0) { appsSel.selectedIndex = i; fillVersions(); load(); return; }
+  }
   renderEps(selectedEps(doc));
 }
 
@@ -315,4 +366,20 @@ function renderEps(eps) {
   const gi = m ? Math.min(+m[1], names.length - 1) : 0;
   const ei = m ? Math.min(+m[2], groups[names[gi]].length - 1) : 0;
   pick(gi, ei);
+  // v2 深链：首次渲染后按 ?ep=&method= 定位接口（找不到则停在默认选中）
+  if (!deepEpDone && shareParams.get('ep')) {
+    deepEpDone = true;
+    const wantUrl = shareParams.get('ep');
+    const wantM = shareParams.get('method') || '';
+    outer: for (let g2 = 0; g2 < names.length; g2++) {
+      const list = groups[names[g2]];
+      for (let e2 = 0; e2 < list.length; e2++) {
+        if (list[e2].url === wantUrl && (!wantM || list[e2].method === wantM)) {
+          location.hash = '#g' + g2 + '/e' + e2;
+          pick(g2, e2);
+          break outer;
+        }
+      }
+    }
+  }
 }

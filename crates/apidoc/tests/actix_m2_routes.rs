@@ -66,6 +66,9 @@ async fn get(uri: &str, origin: Option<&str>) -> (StatusCode, HeaderMap, String)
                 title: "test api".into(),
                 description: Some("集成测试".into()),
                 auth: None,
+                tables: Vec::new(),
+                cache: None,
+                codegen: Vec::new(),
                 apps: Vec::new(),
             }))
             .wrap(cors_layer(CorsConfig::default())),
@@ -190,6 +193,9 @@ async fn cors_whitelist_matches_exactly_and_never_credentials() {
                 title: "t".into(),
                 description: None,
                 auth: None,
+                tables: Vec::new(),
+                cache: None,
+                codegen: Vec::new(),
                 apps: Vec::new(),
             }))
             .wrap(cors_layer(CorsConfig {
@@ -259,6 +265,9 @@ fn ui_html_fields_all_present_in_api_json() {
             secret_key: "k".into(),
             expire: 0,
         }),
+        tables: Vec::new(),
+        cache: None,
+        codegen: Vec::new(),
         apps: vec![apidoc::AppConfig {
             key: "api".into(),
             title: "API".into(),

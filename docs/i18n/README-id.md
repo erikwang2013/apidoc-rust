@@ -78,9 +78,13 @@ Pendekatan implementasi apidoc-rust:
 - **Garis merah keamanan autentikasi**: `password` / `secret_key` tidak pernah diserialisasi; output api.json identik byte demi byte dengan saat autentikasi nonaktif; saat auth nonaktif, `/apidoc/auth` mengembalikan 404 dan rute data langsung diizinkan; saat aplikasi mengonfigurasi `password` sendiri, kata sandi aplikasi diutamakan dari kata sandi global; `secret_key` default `"apidoc#hgcode"` (peringatan stderr sekali jika diaktifkan tanpa konfigurasi), `expire` default 86400 detik
 - **Multi-Aplikasi Multi-Versi (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / `items` sub-versi rekursif / `password`) mengonfigurasi pohon aplikasi; `#[apidoc::app("key")]` menggantung antarmuka ke aplikasi dengan key tersebut dan antarmuka tanpa key masuk ke aplikasi default; output api.json menambah pohon `doc.apps`; muncul pemilih aplikasi/versi di bagian atas UI dan token disimpan terpisah di localStorage per appKey (aplikasi berbeda dapat memiliki kata sandi independen)
 
-### Dalam Rencana (v2)
+### Sudah Diimplementasikan (v2)
 
-- v2: generator kode (generator antarmuka), referensi field tabel data, tautan berbagi, peristiwa debugging, cache dokumentasi
+- **Referensi field tabel data (`table`)**: `#[apidoc::table("user")]` menggabungkan field tabel yang dikonfigurasi berdasarkan key di `ApidocConfig.tables` dengan cara **meratakan** field ke dalam `returned` (semantik sama dengan `ref`; bedanya sumber data adalah tabel konfigurasi, bukan endpoint lain); field mendukung `required` / `default` / `desc` / `mock`; key yang tidak dikonfigurasi hanya memberi peringatan di stderr; tanpa anotasi ini output identik byte demi byte dengan v1
+- **Cache dokumentasi**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — output `/apidoc/mock` dimemoisasi di dalam proses berdasarkan `(url, method)` dan dibangun ulang setelah `ttl` detik; `ttl = 0` berarti permanen; jika tidak dikonfigurasi atau nonaktif, jalur cache sama sekali tidak dilalui (output tidak berubah). api.json / export sudah dibangun sekali saat rute dipasang, setara cache permanen
+- **Tautan berbagi**: `GET /apidoc/share?app=&url=&method=&base=` → tautan dalam `{"url":"…"}` (`?app=<key>&ep=<url antarmuka>&method=<metode>[&token=…]`); di halaman dokumentasi setiap antarmuka memiliki tombol «Bagikan» (menulis ke clipboard; jika gagal, turun ke kolom teks yang bisa disalin); membuka tautan dalam langsung menuju aplikasi/antarmuka tersebut; saat otentikasi aktif tautan membawa token yang diterbitkan server (kata sandi independen aplikasi diutamakan dari global) dan terbuka tanpa kata sandi
+- **Generator kode**: `GET /apidoc/generate?template=<name>` → teks hasil render (template tidak dikenal → 404); menyertakan `api.ts` (file Api frontend), `handler.rs` (kerangka antarmuka Rust), `schema.sql` (pernyataan pembuatan tabel yang dihasilkan dari `tables`); template dengan nama sama di `ApidocConfig.codegen` menimpa template bawaan. Sintaks template hanya ada dua: `{{variabel}}` (jika tidak terdefinisi dipertahankan apa adanya) dan `{{#each daftar}}…{{/each}}` (bisa bersarang, mis. `tables` × `fields`)
+- **Peristiwa debugging**: panel debugging online menambah blok «Skrip Pra» / «Skrip Pasca» yang bisa dilipat (dipersistensi ke localStorage) — skrip Pra dijalankan sebelum permintaan dengan `new Function('ctx', code)`, dapat mengubah `ctx.url/method/headers/body` atau mengembalikan objek untuk penggabungan dangkal; skrip Pasca dijalankan setelah respons dan dapat membaca `status/ms/text/url/method/ep`; jika mengembalikan string, string tersebut menggantikan teks respons yang ditampilkan; error skrip hanya diberitahukan di area hasil dan tidak menghentikan permintaan
 
 ## Arsitektur
 
@@ -99,7 +103,7 @@ Pendekatan implementasi apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Konfigurasi workspace (resolver 2)
-├── VERSION                    # Versi proyek (v1.5.0)
+├── VERSION                    # Versi proyek (v1.6.0)
 ├── crates/
 │   ├── apidoc/                # Inti runtime (independen kerangka kerja)
 │   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json + UI_HTML
@@ -126,7 +130,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.5"        # atau path = "crates/apidoc"
+apidoc-rust = "1.6"        # atau path = "crates/apidoc"
 
 serde_json = "1"      # untuk output api.json
 ```
@@ -253,7 +257,7 @@ GET /apidoc/export?format=swagger   # file deskripsi OpenAPI 3.0.0 (application/
 
 - **markdown**: cocok ditempel ke Wiki proyek / catatan rilis, mengeluarkan direktori per grup, setiap antarmuka dengan tabel parameter dan blok respons;
 - **typescript**: frontend bisa langsung ditempel sebagai definisi tipe; antarmuka tanpa group masuk ke namespace `defaultGroup` (`default` kata cadangan TS, tidak bisa dijadikan pengenal);
-- **swagger**: `info.version` diambil dari isi file `VERSION` di root (saat ini 1.5.0), bisa langsung diimpor ke Swagger UI atau generator kode.
+- **swagger**: `info.version` diambil dari isi file `VERSION` di root (saat ini 1.6.0), bisa langsung diimpor ke Swagger UI atau generator kode.
 
 ### 7. Adaptor actix-web
 
@@ -261,7 +265,7 @@ Saat kerangka web memakai actix-web, pasang `features = ["actix"]` (fungsionalit
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.5", features = ["actix"] }
+apidoc-rust = { version = "1.6", features = ["actix"] }
 ```
 
 ```rust
@@ -353,6 +357,62 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 - Output api.json menambah pohon `doc.apps` (key / title / items / endpoints); muncul pemilih aplikasi/versi di bagian atas UI; setelah berpindah, antarmuka dirender sesuai node tersebut dan data ditarik ulang; token disimpan terpisah di localStorage per appKey
 - Bila anotasi `app` merujuk key yang tidak dikonfigurasi di `apps`, peringatan stderr dan jatuh ke aplikasi default; tanpa anotasi `app` atau tanpa konfigurasi `apps`, output identik byte demi byte dengan M5
 
+### 10. Referensi Field Tabel Data · Cache Dokumentasi (v2)
+
+```rust
+ApidocConfig {
+    // Struktur tabel disediakan konfigurasi (sisi Rust tidak terhubung ke database); anotasi merujuk berdasarkan key
+    tables: vec![TableDef {
+        key: "user".into(),
+        title: "用户表".into(),
+        fields: vec![
+            TableField { name: "id".into(), ty: "int".into(), required: true, desc: Some("用户ID".into()), ..Default::default() },
+            TableField { name: "name".into(), ty: "string".into(), mock: Some("erik".into()), ..Default::default() },
+        ],
+    }],
+    // Cache dokumentasi: output /apidoc/mock dimemoisasi per (url, method) dan dibangun ulang setelah ttl detik (0 = permanen)
+    cache: Some(CacheConfig { enable: true, ttl: 60 }),
+    ..Default::default()   // title / description / auth / apps / codegen dikonfigurasi seperti biasa
+}
+```
+
+Di handler penulisannya sama seperti `ref`: `#[apidoc::table("user")]`. Field diratakan ke dalam `returned` antarmuka tersebut; key yang tidak ada di `tables` hanya memberi peringatan, bukan error.
+
+### 11. Tautan Berbagi · Pembuatan Kode (v2)
+
+- `GET /apidoc/share?app=api&url=/api/user/info&method=GET&base=https://example.com` → `{"url":"https://example.com/apidoc?app=api&ep=%2Fapi%2Fuser%2Finfo&method=GET"}` (saat otentikasi aktif, tautan membawa `&token=…` di akhir dan terbuka tanpa kata sandi)
+- `GET /apidoc/generate?template=api.ts` (atau `handler.rs` / `schema.sql`) → `text/plain; charset=utf-8`; template tidak dikenal → 404, parameter kurang → 400
+- Template kustom (nama sama menimpa template bawaan):
+
+```rust
+ApidocConfig {
+    codegen: vec![CodegenTemplate {
+        name: "api.ts".into(),
+        template: "// {{title}}\n{{#each endpoints}}// {{method}} {{url}}\n{{/each}}".into(),
+    }],
+    ..Default::default()
+}
+```
+
+Variabel yang tersedia di template: level teratas `title` / `description`; di dalam `{{#each endpoints}}`, `title` / `url` / `method` / `group` / `desc` / `author`; di dalam `{{#each tables}}`, `key` / `title`, dan di dalam `{{#each fields}}`-nya, `name` / `ty` / `required` / `default` / `desc` / `mock`; tersedia pula variabel turunan `not_null` / `default_clause` / `comma` (agar dapat langsung menghasilkan SQL yang valid).
+
+### 12. Skrip Pra/Pasca Debugging (v2)
+
+Di halaman dokumentasi, panel «Debugging Online» membuka «Skrip Pra» dan «Skrip Pasca» (konten disimpan di localStorage):
+
+```js
+// Pra: dijalankan sebelum permintaan dikirim; dapat mengubah ctx.url / method / headers / body, atau mengembalikan objek untuk penggabungan dangkal
+ctx.headers['X-Token'] = localStorage.getItem('token') || '';
+```
+
+```js
+// Pasca: dijalankan setelah respons kembali; ctx = { status, ms, text, url, method, ep } (read-only)
+// Jika mengembalikan string, string tersebut menggantikan teks yang ditampilkan di area hasil
+return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
+```
+
+Error skrip hanya diberitahukan di area hasil debugging dan tidak menghentikan permintaan (jika Pra gagal, permintaan tetap dikirim; jika Pasca gagal, respons asli tetap ditampilkan).
+
 ## Rencana Pengembangan
 
 | Tahap | Konten | Status |
@@ -365,6 +425,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 | —  | Adaptor actix-web (fungsionalitas 1:1 dengan axum) | ✅ Selesai |
 | M6a | Otentikasi kata sandi (token authcode + masker kata sandi, kata sandi aplikasi diutamakan) | ✅ Selesai |
 | M6b | Multi-aplikasi multi-versi (pohon konfigurasi apps + anotasi app + pemilih UI) | ✅ Selesai |
+| v2 | referensi field tabel data + cache dokumentasi + tautan berbagi + generator kode + peristiwa debugging | ✅ Selesai |
 
 ## Dokumentasi Multibahasa
 

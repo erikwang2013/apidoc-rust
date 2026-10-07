@@ -43,6 +43,14 @@ pub const UI_HTML: &str = concat!(
 /// 与仓库 README 用的 docs/images/apidoc-pet.svg 同一份，包内自带以保证发布打包安全。
 pub const PET_SVG: &str = include_str!("pet.svg");
 
+// ---- v2 模块（接口已冻结，实现见各文件）----
+/// v2 文档缓存：api.json / export / mock 输出的进程内记忆化（TTL 秒，0 = 永久）。
+pub mod cache;
+/// v2 代码生成器：模板 + 文档模型 → 前端 Api 文件 / 接口骨架 / 建表 SQL。
+pub mod codegen;
+/// v2 分享链接：应用/接口深链 + 鉴权 token。
+pub mod share;
+
 use serde::Serialize;
 
 /// Collects every `#[apidoc::*]` annotation from all linked crates.
@@ -84,6 +92,8 @@ pub enum DocFragment {
     Ref(&'static str),
     // M6b: 挂到指定应用/版本 key 下（key 须在 ApidocConfig.apps 中配置，否则落默认应用）。
     App(&'static str),
+    // v2: 数据表字段引用，key 须在 ApidocConfig.tables 中配置。
+    Table(&'static str),
 }
 
 /// A documented example response body (shared by success / error).
@@ -153,6 +163,9 @@ pub struct DocEndpoint {
     pub sort: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub r#ref: Option<String>,
+    // v2: `#[apidoc::table("key")]` 引用的数据表 key（未使用时省略，输出与 v1 字节级一致）。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub table: Option<String>,
     // 多应用归属（#[apidoc::app] 注解），仅 collect 用，不进任何序列化输出。
     #[serde(skip)]
     pub app_key: String,
@@ -184,6 +197,7 @@ impl Default for DocEndpoint {
             md: String::new(),
             sort: 0,
             r#ref: None,
+            table: None,
             app_key: String::new(),
         }
     }
@@ -220,8 +234,44 @@ pub fn find_app<'a>(apps: &'a [AppConfig], key: &str) -> Option<&'a AppConfig> {
     None
 }
 
+/// v2：数据表字段定义，`#[apidoc::table("key")]` 的数据来源。
+/// Rust 侧不连数据库：表结构由配置提供，解析时按 key 取字段并入 returned。
+#[derive(Clone, Default)]
+pub struct TableDef {
+    /// 注解引用的 key，如 `#[apidoc::table("user")]`。
+    pub key: String,
+    /// 展示名（进 codegen 模板，不进 api.json）。
+    pub title: String,
+    pub fields: Vec<TableField>,
+}
+
+/// v2：一个表字段（纯平铺，不支持 children —— 表字段是标量列）。
+#[derive(Clone, Default)]
+pub struct TableField {
+    pub name: String,
+    pub ty: String,
+    pub required: bool,
+    pub default: Option<String>,
+    pub desc: Option<String>,
+    pub mock: Option<String>,
+}
+
+/// v2：文档缓存配置。`ttl` 秒内命中即复用，0 表示永久有效。
+#[derive(Clone, Default)]
+pub struct CacheConfig {
+    pub enable: bool,
+    pub ttl: u64,
+}
+
+/// v2：代码生成器自定义模板。name 与内置模板同名时覆盖内置。
+#[derive(Clone, Default)]
+pub struct CodegenTemplate {
+    pub name: String,
+    pub template: String,
+}
+
 /// Project-level configuration, combined with endpoints into the final output.
-#[derive(Serialize)]
+#[derive(Serialize, Default)]
 pub struct ApidocConfig {
     pub title: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -232,6 +282,13 @@ pub struct ApidocConfig {
     // 应用/版本配置树。仅服务端使用（校验注解 key、应用密码），不进任何输出。
     #[serde(skip)]
     pub apps: Vec<AppConfig>,
+    // ---- v2 服务端配置：全部 #[serde(skip)]，未使用时 api.json 与 v1 字节级一致 ----
+    #[serde(skip)]
+    pub tables: Vec<TableDef>,
+    #[serde(skip)]
+    pub cache: Option<CacheConfig>,
+    #[serde(skip)]
+    pub codegen: Vec<CodegenTemplate>,
 }
 
 /// 一个应用/版本节点：注解挂载的 endpoints + 递归子版本。
@@ -261,18 +318,33 @@ pub struct DocRegistry;
 impl DocRegistry {
     /// M1-M5 行为不变：仅返回合并后的端点列表。
     pub fn collect() -> Vec<DocEndpoint> {
-        Self::collect_inner()
+        let (ids, mut endpoints) = Self::collect_fragments();
+        Self::resolve_refs(&ids, &mut endpoints);
+        endpoints
     }
 
     /// 构建完整文档（端点 + 应用/版本树）。apps 按 ApidocConfig.apps 配置树
     /// 挂载注解端点；app 注解引用未配置的 key 时 eprintln 警告并落默认应用（根层）。
     pub fn collect_doc(config: ApidocConfig) -> ApiDoc {
-        let endpoints = Self::collect_inner();
+        let (ids, mut endpoints) = Self::collect_fragments();
+        // 打表分两拨，让 ref 与 table 同时生效、且每个端点恰好打一次：
+        // 1. 无 ref 的端点先打表 —— ref 目标由此带上表字段，供第 2 步复制继承；
+        // 2. 解 ref —— 引用方复制到的是目标"打完表"的 returned；
+        // 3. 有 ref 的端点再打自己的表 —— 追加在复制结果之后，不被覆盖。
+        // 已知边界：目标自身同时带 ref 和 table 时，其自带表字段不再二次传播给引用方。
+        for ep in endpoints.iter_mut().filter(|e| e.r#ref.is_none()) {
+            append_table_fields(ep, &config.tables);
+        }
+        Self::resolve_refs(&ids, &mut endpoints);
+        for ep in endpoints.iter_mut().filter(|e| e.r#ref.is_some()) {
+            append_table_fields(ep, &config.tables);
+        }
         let apps = build_apps(&config.apps, &endpoints);
         ApiDoc { config, endpoints, apps }
     }
 
-    fn collect_inner() -> Vec<DocEndpoint> {
+    /// 收集所有片段并按 id 合并为端点（不含 ref / table 解析，两个入口共用）。
+    fn collect_fragments() -> (Vec<&'static str>, Vec<DocEndpoint>) {
         // Sort by seq first: linkme's iteration order is linker-defined, not
         // source order. Cross-crate ordering stays linker-arbitrary; seq ties
         // between crates keep linkme's stable order. ponytail: acceptable for
@@ -319,19 +391,22 @@ impl DocRegistry {
                 DocFragment::Md(m) => ep.md = m.to_string(),
                 DocFragment::Sort(n) => ep.sort = *n,
                 DocFragment::Ref(r) => ep.r#ref = Some(r.to_string()),
+                DocFragment::Table(t) => ep.table = Some(t.to_string()),
                 DocFragment::App(a) => ep.app_key = a.to_string(),
             }
         }
-        // Second pass: resolve ref chains (copy the target's `returned` into
-        // the referencing endpoint). Runs after every endpoint exists so the
-        // target may be declared anywhere, and recursively so chains A→B→C
-        // resolve; cycles are cut by the visited set (warned, not copied).
+        (ids, endpoints)
+    }
+
+    /// 解 ref 链：把目标的 `returned` 复制进引用端点。须在所有端点建好之后调用
+    /// （目标可任意位置声明），链式 A→B→C 递归解析，环由 visited 截断并警告。
+    /// 只应调用一次：复制是整体覆盖，跑第二遍会抹掉其间追加的 table 字段。
+    fn resolve_refs(ids: &[&'static str], endpoints: &mut [DocEndpoint]) {
         for i in 0..endpoints.len() {
             if endpoints[i].r#ref.is_some() {
-                resolve_ref(i, &mut Vec::new(), &ids, &mut endpoints);
+                resolve_ref(i, &mut Vec::new(), ids, endpoints);
             }
         }
-        endpoints
     }
 }
 
@@ -353,6 +428,38 @@ fn build_app_doc(cfg: &AppConfig, endpoints: &[DocEndpoint]) -> AppDoc {
         items: cfg.items.iter().map(|c| build_app_doc(c, endpoints)).collect(),
         endpoints: eps,
     }
+}
+
+/// v2：把 `#[apidoc::table("key")]` 引用的数据表字段平铺追加进 `ep.returned`。
+/// 与 `ref` 语义一致（平铺复制），区别是数据源为 `ApidocConfig.tables` 而非其他端点。
+/// 未配置的 key 只警告不报错（与 ref 未命中同策略）。
+fn append_table_fields(ep: &mut DocEndpoint, tables: &[TableDef]) {
+    let Some(key) = ep.table.as_deref() else { return };
+    let Some(def) = tables.iter().find(|t| t.key == key) else {
+        eprintln!("apidoc: table `{key}` not found in config.tables for `{}`", ep.url);
+        return;
+    };
+    for f in &def.fields {
+        ep.returned.push(DocParam {
+            name: leak(&f.name),
+            ty: leak(&f.ty),
+            required: f.required,
+            default: f.default.as_deref().map(leak),
+            desc: f.desc.as_deref().map(leak),
+            mock: f.mock.as_deref().map(leak),
+            // 表字段是标量列，不支持 children。
+            children: &[],
+        });
+    }
+}
+
+/// 把配置里的运行时字符串提升为 `&'static str`（宏模型只收静态串）。
+/// ponytail: 每次 `collect_doc` 调用 × 每个引用该表的端点 × 字段数都会重新
+/// leak 一次 —— 适配器只在建路由时调一次 collect_doc，实际有界；但 collect_doc
+/// 是公开 API，若在请求路径/循环里反复调用，内存线性增长（实测 200 字段 × 200 次
+/// ≈ 8.8MB）。届时再上一次性缓存复用，或把 DocParam 换成 Cow。
+fn leak(s: &str) -> &'static str {
+    Box::leak(s.to_string().into_boxed_str())
 }
 
 /// Copies the ref target's `returned` into `endpoints[idx].returned`.

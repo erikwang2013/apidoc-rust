@@ -78,9 +78,13 @@ Enfoque de implementación de apidoc-rust:
 - **Línea roja de seguridad de la autenticación**: `password` / `secret_key` nunca se serializan; la salida api.json es byte a byte idéntica a la de autenticación desactivada; con auth desactivado, `/apidoc/auth` devuelve 404 y las rutas de datos pasan directamente; si una aplicación configura su propio `password`, la contraseña de la aplicación prevalece sobre la global; `secret_key` por defecto `"apidoc#hgcode"` (advertencia stderr una vez si está activado sin configurar) y `expire` por defecto 86400 segundos
 - **Múltiples aplicaciones y versiones (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / `items` subversiones recursivas / `password`) configura el árbol de aplicaciones; `#[apidoc::app("key")]` cuelga la interfaz en la aplicación de esa key y las interfaces sin key caen en la aplicación por defecto; la salida api.json añade el árbol `doc.apps`; aparece un selector de aplicación/versión en la parte superior de la UI y los tokens se guardan en localStorage separados por appKey (distintas aplicaciones pueden tener contraseñas independientes)
 
-### Planificado (v2)
+### Implementado (v2)
 
-- v2: generador de código (generador de interfaces), referencias a campos de tablas de datos, enlaces para compartir, eventos de depuración, caché de documentación
+- **Referencia de campos de tablas de datos (`table`)**: `#[apidoc::table("user")]` fusiona (aplanándolos) los campos de la tabla configurada por su key en `ApidocConfig.tables` dentro de `returned` (misma semántica que `ref`; la diferencia es que la fuente de datos es una tabla de configuración y no otro endpoint); los campos admiten `required` / `default` / `desc` / `mock`; una key no configurada solo avisa por stderr; sin usar esta anotación, la salida es byte a byte idéntica a la de v1
+- **Caché de documentación**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — la salida de `/apidoc/mock` se memoriza en el proceso por `(url, method)` y se reconstruye tras `ttl` segundos; `ttl = 0` significa permanente; si no se configura o no se activa, no se pasa por la ruta de caché (cero cambios en la salida). api.json / export ya se construyen una vez al montar las rutas, lo que equivale a una caché permanente
+- **Enlaces para compartir**: `GET /apidoc/share?app=&url=&method=&base=` → enlace profundo `{"url":"…"}` (`?app=<key>&ep=<url de la interfaz>&method=<método>[&token=…]`); en la página de documentación cada interfaz tiene un botón «Compartir» (escribe en el portapapeles; si falla, recurre a un campo de texto copiable); abrir el enlace profundo lleva a esa aplicación/interfaz; con la autenticación activada el enlace incluye el token emitido por el servidor (la contraseña independiente de la aplicación prevalece sobre la global) y se abre sin contraseña
+- **Generador de código**: `GET /apidoc/generate?template=<name>` → el texto renderizado (plantilla desconocida → 404); integra `api.ts` (archivo Api del frontend), `handler.rs` (esqueleto de interfaz en Rust) y `schema.sql` (sentencias de creación de tablas generadas a partir de `tables`); una plantilla con el mismo nombre en `ApidocConfig.codegen` sobrescribe la integrada. La sintaxis de plantillas solo tiene dos formas: `{{variable}}` (si no está definida, se conserva tal cual) y `{{#each lista}}…{{/each}}` (anidable, p. ej. `tables` × `fields`)
+- **Eventos de depuración**: el panel de depuración en línea añade los bloques plegables «Script previo» / «Script posterior» (persistidos en localStorage) — el previo se ejecuta antes de la petición con `new Function('ctx', code)` y puede modificar `ctx.url/method/headers/body` o devolver un objeto para una fusión superficial; el posterior se ejecuta tras la respuesta y puede leer `status/ms/text/url/method/ep`; si devuelve una cadena, esta reemplaza el texto de respuesta mostrado; un error del script solo se avisa en el área de resultados y no interrumpe la petición
 
 ## Arquitectura
 
@@ -99,7 +103,7 @@ Enfoque de implementación de apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuración del workspace (resolver 2)
-├── VERSION                    # versión del proyecto (v1.5.0)
+├── VERSION                    # versión del proyecto (v1.6.0)
 ├── crates/
 │   ├── apidoc/                # núcleo en tiempo de ejecución (independiente del framework)
 │   │   ├── src/lib.rs         # modelo de datos + agregación DocRegistry + api.json + UI_HTML
@@ -126,7 +130,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.5"        # o path = "crates/apidoc"
+apidoc-rust = "1.6"        # o path = "crates/apidoc"
 
 serde_json = "1"      # para generar api.json
 ```
@@ -253,7 +257,7 @@ GET /apidoc/export?format=swagger   # archivo descriptivo OpenAPI 3.0.0 (applica
 
 - **markdown**: ideal para pegar en el Wiki del proyecto / notas de versión, índice por grupos, cada interfaz con tabla de parámetros y bloque de respuesta;
 - **typescript**: el front puede pegar directamente las definiciones de tipos; las interfaces sin grupo caen en el namespace `defaultGroup` (`default` es palabra reservada de TS, no puede usarse como identificador);
-- **swagger**: `info.version` toma el contenido del archivo `VERSION` de la raíz (actualmente 1.5.0), importable directamente en Swagger UI o en un generador de código.
+- **swagger**: `info.version` toma el contenido del archivo `VERSION` de la raíz (actualmente 1.6.0), importable directamente en Swagger UI o en un generador de código.
 
 ### 7. Adaptador actix-web
 
@@ -261,7 +265,7 @@ Si el framework Web es actix-web, conecte `features = ["actix"]` (funcionalidad 
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.5", features = ["actix"] }
+apidoc-rust = { version = "1.6", features = ["actix"] }
 ```
 
 ```rust
@@ -353,6 +357,62 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 - La salida api.json añade el árbol `doc.apps` (key / title / items / endpoints); aparece un selector de aplicación/versión en la parte superior de la UI; al cambiar, las interfaces se renderizan según ese nodo y se recargan los datos; los tokens se guardan en localStorage separados por appKey
 - Si la anotación `app` referencia una key no configurada en `apps`, aviso en stderr y cae en la aplicación por defecto; sin anotación `app` ni `apps` configurado, la salida es byte a byte idéntica a M5
 
+### 10. Referencia de campos de tablas de datos · Caché de documentación (v2)
+
+```rust
+ApidocConfig {
+    // La estructura de la tabla la aporta la configuración (el lado de Rust no se conecta a la base de datos); las anotaciones la referencian por key
+    tables: vec![TableDef {
+        key: "user".into(),
+        title: "用户表".into(),
+        fields: vec![
+            TableField { name: "id".into(), ty: "int".into(), required: true, desc: Some("用户ID".into()), ..Default::default() },
+            TableField { name: "name".into(), ty: "string".into(), mock: Some("erik".into()), ..Default::default() },
+        ],
+    }],
+    // Caché de documentación: la salida de /apidoc/mock se memoriza por (url, method) y se reconstruye tras ttl segundos (0 = permanente)
+    cache: Some(CacheConfig { enable: true, ttl: 60 }),
+    ..Default::default()   // title / description / auth / apps / codegen se configuran como siempre
+}
+```
+
+En el handler se usa la misma forma que con `ref`: `#[apidoc::table("user")]`. Los campos se aplanan dentro del `returned` de esa interfaz; una key ausente en `tables` solo genera un aviso, no un error.
+
+### 11. Enlaces para compartir · Generación de código (v2)
+
+- `GET /apidoc/share?app=api&url=/api/user/info&method=GET&base=https://example.com` → `{"url":"https://example.com/apidoc?app=api&ep=%2Fapi%2Fuser%2Finfo&method=GET"}` (con la autenticación activada, el enlace lleva `&token=…` al final y se abre sin contraseña)
+- `GET /apidoc/generate?template=api.ts` (o `handler.rs` / `schema.sql`) → `text/plain; charset=utf-8`; plantilla desconocida → 404, parámetro faltante → 400
+- Plantilla personalizada (el mismo nombre sobrescribe la integrada):
+
+```rust
+ApidocConfig {
+    codegen: vec![CodegenTemplate {
+        name: "api.ts".into(),
+        template: "// {{title}}\n{{#each endpoints}}// {{method}} {{url}}\n{{/each}}".into(),
+    }],
+    ..Default::default()
+}
+```
+
+Variables disponibles en las plantillas: en el nivel superior `title` / `description`; dentro de `{{#each endpoints}}`, `title` / `url` / `method` / `group` / `desc` / `author`; dentro de `{{#each tables}}`, `key` / `title`, y dentro de su `{{#each fields}}`, `name` / `ty` / `required` / `default` / `desc` / `mock`; además hay variables derivadas `not_null` / `default_clause` / `comma` (para generar SQL válido directamente).
+
+### 12. Scripts previo/posterior de depuración (v2)
+
+En la página de documentación, el panel «Depuración en línea» despliega «Script previo» y «Script posterior» (el contenido se guarda en localStorage):
+
+```js
+// Previo: se ejecuta antes de enviar la petición; puede modificar ctx.url / method / headers / body, o devolver un objeto para fusión superficial
+ctx.headers['X-Token'] = localStorage.getItem('token') || '';
+```
+
+```js
+// Posterior: se ejecuta al volver la respuesta; ctx = { status, ms, text, url, method, ep } (solo lectura)
+// Si devuelve una cadena, reemplaza el texto mostrado en el área de resultados
+return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
+```
+
+Un error de script solo se avisa en el área de resultados de depuración y no interrumpe la petición (si falla el previo, la petición se envía igualmente; si falla el posterior, se muestra la respuesta original tal cual).
+
 ## Plan de desarrollo
 
 | Fase | Contenido | Estado |
@@ -365,6 +425,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 | —  | adaptador actix-web (funcionalidad 1:1 con axum) | ✅ Completado |
 | M6a | Autenticación con contraseña (token authcode + máscara de contraseña, contraseña de la aplicación prevalece) | ✅ Completado |
 | M6b | Múltiples aplicaciones y versiones (árbol de configuración apps + anotación app + selector de UI) | ✅ Completado |
+| v2 | referencia de campos de tablas de datos + caché de documentación + enlaces para compartir + generador de código + eventos de depuración | ✅ Completado |
 
 ## Documentación multilingüe
 

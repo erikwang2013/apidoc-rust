@@ -81,6 +81,7 @@ fn main() {
         config: ApidocConfig {
             title: "demo api".to_string(),
             description: None, auth: None, apps: Vec::new(),
+            ..Default::default()
         },
         apps: Vec::new(), endpoints,
     };
