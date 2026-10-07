@@ -1,33 +1,25 @@
-<div align="center">
-<img src="../images/apidoc-pet.svg" alt="Apidoc 펫" width="200">
-</div>
+![Apidoc 펫](../images/apidoc-pet.svg)
 
-<h1 align="center">Apidoc (apidoc-rust)</h1>
+# Apidoc (apidoc-rust)
 
-<div align="center">
- Rust 프로시저 매크로(proc-macro) 기반 API 문서 생성·인터페이스 개발 도구, axum·actix-web 등 주요 프레임워크 지원
-</div>
+Rust 프로시저 매크로(proc-macro) 기반 API 문서 생성·인터페이스 개발 도구, axum·actix-web 등 주요 프레임워크 지원
 
-<div align="center">
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/badge/license-MIT-green"></a>
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/github/stars/erikwang2013/apidoc-rust"></a>
-</div>
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/erikwang2013/apidoc-rust)
+[![Stars](https://img.shields.io/github/stars/erikwang2013/apidoc-rust)](https://github.com/erikwang2013/apidoc-rust)
 
-<div align="center">
-<a href="../../README.md">中文</a> ·
-<a href="README-en.md">English</a> ·
-<a href="README-ko.md"><strong>한국어</strong></a> ·
-<a href="README-ru.md">Русский</a> ·
-<a href="README-de.md">Deutsch</a> ·
-<a href="README-fr.md">Français</a> ·
-<a href="README-es.md">Español</a> ·
-<a href="README-pt.md">Português</a> ·
-<a href="README-hi.md">हिन्दी</a> ·
-<a href="README-ar.md">العربية</a> ·
-<a href="README-bn.md">বাংলা</a> ·
-<a href="README-id.md">Bahasa Indonesia</a> ·
-<a href="README-ja.md">日本語</a>
-</div>
+[中文](../../README.md) ·
+[English](README-en.md) ·
+**[한국어](README-ko.md)** ·
+[Русский](README-ru.md) ·
+[Deutsch](README-de.md) ·
+[Français](README-fr.md) ·
+[Español](README-es.md) ·
+[Português](README-pt.md) ·
+[हिन्दी](README-hi.md) ·
+[العربية](README-ar.md) ·
+[বাংলা](README-bn.md) ·
+[Bahasa Indonesia](README-id.md) ·
+[日本語](README-ja.md)
 
 ## 📖프로젝트 소개
 
@@ -92,15 +84,15 @@ apidoc-rust의 구현 방향:
 
 ## 아키텍처
 
-<img src="images/ko-architecture.svg" alt="apidoc-rust 전체 아키텍처" width="100%">
+![apidoc-rust 전체 아키텍처](images/ko-architecture.svg)
 
 ## 기능
 
-<img src="images/ko-features.svg" alt="apidoc-rust 프로젝트 기능" width="100%">
+![apidoc-rust 프로젝트 기능](images/ko-features.svg)
 
 ## 수명주기
 
-<img src="images/ko-lifecycle.svg" alt="apidoc-rust 문서 수명주기" width="100%">
+![apidoc-rust 문서 수명주기](images/ko-lifecycle.svg)
 
 ## 프로젝트 구조
 
@@ -121,7 +113,6 @@ apidoc-rust/
 
 │   ├── apidoc-test-fixtures/  # 크로스 crate 등록 테스트 픽스처
 
-
 ├── .github/
 │   └── workflows/release.yml  # 릴리스 워크플로(VERSION 읽기, 태그+릴리스 증분 생성)
 └── docs/
@@ -136,7 +127,6 @@ apidoc-rust/
 ```toml
 [dependencies]
 apidoc-rust = "1.5"        # 또는 path = "crates/apidoc"
-
 
 serde_json = "1"      # api.json 출력용
 ```
@@ -397,18 +387,9 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 
 ### 微信支付 / 支付宝 (WeChat Pay / Alipay)
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="../../docs/weixinpay.png" width="130" height="130" alt="微信支付 (WeChat Pay)" /><br/>
-      <strong>微信支付 (WeChat Pay)</strong>
-    </td>
-    <td align="center">
-      <img src="../../docs/alipay.png" width="130" height="130" alt="支付宝 (Alipay)" /><br/>
-      <strong>支付宝 (Alipay)</strong>
-    </td>
-  </tr>
-</table>
+| 微信支付 (WeChat Pay) | 支付宝 (Alipay) |
+|---|---|
+| ![微信支付 (WeChat Pay)](../../docs/weixinpay.png) | ![支付宝 (Alipay)](../../docs/alipay.png) |
 
 ### 글로벌 송금 기부
 

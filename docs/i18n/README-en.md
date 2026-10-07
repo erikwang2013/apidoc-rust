@@ -1,33 +1,25 @@
-<div align="center">
-<img src="../images/apidoc-pet.svg" alt="Apidoc pet" width="200">
-</div>
+![Apidoc pet](../images/apidoc-pet.svg)
 
-<h1 align="center">Apidoc (apidoc-rust)</h1>
+# Apidoc (apidoc-rust)
 
-<div align="center">
- Rust proc-macro powered API documentation generation and interface development toolkit, compatible with axum, actix-web and other mainstream frameworks
-</div>
+Rust proc-macro powered API documentation generation and interface development toolkit, compatible with axum, actix-web and other mainstream frameworks
 
-<div align="center">
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/badge/license-MIT-green"></a>
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/github/stars/erikwang2013/apidoc-rust"></a>
-</div>
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/erikwang2013/apidoc-rust)
+[![Stars](https://img.shields.io/github/stars/erikwang2013/apidoc-rust)](https://github.com/erikwang2013/apidoc-rust)
 
-<div align="center">
-<a href="../../README.md">中文</a> ·
-<a href="README-en.md"><strong>English</strong></a> ·
-<a href="README-ko.md">한국어</a> ·
-<a href="README-ru.md">Русский</a> ·
-<a href="README-de.md">Deutsch</a> ·
-<a href="README-fr.md">Français</a> ·
-<a href="README-es.md">Español</a> ·
-<a href="README-pt.md">Português</a> ·
-<a href="README-hi.md">हिन्दी</a> ·
-<a href="README-ar.md">العربية</a> ·
-<a href="README-bn.md">বাংলা</a> ·
-<a href="README-id.md">Bahasa Indonesia</a> ·
-<a href="README-ja.md">日本語</a>
-</div>
+[中文](../../README.md) ·
+**[English](README-en.md)** ·
+[한국어](README-ko.md) ·
+[Русский](README-ru.md) ·
+[Deutsch](README-de.md) ·
+[Français](README-fr.md) ·
+[Español](README-es.md) ·
+[Português](README-pt.md) ·
+[हिन्दी](README-hi.md) ·
+[العربية](README-ar.md) ·
+[বাংলা](README-bn.md) ·
+[Bahasa Indonesia](README-id.md) ·
+[日本語](README-ja.md)
 
 ## 📖Introduction
 
@@ -92,15 +84,15 @@ apidoc-rust's implementation approach:
 
 ## Architecture
 
-<img src="images/en-architecture.svg" alt="apidoc-rust overall architecture" width="100%">
+![apidoc-rust overall architecture](images/en-architecture.svg)
 
 ## Features
 
-<img src="images/en-features.svg" alt="apidoc-rust project features" width="100%">
+![apidoc-rust project features](images/en-features.svg)
 
 ## Lifecycle
 
-<img src="images/en-lifecycle.svg" alt="apidoc-rust documentation lifecycle" width="100%">
+![apidoc-rust documentation lifecycle](images/en-lifecycle.svg)
 
 ## Project Structure
 
@@ -121,7 +113,6 @@ apidoc-rust/
 
 │   ├── apidoc-test-fixtures/  # cross-crate registration test fixtures
 
-
 ├── .github/
 │   └── workflows/release.yml  # release workflow (reads VERSION, incrementally creates tag+release)
 └── docs/
@@ -136,7 +127,6 @@ apidoc-rust/
 ```toml
 [dependencies]
 apidoc-rust = "1.5"        # or path = "crates/apidoc"
-
 
 serde_json = "1"      # for api.json output
 ```
@@ -397,18 +387,9 @@ If this project helps you, feel free to give us a ⭐ Star — donations to supp
 
 ### 微信支付 (WeChat Pay) / 支付宝 (Alipay)
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="../../docs/weixinpay.png" width="130" height="130" alt="微信支付 (WeChat Pay)" /><br/>
-      <strong>微信支付 (WeChat Pay)</strong>
-    </td>
-    <td align="center">
-      <img src="../../docs/alipay.png" width="130" height="130" alt="支付宝 (Alipay)" /><br/>
-      <strong>支付宝 (Alipay)</strong>
-    </td>
-  </tr>
-</table>
+| 微信支付 (WeChat Pay) | 支付宝 (Alipay) |
+|---|---|
+| ![微信支付 (WeChat Pay)](../../docs/weixinpay.png) | ![支付宝 (Alipay)](../../docs/alipay.png) |
 
 ### Global Bank Transfer Donation
 

@@ -1,33 +1,25 @@
-<div align="center">
-<img src="../images/apidoc-pet.svg" alt="Apidoc ペット" width="200">
-</div>
+![Apidoc ペット](../images/apidoc-pet.svg)
 
-<h1 align="center">Apidoc (apidoc-rust)</h1>
+# Apidoc (apidoc-rust)
 
-<div align="center">
- Rust の手続きマクロ（proc-macro）による API ドキュメント生成・インターフェース開発ツール。axum、actix-web など主要フレームワークに対応
-</div>
+Rust の手続きマクロ（proc-macro）による API ドキュメント生成・インターフェース開発ツール。axum、actix-web など主要フレームワークに対応
 
-<div align="center">
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/badge/license-MIT-green"></a>
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/github/stars/erikwang2013/apidoc-rust"></a>
-</div>
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/erikwang2013/apidoc-rust)
+[![Stars](https://img.shields.io/github/stars/erikwang2013/apidoc-rust)](https://github.com/erikwang2013/apidoc-rust)
 
-<div align="center">
-<a href="../../README.md">中文</a> ·
-<a href="README-en.md">English</a> ·
-<a href="README-ko.md">한국어</a> ·
-<a href="README-ru.md">Русский</a> ·
-<a href="README-de.md">Deutsch</a> ·
-<a href="README-fr.md">Français</a> ·
-<a href="README-es.md">Español</a> ·
-<a href="README-pt.md">Português</a> ·
-<a href="README-hi.md">हिन्दी</a> ·
-<a href="README-ar.md">العربية</a> ·
-<a href="README-bn.md">বাংলা</a> ·
-<a href="README-id.md">Bahasa Indonesia</a> ·
-<a href="README-ja.md"><strong>日本語</strong></a>
-</div>
+[中文](../../README.md) ·
+[English](README-en.md) ·
+[한국어](README-ko.md) ·
+[Русский](README-ru.md) ·
+[Deutsch](README-de.md) ·
+[Français](README-fr.md) ·
+[Español](README-es.md) ·
+[Português](README-pt.md) ·
+[हिन्दी](README-hi.md) ·
+[العربية](README-ar.md) ·
+[বাংলা](README-bn.md) ·
+[Bahasa Indonesia](README-id.md) ·
+**[日本語](README-ja.md)**
 
 ## 📖プロジェクト紹介
 
@@ -92,15 +84,15 @@ apidoc-rust の実装方針：
 
 ## アーキテクチャ
 
-<img src="images/ja-architecture.svg" alt="apidoc-rust 全体アーキテクチャ" width="100%">
+![apidoc-rust 全体アーキテクチャ](images/ja-architecture.svg)
 
 ## 機能
 
-<img src="images/ja-features.svg" alt="apidoc-rust プロジェクト機能" width="100%">
+![apidoc-rust プロジェクト機能](images/ja-features.svg)
 
 ## ライフサイクル
 
-<img src="images/ja-lifecycle.svg" alt="apidoc-rust ドキュメントライフサイクル" width="100%">
+![apidoc-rust ドキュメントライフサイクル](images/ja-lifecycle.svg)
 
 ## プロジェクト構成
 
@@ -121,7 +113,6 @@ apidoc-rust/
 
 │   ├── apidoc-test-fixtures/  # クロス crate 登録テストフィクスチャ
 
-
 ├── .github/
 │   └── workflows/release.yml  # リリースワークフロー（VERSION を読み、tag+release を増分作成）
 └── docs/
@@ -136,7 +127,6 @@ apidoc-rust/
 ```toml
 [dependencies]
 apidoc-rust = "1.5"        # または path = "crates/apidoc"
-
 
 serde_json = "1"      # api.json 出力用
 ```
@@ -397,18 +387,9 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 
 ### 微信 / 支付宝
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="../../docs/weixinpay.png" width="130" height="130" alt="微信支付（WeChat Pay）" /><br/>
-      <strong>微信支付（WeChat Pay）</strong>
-    </td>
-    <td align="center">
-      <img src="../../docs/alipay.png" width="130" height="130" alt="支付宝（Alipay）" /><br/>
-      <strong>支付宝（Alipay）</strong>
-    </td>
-  </tr>
-</table>
+| 微信支付（WeChat Pay） | 支付宝（Alipay） |
+|---|---|
+| ![微信支付（WeChat Pay）](../../docs/weixinpay.png) | ![支付宝（Alipay）](../../docs/alipay.png) |
 
 ### 海外送金での寄付
 

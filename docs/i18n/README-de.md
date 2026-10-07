@@ -1,33 +1,25 @@
-<div align="center">
-<img src="../images/apidoc-pet.svg" alt="Apidoc-Maskottchen" width="200">
-</div>
+![Apidoc-Maskottchen](../images/apidoc-pet.svg)
 
-<h1 align="center">Apidoc (apidoc-rust)</h1>
+# Apidoc (apidoc-rust)
 
-<div align="center">
-  Toolkit für die Generierung von API-Dokumentation und die Entwicklung von Schnittstellen auf Basis von Rust-Prozessmakros (proc-macro), kompatibel mit axum, actix-web und weiteren gängigen Frameworks
-</div>
+Toolkit für die Generierung von API-Dokumentation und die Entwicklung von Schnittstellen auf Basis von Rust-Prozessmakros (proc-macro), kompatibel mit axum, actix-web und weiteren gängigen Frameworks
 
-<div align="center">
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/badge/license-MIT-green"></a>
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/github/stars/erikwang2013/apidoc-rust"></a>
-</div>
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/erikwang2013/apidoc-rust)
+[![Stars](https://img.shields.io/github/stars/erikwang2013/apidoc-rust)](https://github.com/erikwang2013/apidoc-rust)
 
-<div align="center">
-<a href="../../README.md">中文</a> ·
-<a href="README-en.md">English</a> ·
-<a href="README-ko.md">한국어</a> ·
-<a href="README-ru.md">Русский</a> ·
-<a href="README-de.md"><strong>Deutsch</strong></a> ·
-<a href="README-fr.md">Français</a> ·
-<a href="README-es.md">Español</a> ·
-<a href="README-pt.md">Português</a> ·
-<a href="README-hi.md">हिन्दी</a> ·
-<a href="README-ar.md">العربية</a> ·
-<a href="README-bn.md">বাংলা</a> ·
-<a href="README-id.md">Bahasa Indonesia</a> ·
-<a href="README-ja.md">日本語</a>
-</div>
+[中文](../../README.md) ·
+[English](README-en.md) ·
+[한국어](README-ko.md) ·
+[Русский](README-ru.md) ·
+**[Deutsch](README-de.md)** ·
+[Français](README-fr.md) ·
+[Español](README-es.md) ·
+[Português](README-pt.md) ·
+[हिन्दी](README-hi.md) ·
+[العربية](README-ar.md) ·
+[বাংলা](README-bn.md) ·
+[Bahasa Indonesia](README-id.md) ·
+[日本語](README-ja.md)
 
 ## 📖Projektvorstellung
 
@@ -92,15 +84,15 @@ Der Umsetzungsansatz von apidoc-rust:
 
 ## Architektur
 
-<img src="images/de-architecture.svg" alt="Gesamtarchitektur von apidoc-rust" width="100%">
+![Gesamtarchitektur von apidoc-rust](images/de-architecture.svg)
 
 ## Funktionen
 
-<img src="images/de-features.svg" alt="Projektfunktionen von apidoc-rust" width="100%">
+![Projektfunktionen von apidoc-rust](images/de-features.svg)
 
 ## Lebenszyklus
 
-<img src="images/de-lifecycle.svg" alt="Dokumentationslebenszyklus von apidoc-rust" width="100%">
+![Dokumentationslebenszyklus von apidoc-rust](images/de-lifecycle.svg)
 
 ## Projektstruktur
 
@@ -121,7 +113,6 @@ apidoc-rust/
 
 │   ├── apidoc-test-fixtures/  # Test-Fixtures für die Registrierung über crates hinweg
 
-
 ├── .github/
 │   └── workflows/release.yml  # Release-Workflow (liest VERSION, erstellt inkrementell tag+release)
 └── docs/
@@ -136,7 +127,6 @@ apidoc-rust/
 ```toml
 [dependencies]
 apidoc-rust = "1.5"        # oder path = "crates/apidoc"
-
 
 serde_json = "1"      # für die Ausgabe von api.json
 ```
@@ -397,18 +387,9 @@ Wenn dieses Projekt für Sie hilfreich ist, freuen wir uns über einen ⭐ Star 
 
 ### 微信 / 支付宝 (WeChat / Alipay)
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="../../docs/weixinpay.png" width="130" height="130" alt="微信支付" /><br/>
-      <strong>微信支付</strong>
-    </td>
-    <td align="center">
-      <img src="../../docs/alipay.png" width="130" height="130" alt="支付宝" /><br/>
-      <strong>支付宝</strong>
-    </td>
-  </tr>
-</table>
+| 微信支付 | 支付宝 |
+|---|---|
+| ![微信支付](../../docs/weixinpay.png) | ![支付宝](../../docs/alipay.png) |
 
 ### Spenden per internationaler Überweisung
 

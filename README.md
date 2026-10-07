@@ -1,33 +1,25 @@
-<div align="center">
-<img src="docs/images/apidoc-pet.svg" alt="Apidoc 宠物" width="200">
-</div>
+![Apidoc 宠物](docs/images/apidoc-pet.svg)
 
-<h1 align="center">Apidoc (apidoc-rust)</h1>
+# Apidoc (apidoc-rust)
 
-<div align="center">
- 基于 Rust 过程宏（proc-macro）的 API 文档生成与接口开发工具，兼容 axum、actix-web 等主流框架
-</div>
+基于 Rust 过程宏（proc-macro）的 API 文档生成与接口开发工具，兼容 axum、actix-web 等主流框架
 
-<div align="center">
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/badge/license-MIT-green"></a>
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/github/stars/erikwang2013/apidoc-rust"></a>
-</div>
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/erikwang2013/apidoc-rust)
+[![Stars](https://img.shields.io/github/stars/erikwang2013/apidoc-rust)](https://github.com/erikwang2013/apidoc-rust)
 
-<div align="center">
-<a href="README.md"><strong>中文</strong></a> ·
-<a href="docs/i18n/README-en.md">English</a> ·
-<a href="docs/i18n/README-ko.md">한국어</a> ·
-<a href="docs/i18n/README-ru.md">Русский</a> ·
-<a href="docs/i18n/README-de.md">Deutsch</a> ·
-<a href="docs/i18n/README-fr.md">Français</a> ·
-<a href="docs/i18n/README-es.md">Español</a> ·
-<a href="docs/i18n/README-pt.md">Português</a> ·
-<a href="docs/i18n/README-hi.md">हिन्दी</a> ·
-<a href="docs/i18n/README-ar.md">العربية</a> ·
-<a href="docs/i18n/README-bn.md">বাংলা</a> ·
-<a href="docs/i18n/README-id.md">Bahasa Indonesia</a> ·
-<a href="docs/i18n/README-ja.md">日本語</a>
-</div>
+**[中文](README.md)** ·
+[English](docs/i18n/README-en.md) ·
+[한국어](docs/i18n/README-ko.md) ·
+[Русский](docs/i18n/README-ru.md) ·
+[Deutsch](docs/i18n/README-de.md) ·
+[Français](docs/i18n/README-fr.md) ·
+[Español](docs/i18n/README-es.md) ·
+[Português](docs/i18n/README-pt.md) ·
+[हिन्दी](docs/i18n/README-hi.md) ·
+[العربية](docs/i18n/README-ar.md) ·
+[বাংলা](docs/i18n/README-bn.md) ·
+[Bahasa Indonesia](docs/i18n/README-id.md) ·
+[日本語](docs/i18n/README-ja.md)
 
 ## 📖项目介绍
 
@@ -92,15 +84,15 @@ apidoc-rust 的实现取向：
 
 ## 架构
 
-<img src="docs/images/architecture.svg" alt="apidoc-rust 总体架构" width="100%">
+![apidoc-rust 总体架构](docs/images/architecture.svg)
 
 ## 功能
 
-<img src="docs/images/features.svg" alt="apidoc-rust 项目功能" width="100%">
+![apidoc-rust 项目功能](docs/images/features.svg)
 
 ## 生命周期
 
-<img src="docs/images/lifecycle.svg" alt="apidoc-rust 文档生命周期" width="100%">
+![apidoc-rust 文档生命周期](docs/images/lifecycle.svg)
 
 ## 项目结构
 
@@ -446,18 +438,9 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 
 ### 微信 / 支付宝
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="docs/weixinpay.png" width="130" height="130" alt="微信支付" /><br/>
-      <strong>微信支付</strong>
-    </td>
-    <td align="center">
-      <img src="docs/alipay.png" width="130" height="130" alt="支付宝" /><br/>
-      <strong>支付宝</strong>
-    </td>
-  </tr>
-</table>
+| 微信支付 | 支付宝 |
+|---|---|
+| ![微信支付](docs/weixinpay.png) | ![支付宝](docs/alipay.png) |
 
 ### 全球转账打赏
 

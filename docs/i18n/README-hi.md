@@ -1,33 +1,25 @@
-<div align="center">
-<img src="../images/apidoc-pet.svg" alt="Apidoc शुभंकर" width="200">
-</div>
+![Apidoc शुभंकर](../images/apidoc-pet.svg)
 
-<h1 align="center">Apidoc (apidoc-rust)</h1>
+# Apidoc (apidoc-rust)
 
-<div align="center">
- Rust प्रोसेस मैक्रो (proc-macro) आधारित API दस्तावेज़ जनरेशन और इंटरफ़ेस डेवलपमेंट टूलकिट, axum, actix-web जैसे प्रमुख फ्रेमवर्क के साथ संगत
-</div>
+Rust प्रोसेस मैक्रो (proc-macro) आधारित API दस्तावेज़ जनरेशन और इंटरफ़ेस डेवलपमेंट टूलकिट, axum, actix-web जैसे प्रमुख फ्रेमवर्क के साथ संगत
 
-<div align="center">
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/badge/license-MIT-green"></a>
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/github/stars/erikwang2013/apidoc-rust"></a>
-</div>
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/erikwang2013/apidoc-rust)
+[![Stars](https://img.shields.io/github/stars/erikwang2013/apidoc-rust)](https://github.com/erikwang2013/apidoc-rust)
 
-<div align="center">
-<a href="../../README.md">中文</a> ·
-<a href="README-en.md">English</a> ·
-<a href="README-ko.md">한국어</a> ·
-<a href="README-ru.md">Русский</a> ·
-<a href="README-de.md">Deutsch</a> ·
-<a href="README-fr.md">Français</a> ·
-<a href="README-es.md">Español</a> ·
-<a href="README-pt.md">Português</a> ·
-<a href="README-hi.md"><strong>हिन्दी</strong></a> ·
-<a href="README-ar.md">العربية</a> ·
-<a href="README-bn.md">বাংলা</a> ·
-<a href="README-id.md">Bahasa Indonesia</a> ·
-<a href="README-ja.md">日本語</a>
-</div>
+[中文](../../README.md) ·
+[English](README-en.md) ·
+[한국어](README-ko.md) ·
+[Русский](README-ru.md) ·
+[Deutsch](README-de.md) ·
+[Français](README-fr.md) ·
+[Español](README-es.md) ·
+[Português](README-pt.md) ·
+**[हिन्दी](README-hi.md)** ·
+[العربية](README-ar.md) ·
+[বাংলা](README-bn.md) ·
+[Bahasa Indonesia](README-id.md) ·
+[日本語](README-ja.md)
 
 ## 📖परियोजना परिचय
 
@@ -92,15 +84,15 @@ apidoc-rust का कार्यान्वयन दृष्टिकोण
 
 ## वास्तुकला
 
-<img src="images/hi-architecture.svg" alt="apidoc-rust समग्र वास्तुकला" width="100%">
+![apidoc-rust समग्र वास्तुकला](images/hi-architecture.svg)
 
 ## कार्यक्षमता
 
-<img src="images/hi-features.svg" alt="apidoc-rust परियोजना कार्यक्षमता" width="100%">
+![apidoc-rust परियोजना कार्यक्षमता](images/hi-features.svg)
 
 ## जीवनचक्र
 
-<img src="images/hi-lifecycle.svg" alt="apidoc-rust दस्तावेज़ जीवनचक्र" width="100%">
+![apidoc-rust दस्तावेज़ जीवनचक्र](images/hi-lifecycle.svg)
 
 ## परियोजना संरचना
 
@@ -121,7 +113,6 @@ apidoc-rust/
 
 │   ├── apidoc-test-fixtures/  # क्रॉस-crate पंजीकरण टेस्ट फिक्स्चर
 
-
 ├── .github/
 │   └── workflows/release.yml  # रिलीज़ वर्कफ़्लो (VERSION पढ़कर, incremental tag+release बनाता है)
 └── docs/
@@ -136,7 +127,6 @@ apidoc-rust/
 ```toml
 [dependencies]
 apidoc-rust = "1.5"        # या path = "crates/apidoc"
-
 
 serde_json = "1"      # api.json आउटपुट के लिए
 ```
@@ -397,18 +387,9 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 
 ### 微信支付 (WeChat Pay) / 支付宝 (Alipay)
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="../../docs/weixinpay.png" width="130" height="130" alt="微信支付" /><br/>
-      <strong>微信支付</strong>
-    </td>
-    <td align="center">
-      <img src="../../docs/alipay.png" width="130" height="130" alt="支付宝" /><br/>
-      <strong>支付宝</strong>
-    </td>
-  </tr>
-</table>
+| 微信支付 | 支付宝 |
+|---|---|
+| ![微信支付](../../docs/weixinpay.png) | ![支付宝](../../docs/alipay.png) |
 
 ### वैश्विक बैंक हस्तांतरण दान
 

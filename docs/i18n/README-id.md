@@ -1,33 +1,25 @@
-<div align="center">
-<img src="../images/apidoc-pet.svg" alt="Maskot Apidoc" width="200">
-</div>
+![Maskot Apidoc](../images/apidoc-pet.svg)
 
-<h1 align="center">Apidoc (apidoc-rust)</h1>
+# Apidoc (apidoc-rust)
 
-<div align="center">
- Alat pembuat dokumentasi API dan pengembangan antarmuka berbasis makro prosedural (proc-macro) Rust, kompatibel dengan axum, actix-web, dan kerangka kerja populer lainnya
-</div>
+Alat pembuat dokumentasi API dan pengembangan antarmuka berbasis makro prosedural (proc-macro) Rust, kompatibel dengan axum, actix-web, dan kerangka kerja populer lainnya
 
-<div align="center">
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/badge/license-MIT-green"></a>
-<a href="https://github.com/erikwang2013/apidoc-rust"><img src="https://img.shields.io/github/stars/erikwang2013/apidoc-rust"></a>
-</div>
+[![License](https://img.shields.io/badge/license-MIT-green)](https://github.com/erikwang2013/apidoc-rust)
+[![Stars](https://img.shields.io/github/stars/erikwang2013/apidoc-rust)](https://github.com/erikwang2013/apidoc-rust)
 
-<div align="center">
-<a href="../../README.md">中文</a> ·
-<a href="README-en.md">English</a> ·
-<a href="README-ko.md">한국어</a> ·
-<a href="README-ru.md">Русский</a> ·
-<a href="README-de.md">Deutsch</a> ·
-<a href="README-fr.md">Français</a> ·
-<a href="README-es.md">Español</a> ·
-<a href="README-pt.md">Português</a> ·
-<a href="README-hi.md">हिन्दी</a> ·
-<a href="README-ar.md">العربية</a> ·
-<a href="README-bn.md">বাংলা</a> ·
-<a href="README-id.md"><strong>Bahasa Indonesia</strong></a> ·
-<a href="README-ja.md">日本語</a>
-</div>
+[中文](../../README.md) ·
+[English](README-en.md) ·
+[한국어](README-ko.md) ·
+[Русский](README-ru.md) ·
+[Deutsch](README-de.md) ·
+[Français](README-fr.md) ·
+[Español](README-es.md) ·
+[Português](README-pt.md) ·
+[हिन्दी](README-hi.md) ·
+[العربية](README-ar.md) ·
+[বাংলা](README-bn.md) ·
+**[Bahasa Indonesia](README-id.md)** ·
+[日本語](README-ja.md)
 
 ## 📖Pengenalan Proyek
 
@@ -92,15 +84,15 @@ Pendekatan implementasi apidoc-rust:
 
 ## Arsitektur
 
-<img src="images/id-architecture.svg" alt="Arsitektur keseluruhan apidoc-rust" width="100%">
+![Arsitektur keseluruhan apidoc-rust](images/id-architecture.svg)
 
 ## Fitur
 
-<img src="images/id-features.svg" alt="Fitur proyek apidoc-rust" width="100%">
+![Fitur proyek apidoc-rust](images/id-features.svg)
 
 ## Siklus Hidup
 
-<img src="images/id-lifecycle.svg" alt="Siklus hidup dokumentasi apidoc-rust" width="100%">
+![Siklus hidup dokumentasi apidoc-rust](images/id-lifecycle.svg)
 
 ## Struktur Proyek
 
@@ -121,7 +113,6 @@ apidoc-rust/
 
 │   ├── apidoc-test-fixtures/  # Fixture pengujian registrasi antar-crate
 
-
 ├── .github/
 │   └── workflows/release.yml  # Workflow rilis (membaca VERSION, membuat tag+release inkremental)
 └── docs/
@@ -136,7 +127,6 @@ apidoc-rust/
 ```toml
 [dependencies]
 apidoc-rust = "1.5"        # atau path = "crates/apidoc"
-
 
 serde_json = "1"      # untuk output api.json
 ```
@@ -397,18 +387,9 @@ Jika proyek ini bermanfaat bagi Anda, silakan beri ⭐ Star untuk mendukung kami
 
 ### 微信支付 / 支付宝 (WeChat Pay / Alipay)
 
-<table>
-  <tr>
-    <td align="center">
-      <img src="../weixinpay.png" width="130" height="130" alt="微信支付 (WeChat Pay)" /><br/>
-      <strong>微信支付 (WeChat Pay)</strong>
-    </td>
-    <td align="center">
-      <img src="../alipay.png" width="130" height="130" alt="支付宝 (Alipay)" /><br/>
-      <strong>支付宝 (Alipay)</strong>
-    </td>
-  </tr>
-</table>
+| 微信支付 (WeChat Pay) | 支付宝 (Alipay) |
+|---|---|
+| ![微信支付 (WeChat Pay)](../weixinpay.png) | ![支付宝 (Alipay)](../alipay.png) |
 
 ### Donasi Transfer Global
 
