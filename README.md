@@ -1,4 +1,4 @@
-![Apidoc 宠物](docs/images/apidoc-pet.svg)
+![Apidoc 宠物](https://github.com/erikwang2013/apidoc-rust/raw/HEAD/docs/images/apidoc-pet.svg)
 
 # Apidoc (apidoc-rust)
 
@@ -8,18 +8,18 @@
 [![Stars](https://img.shields.io/github/stars/erikwang2013/apidoc-rust)](https://github.com/erikwang2013/apidoc-rust)
 
 **[中文](README.md)** ·
-[English](docs/i18n/README-en.md) ·
-[한국어](docs/i18n/README-ko.md) ·
-[Русский](docs/i18n/README-ru.md) ·
-[Deutsch](docs/i18n/README-de.md) ·
-[Français](docs/i18n/README-fr.md) ·
-[Español](docs/i18n/README-es.md) ·
-[Português](docs/i18n/README-pt.md) ·
-[हिन्दी](docs/i18n/README-hi.md) ·
-[العربية](docs/i18n/README-ar.md) ·
-[বাংলা](docs/i18n/README-bn.md) ·
-[Bahasa Indonesia](docs/i18n/README-id.md) ·
-[日本語](docs/i18n/README-ja.md)
+[English](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-en.md) ·
+[한국어](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-ko.md) ·
+[Русский](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-ru.md) ·
+[Deutsch](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-de.md) ·
+[Français](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-fr.md) ·
+[Español](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-es.md) ·
+[Português](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-pt.md) ·
+[हिन्दी](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-hi.md) ·
+[العربية](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-ar.md) ·
+[বাংলা](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-bn.md) ·
+[Bahasa Indonesia](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-id.md) ·
+[日本語](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-ja.md)
 
 ## 📖项目介绍
 
@@ -88,15 +88,15 @@ apidoc-rust 的实现取向：
 
 ## 架构
 
-![apidoc-rust 总体架构](docs/images/architecture.svg)
+![apidoc-rust 总体架构](https://github.com/erikwang2013/apidoc-rust/raw/HEAD/docs/images/architecture.svg)
 
 ## 功能
 
-![apidoc-rust 项目功能](docs/images/features.svg)
+![apidoc-rust 项目功能](https://github.com/erikwang2013/apidoc-rust/raw/HEAD/docs/images/features.svg)
 
 ## 生命周期
 
-![apidoc-rust 文档生命周期](docs/images/lifecycle.svg)
+![apidoc-rust 文档生命周期](https://github.com/erikwang2013/apidoc-rust/raw/HEAD/docs/images/lifecycle.svg)
 
 ## 项目结构
 
@@ -480,18 +480,18 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 ## 多语言文档
 
-- [English](docs/i18n/README-en.md)
-- [한국어](docs/i18n/README-ko.md)
-- [Русский](docs/i18n/README-ru.md)
-- [Deutsch](docs/i18n/README-de.md)
-- [Français](docs/i18n/README-fr.md)
-- [Español](docs/i18n/README-es.md)
-- [Português](docs/i18n/README-pt.md)
-- [हिन्दी](docs/i18n/README-hi.md)
-- [العربية](docs/i18n/README-ar.md)
-- [বাংলা](docs/i18n/README-bn.md)
-- [Bahasa Indonesia](docs/i18n/README-id.md)
-- [日本語](docs/i18n/README-ja.md)
+- [English](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-en.md)
+- [한국어](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-ko.md)
+- [Русский](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-ru.md)
+- [Deutsch](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-de.md)
+- [Français](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-fr.md)
+- [Español](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-es.md)
+- [Português](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-pt.md)
+- [हिन्दी](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-hi.md)
+- [العربية](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-ar.md)
+- [বাংলা](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-bn.md)
+- [Bahasa Indonesia](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-id.md)
+- [日本語](https://github.com/erikwang2013/apidoc-rust/blob/HEAD/docs/i18n/README-ja.md)
 
 ## 支持与打赏
 
@@ -501,7 +501,7 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 | 微信支付 | 支付宝 |
 |---|---|
-| ![微信支付](docs/weixinpay.png) | ![支付宝](docs/alipay.png) |
+| ![微信支付](https://github.com/erikwang2013/apidoc-rust/raw/HEAD/docs/weixinpay.png) | ![支付宝](https://github.com/erikwang2013/apidoc-rust/raw/HEAD/docs/alipay.png) |
 
 ### 全球转账打赏
 
