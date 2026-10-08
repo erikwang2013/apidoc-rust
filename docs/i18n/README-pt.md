@@ -68,7 +68,7 @@ Abordagem de implementação do apidoc-rust:
 
 - **Exportação em três formatos** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0); o crate central fornece `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **Rotas de exportação**: os adaptadores adicionam `GET /apidoc/export?format=md|ts|swagger`, formato desconhecido → 400; Content-Type: `text/markdown` / `application/typescript` / `application/json`
-- **markdown**: índice por grupos + tabela de parâmetros + bloco de resposta; **typescript**: gera os tipos `{Name}Params` / `{Name}Result` por namespace de grupo, endpoints sem grupo caem em `defaultGroup` (`default` é palavra reservada de TS); **swagger**: `info.version` vem do conteúdo do arquivo `VERSION` da raiz
+- **markdown**: índice por grupos + tabela de parâmetros + bloco de resposta; **typescript**: gera os tipos `{Name}Params` / `{Name}Result` por namespace de grupo, endpoints sem grupo caem em `defaultGroup` (`default` é palavra reservada de TS); **swagger**: `info.version` vem da versão do pacote Cargo
 - **Adaptador actix-web** (`crates/apidoc/src/actix.rs`): funcionalidade 1:1 com o adaptador axum — `apidoc_routes(ApidocConfig) -> Scope` monta /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` libera CORS
 - **UI compartilhada**: a UI de documentação (`src/ui.html`) sobe para o crate central, exportada como `pub const UI_HTML`; os dois adaptadores referenciam a mesma cópia (seguro para empacotamento de publicação)
 
@@ -103,7 +103,7 @@ Abordagem de implementação do apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuração do workspace (resolver 2)
-├── VERSION                    # versão do projeto (v1.6.0)
+├── VERSION                    # versão do projeto (v1.6.1)
 ├── crates/
 │   ├── apidoc/                # núcleo em tempo de execução (independente de framework)
 │   │   ├── src/lib.rs         # modelo de dados + agregação DocRegistry + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # arquivo descritivo OpenAPI 3.0.0 (applicat
 
 - **markdown**: ideal para colar no Wiki do projeto / notas de versão, índice por grupos, cada endpoint com tabela de parâmetros e bloco de resposta;
 - **typescript**: o front pode colar diretamente as definições de tipos; endpoints sem grupo caem no namespace `defaultGroup` (`default` é palavra reservada de TS, não pode ser usado como identificador);
-- **swagger**: `info.version` vem do conteúdo do arquivo `VERSION` da raiz (atualmente 1.6.0), importável diretamente no Swagger UI ou em um gerador de código.
+- **swagger**: `info.version` vem da versão do pacote Cargo (atualmente 1.6.1), importável diretamente no Swagger UI ou em um gerador de código.
 
 ### 7. Adaptador actix-web
 

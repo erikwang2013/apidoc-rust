@@ -68,7 +68,7 @@ apidoc-rust 的实现取向：
 
 - **导出三格式**（`crates/apidoc/src/export/`）：markdown / typescript / swagger（OpenAPI 3.0.0），核心 crate 提供 `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **导出路由**：适配器新增 `GET /apidoc/export?format=md|ts|swagger`，未知 format 返回 400；Content-Type 分别为 `text/markdown` / `application/typescript` / `application/json`
-- **markdown**：分组目录 + 参数表 + 响应块；**typescript**：按 group 命名空间生成 `{Name}Params` / `{Name}Result` 类型，未分组接口落入 `defaultGroup`（`default` 是 TS 保留字）；**swagger**：`info.version` 取根目录 `VERSION` 文件内容
+- **markdown**：分组目录 + 参数表 + 响应块；**typescript**：按 group 命名空间生成 `{Name}Params` / `{Name}Result` 类型，未分组接口落入 `defaultGroup`（`default` 是 TS 保留字）；**swagger**：`info.version` 取 Cargo 包版本
 - **actix-web 适配器**（`crates/apidoc/src/actix.rs`，feature `actix`）：与 axum 适配器功能 1:1——`apidoc_routes(ApidocConfig) -> Scope` 挂载 /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export，`cors_layer(CorsConfig)` 放行跨域
 - **UI 共享**：文档 UI（`src/ui.html`）上移至核心 crate，导出 `pub const UI_HTML`，两适配器引用同一份（发布打包安全）
 
@@ -103,7 +103,7 @@ apidoc-rust 的实现取向：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 配置（resolver 2）
-├── VERSION                    # 项目版本（v1.6.0）
+├── VERSION                    # 项目版本（v1.6.1）
 ├── crates/
 │   ├── apidoc/                # 单一发布包 apidoc-rust（lib 名 apidoc）
 │   │   ├── src/lib.rs         # 数据模型 + DocRegistry 聚合 + api.json + UI_HTML
@@ -308,7 +308,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 描述文件（application/j
 
 - **markdown**：适合贴进项目 Wiki / 发布说明，按分组输出目录，每个接口带参数表与响应块；
 - **typescript**：前端可直接粘贴为类型定义；未分组接口落入 `defaultGroup` 命名空间（`default` 是 TS 保留字，不能作标识符）；
-- **swagger**：`info.version` 取根目录 `VERSION` 文件内容（当前 1.6.0），可直接导入 Swagger UI 或代码生成器。
+- **swagger**：`info.version` 取 Cargo 包版本（当前 1.6.1），可直接导入 Swagger UI 或代码生成器。
 
 ### 7. actix-web 适配器
 

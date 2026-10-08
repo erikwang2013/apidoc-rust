@@ -7,6 +7,7 @@ edition.workspace = true
 license.workspace = true
 description.workspace = true
 repository.workspace = true
+readme = "../../README.md"
 
 [lib]
 name = "apidoc"
@@ -24,7 +25,7 @@ serde = { version = "1", features = ["derive"] }
 md5 = "0.7"
 # M5 导出（swagger::render 返回 Value）需要；原 dev-dependency 提升为正式依赖
 serde_json = "1"
-apidoc-macros = { path = "../apidoc-macros", version = "1.6.0" }
+apidoc-macros = { path = "../apidoc-macros", version = "1.6.1" }
 # 以下 optional：默认构建不拉任何框架/faker 依赖
 fake = { version = "3", features = ["chrono", "uuid"], optional = true }
 axum = { version = "0.8", optional = true }

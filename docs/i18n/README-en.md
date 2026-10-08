@@ -68,7 +68,7 @@ apidoc-rust's implementation approach:
 
 - **Three-format export** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0); the core crate provides `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **Export route**: the adapter adds `GET /apidoc/export?format=md|ts|swagger` — unknown formats return 400; Content-Type is `text/markdown` / `application/typescript` / `application/json` respectively
-- **markdown**: grouped catalog + parameter tables + response blocks; **typescript**: generates `{Name}Params` / `{Name}Result` types in per-group namespaces, ungrouped endpoints fall into `defaultGroup` (`default` is a TS reserved word); **swagger**: `info.version` is read from the root `VERSION` file
+- **markdown**: grouped catalog + parameter tables + response blocks; **typescript**: generates `{Name}Params` / `{Name}Result` types in per-group namespaces, ungrouped endpoints fall into `defaultGroup` (`default` is a TS reserved word); **swagger**: `info.version` is read from the Cargo package version
 - **actix-web adapter** (`crates/apidoc/src/actix.rs`): 1:1 feature parity with the axum adapter — `apidoc_routes(ApidocConfig) -> Scope` mounts /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, and `cors_layer(CorsConfig)` allows cross-origin
 - **Shared UI**: the docs UI (`src/ui.html`) was moved up into the core crate and exported as `pub const UI_HTML`; both adapters reference the same copy (safe for published packages)
 
@@ -103,7 +103,7 @@ apidoc-rust's implementation approach:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace config (resolver 2)
-├── VERSION                    # project version (v1.6.0)
+├── VERSION                    # project version (v1.6.1)
 ├── crates/
 │   ├── apidoc/                # runtime core (framework-agnostic)
 │   │   ├── src/lib.rs         # data model + DocRegistry aggregation + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 description file (applicatio
 
 - **markdown**: great for pasting into a project Wiki / release notes; outputs a catalog by group, each endpoint with parameter tables and response blocks;
 - **typescript**: the frontend can paste it directly as type definitions; ungrouped endpoints fall into the `defaultGroup` namespace (`default` is a TS reserved word and cannot be an identifier);
-- **swagger**: `info.version` is read from the root `VERSION` file (currently 1.6.0), importable directly into Swagger UI or code generators.
+- **swagger**: `info.version` is read from the Cargo package version (currently 1.6.1), importable directly into Swagger UI or code generators.
 
 ### 7. actix-web adapter
 

@@ -30,6 +30,10 @@ pub mod axum;
 #[cfg(feature = "actix")]
 pub mod actix;
 
+/// 框架无关的 handler core：axum/actix 适配器共享的守卫、分支与响应构造。
+#[cfg(any(feature = "axum", feature = "actix"))]
+mod route_core;
+
 /// 共享文档 UI（axum/actix 适配器 include_str! 自本 crate，发布打包安全）。
 /// ui.html 为标记与样式、ui.js 为核心脚本、ui.debug.js 为在线调试面板，
 /// 编译期拼接为完整 HTML（同一 <script>，函数声明提升保证跨文件可见）。

@@ -68,7 +68,7 @@ apidoc-rust의 구현 방향:
 
 - **3가지 형식 내보내기**(`crates/apidoc/src/export/`): markdown / typescript / swagger(OpenAPI 3.0.0), 코어 crate가 `export::markdown::render` / `export::typescript::render` / `export::swagger::render` 제공
 - **내보내기 라우트**: 어댑터에 `GET /apidoc/export?format=md|ts|swagger` 추가, 알 수 없는 format은 400 반환; Content-Type은 각각 `text/markdown` / `application/typescript` / `application/json`
-- **markdown**: 그룹 목차 + 파라미터 테이블 + 응답 블록; **typescript**: group별 네임스페이스로 `{Name}Params` / `{Name}Result` 타입 생성, 그룹 없는 인터페이스는 `defaultGroup`에 포함(`default`는 TS 예약어); **swagger**: `info.version`은 루트 `VERSION` 파일 내용 사용
+- **markdown**: 그룹 목차 + 파라미터 테이블 + 응답 블록; **typescript**: group별 네임스페이스로 `{Name}Params` / `{Name}Result` 타입 생성, 그룹 없는 인터페이스는 `defaultGroup`에 포함(`default`는 TS 예약어); **swagger**: `info.version`은 Cargo 패키지 버전 사용
 - **actix-web 어댑터**(`crates/apidoc/src/actix.rs`): axum 어댑터와 기능 1:1 — `apidoc_routes(ApidocConfig) -> Scope`로 /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export 마운트, `cors_layer(CorsConfig)`로 크로스 오리진 허용
 - **UI 공유**: 문서 UI(`src/ui.html`)를 코어 crate로 이동해 `pub const UI_HTML`로 내보내며, 두 어댑터가 동일한 파일 참조(배포 패키징 안전)
 
@@ -103,7 +103,7 @@ apidoc-rust의 구현 방향:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 설정(resolver 2)
-├── VERSION                    # 프로젝트 버전(v1.6.0)
+├── VERSION                    # 프로젝트 버전(v1.6.1)
 ├── crates/
 │   ├── apidoc/                # 런타임 코어(프레임워크 무관)
 │   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 설명 파일(application/js
 
 - **markdown**: 프로젝트 Wiki / 릴리스 노트에 붙여넣기 적합, 그룹별 목차 출력, 각 인터페이스에 파라미터 테이블과 응답 블록 포함;
 - **typescript**: 프론트엔드가 바로 타입 정의로 붙여넣기 가능; 그룹 없는 인터페이스는 `defaultGroup` 네임스페이스에 포함(`default`는 TS 예약어라 식별자로 사용 불가);
-- **swagger**: `info.version`은 루트 `VERSION` 파일 내용 사용(현재 1.6.0), Swagger UI나 코드 생성기에 바로 가져오기 가능.
+- **swagger**: `info.version`은 Cargo 패키지 버전 사용(현재 1.6.1), Swagger UI나 코드 생성기에 바로 가져오기 가능.
 
 ### 7. actix-web 어댑터
 

@@ -68,7 +68,7 @@ apidoc-rust の実装方針：
 
 - **3 形式エクスポート**（`crates/apidoc/src/export/`）：markdown / typescript / swagger（OpenAPI 3.0.0）、コア crate が `export::markdown::render` / `export::typescript::render` / `export::swagger::render` を提供
 - **エクスポートルート**：アダプタに `GET /apidoc/export?format=md|ts|swagger` を追加、未知の format は 400 を返す；Content-Type はそれぞれ `text/markdown` / `application/typescript` / `application/json`
-- **markdown**：グループ別ディレクトリ + パラメータ表 + レスポンスブロック；**typescript**：group ごとに名前空間で `{Name}Params` / `{Name}Result` 型を生成、未グループのインターフェースは `defaultGroup` に入る（`default` は TS の予約語）；**swagger**：`info.version` はルートの `VERSION` ファイルの内容を取得
+- **markdown**：グループ別ディレクトリ + パラメータ表 + レスポンスブロック；**typescript**：group ごとに名前空間で `{Name}Params` / `{Name}Result` 型を生成、未グループのインターフェースは `defaultGroup` に入る（`default` は TS の予約語）；**swagger**：`info.version` は Cargo パッケージバージョンを取得
 - **actix-web アダプタ**（`crates/apidoc/src/actix.rs`）：axum アダプタと機能 1:1——`apidoc_routes(ApidocConfig) -> Scope` で /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export をマウント、`cors_layer(CorsConfig)` がクロスオリジンを許可
 - **UI 共有**：ドキュメント UI（`src/ui.html`）をコア crate に移動し、`pub const UI_HTML` としてエクスポート、両アダプタは同一のものを参照（リリースパッケージングでも安全）
 
@@ -103,7 +103,7 @@ apidoc-rust の実装方針：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 設定（resolver 2）
-├── VERSION                    # プロジェクトバージョン（v1.6.0）
+├── VERSION                    # プロジェクトバージョン（v1.6.1）
 ├── crates/
 │   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
 │   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 記述ファイル（applica
 
 - **markdown**：プロジェクト Wiki / リリースノートに貼り付けるのに適しており、グループごとにディレクトリを出力し、各インターフェースにパラメータ表とレスポンスブロック付き；
 - **typescript**：フロントエンドがそのまま型定義として貼り付け可能；未グループのインターフェースは `defaultGroup` 名前空間に入る（`default` は TS の予約語のため識別子にできない）；
-- **swagger**：`info.version` はルートの `VERSION` ファイルの内容を取得（現在 1.6.0）、そのまま Swagger UI やコードジェネレータにインポート可能。
+- **swagger**：`info.version` は Cargo パッケージバージョンを取得（現在 1.6.1）、そのまま Swagger UI やコードジェネレータにインポート可能。
 
 ### 7. actix-web アダプタ
 

@@ -61,7 +61,7 @@
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">कार्यान्वित M5</text>
   <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">तीन प्रारूप निर्यात (M5)</text>
   <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI 3.0)</text>
-  <text x="500" y="450" font-size="13" fill="#333">info.version VERSION फ़ाइल से (बिल्ड समय पूर्व-क्रमांकित)</text>
+  <text x="500" y="450" font-size="13" fill="#333">info.version Cargo पैकेज संस्करण से (बिल्ड समय पूर्व-क्रमांकित)</text>
   <text x="500" y="470" font-size="13" fill="#333">UI / api.json / निर्यात एक ही डेटा मॉडल साझा करते हैं</text>
 
   <!-- कार्ड 7: M6a पासवर्ड प्रमाणीकरण -->

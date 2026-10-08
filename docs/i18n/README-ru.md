@@ -68,7 +68,7 @@ Apidoc — это Rust-библиотека-плагин, которая авт�
 
 - **Экспорт в три формата** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0); в core crate есть `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **Маршрут экспорта**: в адаптер добавлен `GET /apidoc/export?format=md|ts|swagger` — неизвестный format возвращает 400; Content-Type: `text/markdown` / `application/typescript` / `application/json` соответственно
-- **markdown**: группировка по разделам + таблицы параметров + блоки ответов; **typescript**: типы `{Name}Params` / `{Name}Result` в пространстве имён по group, неструппированные интерфейсы попадают в `defaultGroup` (`default` — зарезервированное слово TS); **swagger**: `info.version` берётся из файла `VERSION` в корне
+- **markdown**: группировка по разделам + таблицы параметров + блоки ответов; **typescript**: типы `{Name}Params` / `{Name}Result` в пространстве имён по group, неструппированные интерфейсы попадают в `defaultGroup` (`default` — зарезервированное слово TS); **swagger**: `info.version` берётся из версии пакета Cargo
 - **Адаптер actix-web** (`crates/apidoc/src/actix.rs`): функционально 1:1 с адаптером axum — `apidoc_routes(ApidocConfig) -> Scope` монтирует /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` разрешает кросс-домен
 - **Общий UI**: UI документации (`src/ui.html`) перенесён в core crate и экспортируется как `pub const UI_HTML`; оба адаптера ссылаются на одну копию (безопасно при публикации)
 
@@ -103,7 +103,7 @@ Apidoc — это Rust-библиотека-плагин, которая авт�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # конфигурация workspace (resolver 2)
-├── VERSION                    # версия проекта (v1.6.0)
+├── VERSION                    # версия проекта (v1.6.1)
 ├── crates/
 │   ├── apidoc/                # ядро рантайма (не зависит от фреймворка)
 │   │   ├── src/lib.rs         # модель данных + агрегация DocRegistry + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # файл описания OpenAPI 3.0.0 (a
 
 - **markdown**: удобно вставлять в Wiki проекта / заметки к релизу; по группам выводится оглавление, у каждого интерфейса таблица параметров и блок ответа;
 - **typescript**: фронтенд может вставить это как определения типов; неструппированные интерфейсы попадают в пространство имён `defaultGroup` (`default` — зарезервированное слово TS, не может быть идентификатором);
-- **swagger**: `info.version` берётся из файла `VERSION` в корне (сейчас 1.6.0), можно сразу импортировать в Swagger UI или генераторы кода.
+- **swagger**: `info.version` берётся из версии пакета Cargo (сейчас 1.6.1), можно сразу импортировать в Swagger UI или генераторы кода.
 
 ### 7. Адаптер actix-web
 

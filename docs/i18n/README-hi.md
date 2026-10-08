@@ -68,7 +68,7 @@ apidoc-rust का कार्यान्वयन दृष्टिकोण
 
 - **तीन प्रारूपों में निर्यात** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), कोर crate `export::markdown::render` / `export::typescript::render` / `export::swagger::render` प्रदान करता है
 - **निर्यात रूट**: अडैप्टर में नया `GET /apidoc/export?format=md|ts|swagger`, अज्ञात format पर 400; Content-Type क्रमशः `text/markdown` / `application/typescript` / `application/json`
-- **markdown**: समूहित कैटलॉग + पैरामीटर तालिका + रिस्पॉन्स ब्लॉक; **typescript**: group namespace के अनुसार `{Name}Params` / `{Name}Result` टाइप जनरेट होते हैं, बिना समूह वाले इंटरफ़ेस `defaultGroup` में जाते हैं (`default` TS का आरक्षित शब्द है); **swagger**: `info.version` रूट में `VERSION` फ़ाइल की सामग्री से लिया जाता है
+- **markdown**: समूहित कैटलॉग + पैरामीटर तालिका + रिस्पॉन्स ब्लॉक; **typescript**: group namespace के अनुसार `{Name}Params` / `{Name}Result` टाइप जनरेट होते हैं, बिना समूह वाले इंटरफ़ेस `defaultGroup` में जाते हैं (`default` TS का आरक्षित शब्द है); **swagger**: `info.version` Cargo पैकेज संस्करण से लिया जाता है
 - **actix-web अडैप्टर** (`crates/apidoc/src/actix.rs`): axum अडैप्टर के साथ कार्यक्षमता 1:1 — `apidoc_routes(ApidocConfig) -> Scope` /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export माउंट करता है, `cors_layer(CorsConfig)` क्रॉस-डोमेन की अनुमति देता है
 - **UI साझाकरण**: दस्तावेज़ UI (`src/ui.html`) कोर crate में ऊपर स्थानांतरित, `pub const UI_HTML` निर्यात, दोनों अडैप्टर एक ही प्रति संदर्भित करते हैं (रिलीज़ पैकेजिंग सुरक्षित)
 
@@ -103,7 +103,7 @@ apidoc-rust का कार्यान्वयन दृष्टिकोण
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace कॉन्फ़िगरेशन (resolver 2)
-├── VERSION                    # परियोजना संस्करण (v1.6.0)
+├── VERSION                    # परियोजना संस्करण (v1.6.1)
 ├── crates/
 │   ├── apidoc/                # रनटाइम कोर (फ्रेमवर्क-स्वतंत्र)
 │   │   ├── src/lib.rs         # डेटा मॉडल + DocRegistry एकत्रीकरण + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 विवरण फ़ाइ
 
 - **markdown**: प्रोजेक्ट Wiki / रिलीज़ नोट्स में चिपकाने के लिए उपयुक्त, समूह के अनुसार कैटलॉग, प्रत्येक इंटरफ़ेस में पैरामीटर तालिका और रिस्पॉन्स ब्लॉक;
 - **typescript**: फ्रंटएंड सीधे टाइप परिभाषाओं के रूप में चिपका सकता है; बिना समूह वाले इंटरफ़ेस `defaultGroup` namespace में जाते हैं (`default` TS का आरक्षित शब्द है, पहचानकर्ता नहीं बन सकता);
-- **swagger**: `info.version` रूट की `VERSION` फ़ाइल की सामग्री से लिया जाता है (वर्तमान में 1.6.0), सीधे Swagger UI या कोड जनरेटर में आयात किया जा सकता है।
+- **swagger**: `info.version` Cargo पैकेज संस्करण से लिया जाता है (वर्तमान में 1.6.1), सीधे Swagger UI या कोड जनरेटर में आयात किया जा सकता है।
 
 ### 7. actix-web अडैप्टर
 

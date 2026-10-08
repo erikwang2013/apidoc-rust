@@ -1,31 +1,21 @@
-//! 薄 axum 适配器（feature "axum"）：挂载 /apidoc（UI 页）与 /apidoc/api.json（数据）。
+//! 薄 axum 适配器（feature "axum"）：只做路由注册 + 状态注入（State<Arc<Core>>），
+//! 守卫/分支/响应渲染全部在 crate::route_core（与 actix 同一份实现，行为 1:1
+//! 由结构性共享保证，不再靠两份复制维护）。
 //! 不做 UI 内嵌三方文档工具、不做服务端代理（规划已定）。
 
-use crate::auth::{self, AuthConfig};
-use crate::export;
-use crate::mock::{generate_mock, mock_specs, MockEndpointSpec};
-use crate::{cache, codegen, share};
-use crate::{AppConfig, ApidocConfig, CacheConfig, CodegenTemplate, DocRegistry};
-use axum::extract::Query;
-use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
-use axum::response::{Html, IntoResponse};
+use crate::route_core::{self, Core, R};
+use crate::ApidocConfig;
+use axum::body::Body;
+use axum::extract::{Query, State};
+use axum::http::{header, HeaderValue, StatusCode};
+use axum::response::Response;
 use axum::routing::get;
 use axum::Router;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
-/// CORS 策略（为 M4 在线调试跨域直连目标接口做准备）。
-/// - `allow_origins` 为空（默认）：`Access-Control-Allow-Origin: *`，
-///   不携带凭据。宽松但安全：`*` + 无凭据只允许跨域读响应，这是调试工具的意图。
-/// - `allow_origins` 非空：精确匹配白名单（安全收紧模式，如 ["http://localhost:3000"]）。
-///   两种模式都不开 allow_credentials —— 反射任意 Origin + 凭据才是会被安全
-///   审查打回的组合，M2 直接不提供该开关。
-///   ponytail: allow_credentials 字段暂不做，等真有"白名单 + 凭据"需求再加。
-#[derive(Default)]
-pub struct CorsConfig {
-    pub allow_origins: Vec<String>,
-}
+pub use crate::route_core::CorsConfig;
 
 /// 生成 CORS 层。用法：`.merge(apidoc::axum::apidoc_routes(cfg)).layer(apidoc::axum::cors_layer(cfg))`。
 /// 注意 layer 必须在 merge 之后调用（或对最终 router 调用），否则 CORS 只覆盖
@@ -42,10 +32,7 @@ pub fn cors_layer(config: CorsConfig) -> CorsLayer {
                 .map(|o| HeaderValue::from_str(&o).expect("valid origin")),
         )
     };
-    CorsLayer::new()
-        .allow_origin(origin)
-        .allow_methods(Any)
-        .allow_headers(Any)
+    CorsLayer::new().allow_origin(origin).allow_methods(Any).allow_headers(Any)
 }
 
 /// 挂载 GET /apidoc（UI）与 GET /apidoc/api.json（数据），返回 Router<()>，
@@ -53,244 +40,53 @@ pub fn cors_layer(config: CorsConfig) -> CorsLayer {
 /// api.json 内容 = DocRegistry::collect() 原样输出（核心数据模型零改动）；
 /// 分组是纯 UI 侧启发式（见 ui.html），M3 的 group 注解上线后 UI 优先用注解。
 pub fn apidoc_routes(config: ApidocConfig) -> Router {
-    let doc = DocRegistry::collect_doc(config);
-    // 构建期序列化一次：ApiDoc 无 Clone（核心约束），axum handler 要求 Clone，
-    // 且 async 不能返回对自身捕获的借用 —— 预序列化 String 是唯一干净解。
-    let api_json = serde_json::to_string(&doc).expect("ApiDoc must serialize");
-    // M4 mock：只需可 Clone 的子集，handler 捕获 Arc<Vec<MockEndpointSpec>>，
-    // 不碰 ApiDoc/DocEndpoint，api.json 输出零变化。
-    let mocks: Arc<Vec<MockEndpointSpec>> = Arc::new(mock_specs(&doc.endpoints));
-    // M5 export：与 api.json 同模式，构建期预序列化三份 String。
-    let md = export::markdown::render(&doc);
-    let ts = export::typescript::render(&doc);
-    // VERSION 为包内文件（crates/apidoc/VERSION），发布打包安全；发版时与根目录 VERSION 同步
-    let sw = serde_json::to_string(&export::swagger::render(&doc, include_str!("../VERSION").trim()))
-        .expect("swagger must serialize");
-    // 鉴权配置与应用树按需捕获（password/secret_key 只在构建期内存中）
-    let auth_cfg: Option<Arc<AuthConfig>> = doc.config.auth.clone().map(Arc::new);
-    let app_cfgs: Arc<Vec<AppConfig>> = Arc::new(doc.config.apps.clone());
-    // v2：分享链接要按 url+method 找 endpoint，代码生成要整个文档模型 ——
-    // ApiDoc 无 Clone（核心约束），用 Arc 捕获（构建期不可变，共享安全）。
-    let doc = Arc::new(doc);
-    let codegen_cfgs: Arc<Vec<CodegenTemplate>> = Arc::new(doc.config.codegen.clone());
-    // v2 文档缓存：仅 mock 每请求有实际计算（api.json/export 构建期已物化一次，
-    // 恒等重建无意义）——开启后按 (url,method) 记忆化 mock 输出。
-    let cache_cfg: Option<CacheConfig> = doc.config.cache.clone();
-    // v2 分享 token 签发只看 auth + apps，构造轻量快照避免再 clone 整个 doc。
-    let share_cfg = Arc::new(ApidocConfig {
-        auth: doc.config.auth.clone(),
-        apps: doc.config.apps.clone(),
-        ..Default::default()
-    });
-    // 数据路由守卫，失败 401；auth 未启用恒放行。无捕获闭包为 Copy，
-    // 可被三个 handler 各自 move 一份
-    let denied = || (StatusCode::UNAUTHORIZED, auth::DENIED_BODY).into_response();
-    let guard = |q: &HashMap<String, String>, auth_cfg: Option<&AuthConfig>, app_cfgs: &[AppConfig]| {
-        auth::auth_guard_ok(
-            q.get("token").map(String::as_str).unwrap_or(""),
-            q.get("appKey").map(String::as_str),
-            auth_cfg,
-            app_cfgs,
-        )
-    };
-    // /apidoc/auth 响应映射与 actix 共用（auth_result_response）
-    let auth_resp = |r: auth::AuthResult| {
-        let (status, body) = auth::auth_result_response(r);
-        let mut headers = HeaderMap::new();
-        headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
-        (StatusCode::from_u16(status).unwrap(), headers, body).into_response()
-    };
-    // auth_cfg / app_cfgs 被多个路由共享：外层块 clone 一份给当前路由的 move
-    // 闭包（避免 E0382）；闭包体内再 clone 成局部变量，async move 只捕获局部
-    // 变量（避免 FnOnce）。api_json/mocks/md/ts/sw 单路由独占，一层 clone 即可。
+    // 构建期一次性物化全部文档产物（api.json/export/mock），请求期零重算。
+    let core = Arc::new(Core::build(config));
     Router::new()
-        .route("/apidoc", get(|| async { Html(crate::UI_HTML) }))
-        // UI 宠物图标：favicon 与页头 logo（UI 页内容的一部分，与 UI 页同样不设守卫）
-        .route(
-            "/apidoc/pet.svg",
-            get(|| async {
-                ([(header::CONTENT_TYPE, "image/svg+xml")], crate::PET_SVG)
-            }),
-        )
-        // v2：GET /apidoc/share?app=&url=&method=&base= → {"url":"..."}
-        // 生成指定应用/接口的分享深链；鉴权开启时附带服务端签发的 token（打开免密）。
-        .route(
-            "/apidoc/share",
-            get({
-                let auth_cfg = auth_cfg.clone();
-                let app_cfgs = app_cfgs.clone();
-                let doc = doc.clone();
-                let share_cfg = share_cfg.clone();
-                move |Query(q): Query<HashMap<String, String>>| {
-                    let auth_cfg = auth_cfg.clone();
-                    let app_cfgs = app_cfgs.clone();
-                    let doc = doc.clone();
-                    let share_cfg = share_cfg.clone();
-                    async move {
-                        // 守卫必须校验"被分享的那个应用"：本路由用 `app` 指定应用（与 UI 深链
-                        // 参数一致），若沿用其它路由的 `appKey` 守卫，守卫看不到应用名 → 落全局
-                        // 分支放行 → 本路由就变成"无凭据铸造应用 token"的口子（全局鉴权关闭时
-                        // 直接绕过应用密码；全局 token 持有者也能借此提权到任意独立密码应用）。
-                        let guard_app = q
-                            .get("app")
-                            .or_else(|| q.get("appKey"))
-                            .map(String::as_str);
-                        if !auth::auth_guard_ok(
-                            q.get("token").map(String::as_str).unwrap_or(""),
-                            guard_app,
-                            auth_cfg.as_deref(),
-                            &app_cfgs,
-                        ) {
-                            return denied();
-                        }
-                        let app_key = q.get("app").map(String::as_str);
-                        let url = q.get("url").map(String::as_str);
-                        if app_key.is_none() && url.is_none() {
-                            return StatusCode::BAD_REQUEST.into_response();
-                        }
-                        let method = q.get("method").map(String::as_str).unwrap_or("GET");
-                        let ep = url.and_then(|u| {
-                            doc.endpoints.iter().find(|e| e.url == u && e.method == method)
-                        });
-                        let token = share::token_for(&share_cfg, app_key);
-                        let base = q.get("base").map(String::as_str).unwrap_or("");
-                        let body = serde_json::json!({
-                            "url": share::build_url(base, app_key, ep, token.as_deref())
-                        })
-                        .to_string();
-                        let mut headers = HeaderMap::new();
-                        headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
-                        (headers, body).into_response()
-                    }
-                }
-            }),
-        )
-        // v2：GET /apidoc/generate?template=<name> → 渲染后的代码；未知模板 404。
-        .route(
-            "/apidoc/generate",
-            get({
-                let auth_cfg = auth_cfg.clone();
-                let app_cfgs = app_cfgs.clone();
-                let doc = doc.clone();
-                let codegen_cfgs = codegen_cfgs.clone();
-                move |Query(q): Query<HashMap<String, String>>| {
-                    let auth_cfg = auth_cfg.clone();
-                    let app_cfgs = app_cfgs.clone();
-                    let doc = doc.clone();
-                    let codegen_cfgs = codegen_cfgs.clone();
-                    async move {
-                        if !guard(&q, auth_cfg.as_deref(), &app_cfgs) {
-                            return denied();
-                        }
-                        let Some(name) = q.get("template").map(String::as_str) else {
-                            return StatusCode::BAD_REQUEST.into_response();
-                        };
-                        let Some(tpl) = codegen::find(name, &codegen_cfgs) else {
-                            return StatusCode::NOT_FOUND.into_response();
-                        };
-                        let body = codegen::render(tpl, &doc);
-                        let mut headers = HeaderMap::new();
-                        headers.insert(
-                            header::CONTENT_TYPE,
-                            HeaderValue::from_static("text/plain; charset=utf-8"),
-                        );
-                        (headers, body).into_response()
-                    }
-                }
-            }),
-        )
-        // M6a：GET /apidoc/auth?password=<md5>&appKey=...（appKey 应用密码优先）
-        .route("/apidoc/auth", get({
-            let auth_cfg = auth_cfg.clone();
-            let app_cfgs = app_cfgs.clone();
-            move |Query(q): Query<HashMap<String, String>>| {
-                let auth_cfg = auth_cfg.clone();
-                let app_cfgs = app_cfgs.clone();
-                async move {
-                    auth_resp(auth::auth_issue(
-                        q.get("password").map(String::as_str).unwrap_or(""),
-                        q.get("appKey").map(String::as_str),
-                        auth_cfg.as_deref(),
-                        &app_cfgs,
-                    ))
-                }
-            }
-        }))
-        .route("/apidoc/api.json", get({
-            let auth_cfg = auth_cfg.clone();
-            let app_cfgs = app_cfgs.clone();
-            let body = api_json.clone();
-            move |Query(q): Query<HashMap<String, String>>| {
-                let auth_cfg = auth_cfg.clone();
-                let app_cfgs = app_cfgs.clone();
-                async move {
-                    if !guard(&q, auth_cfg.as_deref(), &app_cfgs) {
-                        return denied();
-                    }
-                    let mut headers = HeaderMap::new();
-                    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
-                    (headers, body).into_response()
-                }
-            }
-        }))
-        .route("/apidoc/export", get({
-            let auth_cfg = auth_cfg.clone();
-            let app_cfgs = app_cfgs.clone();
-            let (md, ts, sw) = (md.clone(), ts.clone(), sw.clone());
-            move |Query(q): Query<HashMap<String, String>>| {
-                let auth_cfg = auth_cfg.clone();
-                let app_cfgs = app_cfgs.clone();
-                async move {
-                    if !guard(&q, auth_cfg.as_deref(), &app_cfgs) {
-                        return denied();
-                    }
-                    let (ct, body) = match q.get("format").map(String::as_str) {
-                        Some("md") => ("text/markdown", md),
-                        Some("ts") => ("application/typescript", ts),
-                        Some("swagger") => ("application/json", sw),
-                        _ => return StatusCode::BAD_REQUEST.into_response(),
-                    };
-                    let mut headers = HeaderMap::new();
-                    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static(ct));
-                    (headers, body).into_response()
-                }
-            }
-        }))
-        .route("/apidoc/mock", get({
-            let auth_cfg = auth_cfg.clone();
-            let app_cfgs = app_cfgs.clone();
-            let mocks = mocks.clone();
-            let cache_cfg = cache_cfg.clone();
-            move |Query(q): Query<HashMap<String, String>>| {
-                let auth_cfg = auth_cfg.clone();
-                let app_cfgs = app_cfgs.clone();
-                let cache_cfg = cache_cfg.clone();
-                async move {
-                    if !guard(&q, auth_cfg.as_deref(), &app_cfgs) {
-                        return denied();
-                    }
-                    let url = q.get("url").map(String::as_str).unwrap_or("");
-                    let method = q.get("method").map(String::as_str).unwrap_or("");
-                    let (status, body) = match mocks.iter().find(|s| s.url == url && s.method == method) {
-                        Some(spec) => {
-                            let build = || {
-                                serde_json::to_string(&generate_mock(spec)).expect("mock must serialize")
-                            };
-                            // v2 文档缓存：开启时按 (url,method) 记忆化；未开启走原路径（字节级一致）
-                            let body = match &cache_cfg {
-                                Some(c) if c.enable => {
-                                    cache::memo(&format!("mock:{url}:{method}"), c.ttl, build)
-                                }
-                                _ => build(),
-                            };
-                            (StatusCode::OK, body)
-                        }
-                        None => (StatusCode::NOT_FOUND, r#"{"error":"endpoint not found"}"#.to_string()),
-                    };
-                    let mut headers = HeaderMap::new();
-                    headers.insert(header::CONTENT_TYPE, HeaderValue::from_static("application/json"));
-                    (status, headers, body).into_response()
-                }
-            }
-        }))
+        // UI 页与宠物图标不设守卫（见 route_core::UI/PET）。
+        .route("/apidoc", get(|| async { response(route_core::UI) }))
+        .route("/apidoc/pet.svg", get(|| async { response(route_core::PET) }))
+        .route("/apidoc/auth", get(auth))
+        // 以下数据路由均经 route_core 守卫，失败 401 DENIED_BODY
+        .route("/apidoc/api.json", get(api_json))
+        .route("/apidoc/export", get(export))
+        .route("/apidoc/mock", get(mock))
+        .route("/apidoc/share", get(share))
+        .route("/apidoc/generate", get(generate))
+        .with_state(core)
+}
+
+// 各 handler 一行转发 core：判定与渲染在 route_core（两框架共享同一实现）。
+async fn auth(State(core): State<Arc<Core>>, Query(q): Query<HashMap<String, String>>) -> Response {
+    response(core.auth(&q))
+}
+
+async fn api_json(State(core): State<Arc<Core>>, Query(q): Query<HashMap<String, String>>) -> Response {
+    response(core.api_json(&q))
+}
+
+async fn export(State(core): State<Arc<Core>>, Query(q): Query<HashMap<String, String>>) -> Response {
+    response(core.export(&q))
+}
+
+async fn mock(State(core): State<Arc<Core>>, Query(q): Query<HashMap<String, String>>) -> Response {
+    response(core.mock(&q))
+}
+
+async fn share(State(core): State<Arc<Core>>, Query(q): Query<HashMap<String, String>>) -> Response {
+    response(core.share(&q))
+}
+
+async fn generate(State(core): State<Arc<Core>>, Query(q): Query<HashMap<String, String>>) -> Response {
+    response(core.generate(&q))
+}
+
+/// route_core::R → axum Response：Content-Type 为 None 时不设头（对齐现状空响应）。
+fn response(r: R) -> Response {
+    let mut res = Response::new(Body::from(r.body));
+    *res.status_mut() = StatusCode::from_u16(r.status).expect("valid status");
+    if let Some(ct) = r.ct {
+        res.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static(ct));
+    }
+    res
 }

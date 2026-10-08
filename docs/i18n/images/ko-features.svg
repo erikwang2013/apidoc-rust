@@ -61,7 +61,7 @@
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">구현됨 M5</text>
   <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">3형식 내보내기(M5)</text>
   <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger(OpenAPI 3.0)</text>
-  <text x="500" y="450" font-size="13" fill="#333">info.version은 VERSION 파일에서 가져옴(빌드 시 사전 직렬화)</text>
+  <text x="500" y="450" font-size="13" fill="#333">info.version은 Cargo 패키지 버전에서 가져옴(빌드 시 사전 직렬화)</text>
   <text x="500" y="470" font-size="13" fill="#333">UI / api.json / 내보내기 동일 데이터 모델 공용</text>
 
   <!-- 카드 7: M6a 비밀번호 인증 -->

@@ -61,7 +61,7 @@
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">実装済み M5</text>
   <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">3 形式エクスポート（M5）</text>
   <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger（OpenAPI 3.0）</text>
-  <text x="500" y="450" font-size="13" fill="#333">info.version は VERSION ファイルから取得（ビルド時に事前シリアライズ）</text>
+  <text x="500" y="450" font-size="13" fill="#333">info.version は Cargo パッケージバージョンから取得（ビルド時に事前シリアライズ）</text>
   <text x="500" y="470" font-size="13" fill="#333">UI / api.json / エクスポートは同一データモデルを共用</text>
 
   <!-- カード 7：M6a パスワード認証 -->

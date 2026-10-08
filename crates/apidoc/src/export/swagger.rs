@@ -5,7 +5,8 @@
 use crate::{ApiDoc, DocEndpoint, DocExample, DocParam};
 use serde_json::{json, Map, Value};
 
-/// `version` 为项目版本（OpenAPI 3.0 info.version 必填），调用方从 VERSION 文件提供。
+/// `version` 为项目版本（OpenAPI 3.0 info.version 必填），适配器传 Cargo 包版本
+/// （`env!("CARGO_PKG_VERSION")`，见 src/route_core.rs）。
 pub fn render(doc: &ApiDoc, version: &str) -> Value {
     let mut paths = Map::new();
     for ep in doc.endpoints.iter().filter(|e| !e.not_debug) {

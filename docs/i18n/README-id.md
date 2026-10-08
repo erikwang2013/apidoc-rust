@@ -68,7 +68,7 @@ Pendekatan implementasi apidoc-rust:
 
 - **Ekspor tiga format** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), crate inti menyediakan `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **Rute ekspor**: adaptor menambah `GET /apidoc/export?format=md|ts|swagger`, format tidak dikenal mengembalikan 400; Content-Type masing-masing `text/markdown` / `application/typescript` / `application/json`
-- **markdown**: direktori berkelompok + tabel parameter + blok respons; **typescript**: menghasilkan tipe `{Name}Params` / `{Name}Result` per namespace group, antarmuka tanpa group masuk ke `defaultGroup` (`default` kata cadangan TS); **swagger**: `info.version` diambil dari isi file `VERSION` di root
+- **markdown**: direktori berkelompok + tabel parameter + blok respons; **typescript**: menghasilkan tipe `{Name}Params` / `{Name}Result` per namespace group, antarmuka tanpa group masuk ke `defaultGroup` (`default` kata cadangan TS); **swagger**: `info.version` diambil dari versi paket Cargo
 - **Adaptor actix-web** (`crates/apidoc/src/actix.rs`): fungsionalitas 1:1 dengan adaptor axum — `apidoc_routes(ApidocConfig) -> Scope` memasang /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` mengizinkan lintas-domain
 - **Berbagi UI**: UI dokumentasi (`src/ui.html`) dipindahkan ke atas ke crate inti, diekspor sebagai `pub const UI_HTML`, kedua adaptor merujuk salinan yang sama (aman saat packaging rilis)
 
@@ -103,7 +103,7 @@ Pendekatan implementasi apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Konfigurasi workspace (resolver 2)
-├── VERSION                    # Versi proyek (v1.6.0)
+├── VERSION                    # Versi proyek (v1.6.1)
 ├── crates/
 │   ├── apidoc/                # Inti runtime (independen kerangka kerja)
 │   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # file deskripsi OpenAPI 3.0.0 (application/
 
 - **markdown**: cocok ditempel ke Wiki proyek / catatan rilis, mengeluarkan direktori per grup, setiap antarmuka dengan tabel parameter dan blok respons;
 - **typescript**: frontend bisa langsung ditempel sebagai definisi tipe; antarmuka tanpa group masuk ke namespace `defaultGroup` (`default` kata cadangan TS, tidak bisa dijadikan pengenal);
-- **swagger**: `info.version` diambil dari isi file `VERSION` di root (saat ini 1.6.0), bisa langsung diimpor ke Swagger UI atau generator kode.
+- **swagger**: `info.version` diambil dari versi paket Cargo (saat ini 1.6.1), bisa langsung diimpor ke Swagger UI atau generator kode.
 
 ### 7. Adaptor actix-web
 

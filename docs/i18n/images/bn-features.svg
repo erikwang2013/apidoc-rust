@@ -61,7 +61,7 @@
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M5</text>
   <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">তিন ফরম্যাটে এক্সপোর্ট (M5)</text>
   <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI 3.0)</text>
-  <text x="500" y="450" font-size="13" fill="#333">info.version VERSION ফাইল থেকে (বিল্ড-টাইম প্রি-সিরিয়ালাইজেশন)</text>
+  <text x="500" y="450" font-size="13" fill="#333">info.version Cargo প্যাকেজ ভার্সন থেকে (বিল্ড-টাইম প্রি-সিরিয়ালাইজেশন)</text>
   <text x="500" y="470" font-size="13" fill="#333">UI / api.json / এক্সপোর্ট একই ডেটা মডেল শেয়ার করে</text>
 
   <!-- কার্ড 7: M6a পাসওয়ার্ড অথেনটিকেশন -->

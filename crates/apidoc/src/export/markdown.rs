@@ -51,10 +51,6 @@ fn render_endpoint(ep: &DocEndpoint, out: &mut String) {
         }
         out.push('\n');
     }
-/// 表格单元格转义：`|` 会拆列，换行吞掉。
-fn cell(s: &str) -> String {
-    s.replace('|', "\\|")
-}
 
     for (label, examples) in [("成功响应", &ep.success), ("错误响应", &ep.error)] {
         for ex in examples {
@@ -65,4 +61,9 @@ fn cell(s: &str) -> String {
         out.push_str(&ep.md);
         out.push_str("\n\n");
     }
+}
+
+/// 表格单元格转义：`|` 会拆列，换行吞掉。
+fn cell(s: &str) -> String {
+    s.replace('|', "\\|")
 }

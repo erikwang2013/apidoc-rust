@@ -232,7 +232,7 @@ dependencies = [
 
 [[package]]
 name = "apidoc-macros"
-version = "1.6.0"
+version = "1.6.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -241,7 +241,7 @@ dependencies = [
 
 [[package]]
 name = "apidoc-rust"
-version = "1.6.0"
+version = "1.6.1"
 dependencies = [
  "actix-cors",
  "actix-web",
@@ -260,7 +260,7 @@ dependencies = [
 
 [[package]]
 name = "apidoc-test-fixtures"
-version = "1.6.0"
+version = "1.6.1"
 dependencies = [
  "apidoc-rust",
  "linkme",

@@ -61,7 +61,7 @@
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implementado M5</text>
   <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">Exportação em três formatos (M5)</text>
   <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI 3.0)</text>
-  <text x="500" y="450" font-size="13" fill="#333">info.version vem do arquivo VERSION (pré-serializado no build)</text>
+  <text x="500" y="450" font-size="13" fill="#333">info.version vem da versão do pacote Cargo (pré-serializado no build)</text>
   <text x="500" y="470" font-size="13" fill="#333">UI / api.json / exportação compartilham o mesmo modelo de dados</text>
 
   <!-- Card 7: M6a autenticação por senha -->

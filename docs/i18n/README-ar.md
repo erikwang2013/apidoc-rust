@@ -68,7 +68,7 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 
 - **التصدير بثلاث صيغ** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0)، النواة توفر `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **مسار التصدير**: المحول يضيف `GET /apidoc/export?format=md|ts|swagger`، والصيغة غير المعروفة تعيد 400؛ وContent-Type تكون `text/markdown` / `application/typescript` / `application/json` على التوالي
-- **markdown**: فهرس مجمّع + جدول معاملات + كتلة استجابة؛ **typescript**: توليد أنواع `{Name}Params` / `{Name}Result` ضمن نطاق group، والواجهات غير المجمّعة تقع في `defaultGroup` (`default` كلمة محجوزة في TS)؛ **swagger**: `info.version` مأخوذ من محتوى ملف `VERSION` في جذر المشروع
+- **markdown**: فهرس مجمّع + جدول معاملات + كتلة استجابة؛ **typescript**: توليد أنواع `{Name}Params` / `{Name}Result` ضمن نطاق group، والواجهات غير المجمّعة تقع في `defaultGroup` (`default` كلمة محجوزة في TS)؛ **swagger**: `info.version` مأخوذ من إصدار حزمة Cargo
 - **محول actix-web** (`crates/apidoc/src/actix.rs`): وظائف متطابقة 1:1 مع محول axum — `apidoc_routes(ApidocConfig) -> Scope` يركّب /apidoc و/apidoc/api.json و/apidoc/mock و/apidoc/export، و`cors_layer(CorsConfig)` يسمح بالطلبات عبر النطاقات
 - **مشاركة الواجهة**: واجهة الوثائق (`src/ui.html`) نُقلت للأعلى إلى النواة، وتُصدَّر باسم `pub const UI_HTML`، والمحولان يشيران إلى النسخة نفسها (آمن عند نشر الحزمة)
 
@@ -103,7 +103,7 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 ```
 apidoc-rust/
 ├── Cargo.toml                 # إعداد workspace (resolver 2)
-├── VERSION                    # إصدار المشروع (v1.6.0)
+├── VERSION                    # إصدار المشروع (v1.6.1)
 ├── crates/
 │   ├── apidoc/                # النواة في زمن التشغيل (مستقلة عن الإطار)
 │   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # ملف وصف OpenAPI 3.0.0 (application/j
 
 - **markdown**: مناسب للصقه في Wiki المشروع / ملاحظات الإصدار، يخرج فهرسًا مجمّعًا حسب المجموعة، وكل واجهة مع جدول معاملات وكتلة استجابة؛
 - **typescript**: الواجهة الأمامية يمكنها لصقه مباشرة كتعريفات أنواع؛ الواجهات غير المجمّعة تقع في نطاق `defaultGroup` (`default` كلمة محجوزة في TS، لا يمكن استخدامها كمعرّف)؛
-- **swagger**: `info.version` مأخوذ من محتوى ملف `VERSION` في جذر المشروع (حاليًا 1.6.0)، ويمكن استيراده مباشرة إلى Swagger UI أو مولّدات الكود.
+- **swagger**: `info.version` مأخوذ من إصدار حزمة Cargo (حاليًا 1.6.1)، ويمكن استيراده مباشرة إلى Swagger UI أو مولّدات الكود.
 
 ### 7. محول actix-web
 

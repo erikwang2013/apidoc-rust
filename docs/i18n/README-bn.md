@@ -68,7 +68,7 @@ apidoc-rust-এর বাস্তবায়ন দৃষ্টিভঙ্গ
 
 - **তিন ফরম্যাটে এক্সপোর্ট** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), কোর ক্রেট `export::markdown::render` / `export::typescript::render` / `export::swagger::render` সরবরাহ করে
 - **এক্সপোর্ট রাউট**: অ্যাডাপ্টারে নতুন `GET /apidoc/export?format=md|ts|swagger`, অজানা format-এ 400; Content-Type যথাক্রমে `text/markdown` / `application/typescript` / `application/json`
-- **markdown**: গ্রুপড ডিরেক্টরি + প্যারামিটার টেবিল + রেসপন্স ব্লক; **typescript**: group নেমস্পেস অনুযায়ী `{Name}Params` / `{Name}Result` টাইপ তৈরি, গ্রুপবিহীন ইন্টারফেস `defaultGroup`-এ পড়ে (`default` TS রিজার্ভড শব্দ); **swagger**: `info.version` রুটের `VERSION` ফাইলের কনটেন্ট থেকে নেওয়া
+- **markdown**: গ্রুপড ডিরেক্টরি + প্যারামিটার টেবিল + রেসপন্স ব্লক; **typescript**: group নেমস্পেস অনুযায়ী `{Name}Params` / `{Name}Result` টাইপ তৈরি, গ্রুপবিহীন ইন্টারফেস `defaultGroup`-এ পড়ে (`default` TS রিজার্ভড শব্দ); **swagger**: `info.version` Cargo প্যাকেজ ভার্সন থেকে নেওয়া
 - **actix-web অ্যাডাপ্টার** (`crates/apidoc/src/actix.rs`): axum অ্যাডাপ্টারের সাথে 1:1 ফাংশনালিটি—`apidoc_routes(ApidocConfig) -> Scope` /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export মাউন্ট করে, `cors_layer(CorsConfig)` ক্রস-অরিজিন পারমিশন দেয়
 - **UI শেয়ারিং**: ডকুমেন্ট UI (`src/ui.html`) কোর ক্রেটে স্থানান্তরিত, `pub const UI_HTML` এক্সপোর্ট হয়, দুই অ্যাডাপ্টারই একই কপি রেফার করে (রিলিজ প্যাকেজিংয়ে নিরাপদ)
 
@@ -103,7 +103,7 @@ apidoc-rust-এর বাস্তবায়ন দৃষ্টিভঙ্গ
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace কনফিগারেশন (resolver 2)
-├── VERSION                    # প্রজেক্ট ভার্সন (v1.6.0)
+├── VERSION                    # প্রজেক্ট ভার্সন (v1.6.1)
 ├── crates/
 │   ├── apidoc/                # রানটাইম কোর (ফ্রেমওয়ার্ক-নিরপেক্ষ)
 │   │   ├── src/lib.rs         # ডেটা মডেল + DocRegistry অ্যাগ্রিগেশন + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 বর্ণনা ফাই
 
 - **markdown**: প্রজেক্ট Wiki / রিলিজ নোটে পেস্ট করার উপযুক্ত, গ্রুপ অনুযায়ী ডিরেক্টরি আউটপুট, প্রতিটি ইন্টারফেসে প্যারামিটার টেবিল ও রেসপন্স ব্লক;
 - **typescript**: ফ্রন্টএন্ড সরাসরি টাইপ ডেফিনিশন হিসেবে পেস্ট করতে পারে; গ্রুপবিহীন ইন্টারফেস `defaultGroup` নেমস্পেসে পড়ে (`default` TS রিজার্ভড শব্দ, আইডেন্টিফায়ার হিসেবে ব্যবহার করা যাবে না);
-- **swagger**: `info.version` রুটের `VERSION` ফাইলের কনটেন্ট থেকে নেওয়া (বর্তমানে 1.6.0), সরাসরি Swagger UI বা কোড জেনারেটরে ইমপোর্ট করা যায়।
+- **swagger**: `info.version` Cargo প্যাকেজ ভার্সন থেকে নেওয়া (বর্তমানে 1.6.1), সরাসরি Swagger UI বা কোড জেনারেটরে ইমপোর্ট করা যায়।
 
 ### ৭. actix-web অ্যাডাপ্টার
 
