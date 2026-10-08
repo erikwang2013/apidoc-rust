@@ -103,7 +103,7 @@ apidoc-rust の実装方針：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 設定（resolver 2）
-├── VERSION                    # プロジェクトバージョン（v1.6.1）
+├── VERSION                    # プロジェクトバージョン（v1.6.2）
 ├── crates/
 │   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
 │   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 記述ファイル（applica
 
 - **markdown**：プロジェクト Wiki / リリースノートに貼り付けるのに適しており、グループごとにディレクトリを出力し、各インターフェースにパラメータ表とレスポンスブロック付き；
 - **typescript**：フロントエンドがそのまま型定義として貼り付け可能；未グループのインターフェースは `defaultGroup` 名前空間に入る（`default` は TS の予約語のため識別子にできない）；
-- **swagger**：`info.version` は Cargo パッケージバージョンを取得（現在 1.6.1）、そのまま Swagger UI やコードジェネレータにインポート可能。
+- **swagger**：`info.version` は Cargo パッケージバージョンを取得（現在 1.6.2）、そのまま Swagger UI やコードジェネレータにインポート可能。
 
 ### 7. actix-web アダプタ
 

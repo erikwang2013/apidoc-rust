@@ -103,7 +103,7 @@ Enfoque de implementación de apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuración del workspace (resolver 2)
-├── VERSION                    # versión del proyecto (v1.6.1)
+├── VERSION                    # versión del proyecto (v1.6.2)
 ├── crates/
 │   ├── apidoc/                # núcleo en tiempo de ejecución (independiente del framework)
 │   │   ├── src/lib.rs         # modelo de datos + agregación DocRegistry + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # archivo descriptivo OpenAPI 3.0.0 (applica
 
 - **markdown**: ideal para pegar en el Wiki del proyecto / notas de versión, índice por grupos, cada interfaz con tabla de parámetros y bloque de respuesta;
 - **typescript**: el front puede pegar directamente las definiciones de tipos; las interfaces sin grupo caen en el namespace `defaultGroup` (`default` es palabra reservada de TS, no puede usarse como identificador);
-- **swagger**: `info.version` toma la versión del paquete de Cargo (actualmente 1.6.1), importable directamente en Swagger UI o en un generador de código.
+- **swagger**: `info.version` toma la versión del paquete de Cargo (actualmente 1.6.2), importable directamente en Swagger UI o en un generador de código.
 
 ### 7. Adaptador actix-web
 

@@ -103,7 +103,7 @@ Der Umsetzungsansatz von apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Workspace-Konfiguration (resolver 2)
-├── VERSION                    # Projektversion (v1.6.1)
+├── VERSION                    # Projektversion (v1.6.2)
 ├── crates/
 │   ├── apidoc/                # Laufzeitkern (frameworkunabhängig)
 │   │   ├── src/lib.rs         # Datenmodell + DocRegistry-Aggregation + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI-3.0.0-Beschreibungsdatei (applicat
 
 - **markdown**: geeignet zum Einfügen in Projekt-Wiki / Release-Notizen, Ausgabe eines Verzeichnisses nach Gruppen, jede Schnittstelle mit Parametertabelle und Antwortblock;
 - **typescript**: das Frontend kann es direkt als Typdefinitionen einfügen; nicht gruppierte Schnittstellen landen im Namensraum `defaultGroup` (`default` ist ein TS-Schlüsselwort und kann kein Bezeichner sein);
-- **swagger**: `info.version` stammt aus der Cargo-Paketversion (aktuell 1.6.1), direkt importierbar in Swagger UI oder Code-Generatoren.
+- **swagger**: `info.version` stammt aus der Cargo-Paketversion (aktuell 1.6.2), direkt importierbar in Swagger UI oder Code-Generatoren.
 
 ### 7. actix-web-Adapter
 

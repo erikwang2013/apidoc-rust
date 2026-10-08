@@ -103,7 +103,7 @@ apidoc-rust의 구현 방향:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 설정(resolver 2)
-├── VERSION                    # 프로젝트 버전(v1.6.1)
+├── VERSION                    # 프로젝트 버전(v1.6.2)
 ├── crates/
 │   ├── apidoc/                # 런타임 코어(프레임워크 무관)
 │   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 설명 파일(application/js
 
 - **markdown**: 프로젝트 Wiki / 릴리스 노트에 붙여넣기 적합, 그룹별 목차 출력, 각 인터페이스에 파라미터 테이블과 응답 블록 포함;
 - **typescript**: 프론트엔드가 바로 타입 정의로 붙여넣기 가능; 그룹 없는 인터페이스는 `defaultGroup` 네임스페이스에 포함(`default`는 TS 예약어라 식별자로 사용 불가);
-- **swagger**: `info.version`은 Cargo 패키지 버전 사용(현재 1.6.1), Swagger UI나 코드 생성기에 바로 가져오기 가능.
+- **swagger**: `info.version`은 Cargo 패키지 버전 사용(현재 1.6.2), Swagger UI나 코드 생성기에 바로 가져오기 가능.
 
 ### 7. actix-web 어댑터
 

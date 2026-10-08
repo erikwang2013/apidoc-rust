@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/apidoc", "crates/apidoc-macros", "crates/apidoc-test-fixtures"]
 
 [workspace.package]
-version = "1.6.1"
+version = "1.6.2"
 edition = "2021"
 license = "MIT"
 description = "Rust annotation-driven API documentation framework (apidoc-php port): zero-cost doc collection, web UI, export & mock"

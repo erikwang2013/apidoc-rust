@@ -103,7 +103,7 @@ apidoc-rust 的实现取向：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 配置（resolver 2）
-├── VERSION                    # 项目版本（v1.6.1）
+├── VERSION                    # 项目版本（v1.6.2）
 ├── crates/
 │   ├── apidoc/                # 单一发布包 apidoc-rust（lib 名 apidoc）
 │   │   ├── src/lib.rs         # 数据模型 + DocRegistry 聚合 + api.json + UI_HTML
@@ -308,7 +308,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 描述文件（application/j
 
 - **markdown**：适合贴进项目 Wiki / 发布说明，按分组输出目录，每个接口带参数表与响应块；
 - **typescript**：前端可直接粘贴为类型定义；未分组接口落入 `defaultGroup` 命名空间（`default` 是 TS 保留字，不能作标识符）；
-- **swagger**：`info.version` 取 Cargo 包版本（当前 1.6.1），可直接导入 Swagger UI 或代码生成器。
+- **swagger**：`info.version` 取 Cargo 包版本（当前 1.6.2），可直接导入 Swagger UI 或代码生成器。
 
 ### 7. actix-web 适配器
 

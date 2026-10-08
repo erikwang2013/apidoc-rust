@@ -103,7 +103,7 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 ```
 apidoc-rust/
 ├── Cargo.toml                 # إعداد workspace (resolver 2)
-├── VERSION                    # إصدار المشروع (v1.6.1)
+├── VERSION                    # إصدار المشروع (v1.6.2)
 ├── crates/
 │   ├── apidoc/                # النواة في زمن التشغيل (مستقلة عن الإطار)
 │   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # ملف وصف OpenAPI 3.0.0 (application/j
 
 - **markdown**: مناسب للصقه في Wiki المشروع / ملاحظات الإصدار، يخرج فهرسًا مجمّعًا حسب المجموعة، وكل واجهة مع جدول معاملات وكتلة استجابة؛
 - **typescript**: الواجهة الأمامية يمكنها لصقه مباشرة كتعريفات أنواع؛ الواجهات غير المجمّعة تقع في نطاق `defaultGroup` (`default` كلمة محجوزة في TS، لا يمكن استخدامها كمعرّف)؛
-- **swagger**: `info.version` مأخوذ من إصدار حزمة Cargo (حاليًا 1.6.1)، ويمكن استيراده مباشرة إلى Swagger UI أو مولّدات الكود.
+- **swagger**: `info.version` مأخوذ من إصدار حزمة Cargo (حاليًا 1.6.2)، ويمكن استيراده مباشرة إلى Swagger UI أو مولّدات الكود.
 
 ### 7. محول actix-web
 

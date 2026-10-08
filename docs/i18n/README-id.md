@@ -103,7 +103,7 @@ Pendekatan implementasi apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Konfigurasi workspace (resolver 2)
-├── VERSION                    # Versi proyek (v1.6.1)
+├── VERSION                    # Versi proyek (v1.6.2)
 ├── crates/
 │   ├── apidoc/                # Inti runtime (independen kerangka kerja)
 │   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json + UI_HTML
@@ -257,7 +257,7 @@ GET /apidoc/export?format=swagger   # file deskripsi OpenAPI 3.0.0 (application/
 
 - **markdown**: cocok ditempel ke Wiki proyek / catatan rilis, mengeluarkan direktori per grup, setiap antarmuka dengan tabel parameter dan blok respons;
 - **typescript**: frontend bisa langsung ditempel sebagai definisi tipe; antarmuka tanpa group masuk ke namespace `defaultGroup` (`default` kata cadangan TS, tidak bisa dijadikan pengenal);
-- **swagger**: `info.version` diambil dari versi paket Cargo (saat ini 1.6.1), bisa langsung diimpor ke Swagger UI atau generator kode.
+- **swagger**: `info.version` diambil dari versi paket Cargo (saat ini 1.6.2), bisa langsung diimpor ke Swagger UI atau generator kode.
 
 ### 7. Adaptor actix-web
 
