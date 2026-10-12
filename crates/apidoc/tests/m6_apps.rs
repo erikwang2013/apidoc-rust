@@ -45,6 +45,7 @@ fn config() -> ApidocConfig {
             items: vec![AppConfig { key: "v2".into(), title: "V2".into(), items: Vec::new(), password: None }],
             password: None,
         }],
+        ..Default::default()
     }
 }
 

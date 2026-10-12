@@ -69,9 +69,9 @@
   <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implémenté M6a</text>
   <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">Authentification par mot de passe</text>
-  <text x="60" y="580" font-size="13" fill="#333">GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; pour obtenir un token</text>
+  <text x="60" y="580" font-size="13" fill="#333">POST /apidoc/auth (JSON body) pour obtenir un token</text>
   <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock exigent ?token=, absent/expiré/erroné renvoie 401</text>
-  <text x="60" y="620" font-size="13" fill="#333">Enveloppe de chiffrement authcode pour l'émission (variante RC4 + somme de contrôle md5, MAC en temps constant)</text>
+  <text x="60" y="620" font-size="13" fill="#333">Signature HMAC-SHA256 (MAC en temps constant)</text>
   <text x="60" y="640" font-size="13" fill="#333">password / secret_key jamais sérialisés · le mot de passe de l'application prévaut sur le global</text>
 
   <!-- Carte 8 : M6b multi-applications multi-versions -->

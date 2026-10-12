@@ -48,11 +48,8 @@ async fn main() {
         .merge(apidoc_routes(ApidocConfig {
             title: "demo api".to_string(),
             description: Some("apidoc::axum 演示".to_string()),
-            auth: None,
-            tables: Vec::new(),
-            cache: None,
-            codegen: Vec::new(),
-            apps: Vec::new(),
+            // 其余配置（auth/apps/tables/cache/codegen）走默认值——新增字段不必改这里
+            ..Default::default()
         }))
         // 收紧模式演示：改为 CorsConfig { allow_origins: vec!["http://localhost:3000".into()] }
         .layer(cors_layer(CorsConfig::default()));

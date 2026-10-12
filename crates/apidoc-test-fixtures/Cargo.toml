@@ -2,10 +2,11 @@
 name = "apidoc-test-fixtures"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 description.workspace = true
 repository.workspace = true
 
 [dependencies]
-apidoc-rust = { path = "../apidoc", version = "1.6.2" }
+apidoc-rust = { path = "../apidoc", version = "2.0.0" }
 linkme = "0.3"

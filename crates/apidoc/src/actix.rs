@@ -20,7 +20,9 @@ pub fn cors_layer(config: CorsConfig) -> Cors {
     // Cors::default() 凭据为 false，空配置补 send_wildcard 产出字面 `*`（与 axum 一致），
     // 白名单命中时反射请求 Origin（与 tower-http AllowOrigin::list 一致）。
     let cors = Cors::default().allow_any_method().allow_any_header();
-    if config.allow_origins.is_empty() {
+    // `"*"` 与空列表同样走通配：actix-cors 的白名单遇到 `*` 只在 wrap 期报
+    // 一个没有上下文的 Transform error（见 route_core::CorsConfig 注释）。
+    if config.allow_origins.is_empty() || config.allow_origins.iter().any(|o| o == "*") {
         cors.allow_any_origin().send_wildcard()
     } else {
         config.allow_origins.iter().fold(cors, |c, o| c.allowed_origin(o))
@@ -40,7 +42,8 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
         // UI 页与宠物图标不设守卫（见 route_core::UI/PET）。
         .route("", web::get().to(|| async { response(route_core::UI) }))
         .route("/pet.svg", web::get().to(|| async { response(route_core::PET) }))
-        .route("/auth", web::get().to(auth))
+        // 登录用 POST：密码走 body，不进 URL/日志（GET 的 ?password= 已废弃）
+        .route("/auth", web::post().to(auth))
         // 以下数据路由均经 route_core 守卫，失败 401 DENIED_BODY
         .route("/api.json", web::get().to(api_json))
         .route("/export", web::get().to(export))
@@ -50,8 +53,8 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
 }
 
 // 各 handler 一行转发 core：判定与渲染在 route_core（两框架共享同一实现）。
-async fn auth(core: web::Data<Arc<Core>>, q: web::Query<HashMap<String, String>>) -> HttpResponse {
-    response(core.auth(&q))
+async fn auth(core: web::Data<Arc<Core>>, body: web::Bytes) -> HttpResponse {
+    response(core.auth(&body))
 }
 
 async fn api_json(core: web::Data<Arc<Core>>, q: web::Query<HashMap<String, String>>) -> HttpResponse {
@@ -81,5 +84,7 @@ fn response(r: R) -> HttpResponse {
     if let Some(ct) = r.ct {
         builder.content_type(ct);
     }
+    // 这些响应里带着 /apidoc/auth 的凭据与 token，任何一层缓存都不该留存
+    builder.insert_header(("Cache-Control", "no-store"));
     builder.body(r.body)
 }

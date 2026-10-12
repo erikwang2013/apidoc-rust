@@ -41,7 +41,7 @@
   <rect x="120" y="350" width="700" height="40" rx="8" fill="#fdedec" stroke="#c0392b" stroke-width="2"/>
   <rect x="730" y="354" width="62" height="20" rx="10" fill="#c0392b"/>
   <text x="761" y="368" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M6a</text>
-  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs：GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; で token 取得（authcode 暗号化スイート、password/secret_key は決してシリアライズしない）</text>
+  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs：POST /apidoc/auth (JSON body) で token 取得（HMAC-SHA256 署名、password/secret_key は決してシリアライズしない）</text>
 
   <!-- アダプタ層: 完了 -->
   <rect x="120" y="402" width="700" height="76" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -60,7 +60,7 @@
   <text x="750" y="509" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
   <text x="140" y="515" font-size="16" font-weight="bold" fill="#1e8449">表示層（完了）· ドキュメント UI デバッグパネル（内蔵 Html、外部依存ゼロ）</text>
   <text x="140" y="537" font-size="13" fill="#333">ディレクトリ閲覧 / オンラインデバッグ（CORS 直結）/ Mock 事前入力</text>
-  <text x="140" y="553" font-size="13" fill="#333">M6：パスワードマスク（フロントエンドで md5 を送信し token 取得）· アプリ/バージョンセレクタ · token は appKey ごとに localStorage へ分けて保存</text>
+  <text x="140" y="553" font-size="13" fill="#333">M6：パスワードマスク（POST で token 取得）· アプリ/バージョンセレクタ · token は appKey ごとに localStorage へ分けて保存</text>
 
   <!-- データフロー -->
   <rect x="120" y="566" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
@@ -68,7 +68,7 @@
   <text x="750" y="585" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
   <text x="140" y="588" font-size="13" fill="#333" font-family="monospace">ブラウザ → /apidoc（デバッグパネル）→ CORS 直結 → 対象 API（実際のリクエスト）</text>
   <text x="140" y="606" font-size="13" fill="#333" font-family="monospace">ブラウザ → /apidoc/mock → Mock データ（fake crate · 15 ルール）</text>
-  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">ブラウザ → /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token、データルートは ?token= 付きでアクセス</text>
+  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">ブラウザ → POST /apidoc/auth (JSON body) → token、データルートは ?token= 付きでアクセス</text>
 
   <!-- workspace -->
   <rect x="120" y="642" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>

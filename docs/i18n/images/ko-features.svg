@@ -69,9 +69,9 @@
   <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">구현됨 M6a</text>
   <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">비밀번호 인증</text>
-  <text x="60" y="580" font-size="13" fill="#333">GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt;로 token 교환</text>
+  <text x="60" y="580" font-size="13" fill="#333">POST /apidoc/auth (JSON body)로 token 교환</text>
   <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock은 ?token= 필수, 누락/만료/오류는 401</text>
-  <text x="60" y="620" font-size="13" fill="#333">authcode 암호화 스위트 발급(RC4 변형 + md5 체크섬, MAC 상수 시간)</text>
+  <text x="60" y="620" font-size="13" fill="#333">HMAC-SHA256 서명 발급(MAC 상수 시간)</text>
   <text x="60" y="640" font-size="13" fill="#333">password / secret_key는 절대 직렬화하지 않음 · 앱 비밀번호가 전역보다 우선</text>
 
   <!-- 카드 8: M6b 다중 앱·다중 버전 -->

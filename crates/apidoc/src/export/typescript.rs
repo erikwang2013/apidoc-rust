@@ -6,19 +6,60 @@ use crate::{ApiDoc, DocEndpoint, DocParam};
 
 use super::{camel, group_endpoints, pascal, NameAllocator};
 
+/// 转义进 TS 字符串字面量：反斜杠、指定引号、换行（裸换行不合法）。
+fn esc(s: &str, quote: char) -> String {
+    let mut out = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '\\' => out.push_str("\\\\"),
+            '\n' => out.push_str("\\n"),
+            '\r' => out.push_str("\\r"),
+            c if c == quote => {
+                out.push('\\');
+                out.push(c);
+            }
+            c => out.push(c),
+        }
+    }
+    out
+}
+
+/// 合法标识符原样，否则加双引号（对象/接口成员名允许字符串字面量）。
+fn member(name: &str) -> String {
+    let mut chars = name.chars();
+    let head_ok = chars.next().is_some_and(|c| c.is_alphabetic() || c == '_' || c == '$');
+    if head_ok && chars.all(|c| c.is_alphanumeric() || c == '_' || c == '$') {
+        return name.to_string();
+    }
+    format!("\"{}\"", esc(name, '"'))
+}
+
+/// 顶层 `export const` 名必须是标识符：非字母数字下划线剔除，空或数字开头加 `_`。
+fn ident(name: &str) -> String {
+    let cleaned: String = name.chars().filter(|c| c.is_alphanumeric() || *c == '_').collect();
+    if cleaned.is_empty() || cleaned.chars().next().is_some_and(|c| c.is_numeric()) {
+        format!("_{cleaned}")
+    } else {
+        cleaned
+    }
+}
+
 pub fn render(doc: &ApiDoc) -> String {
     let mut out = String::new();
     // 类型名按「方法 + URL 末段」派生：DocEndpoint 不携带端点 id/fn 名，
     // 且红线禁止 collect() 补字段，URL 是唯一稳定可用来源。
     // ponytail: GET /api/user/:id → GetUser；将来有 id 字段再换 fn 名。
     let mut type_names = NameAllocator::new();
+    // 命名空间名过清洗后可能撞车（"用户 组" 与 "用户-组" 都成 用户组），去重分配
+    let mut ns_names = NameAllocator::new();
     for (group, eps) in group_endpoints(doc) {
-        let ns = namespace_name(group);
+        let ns = ns_names.alloc(ident(&namespace_name(group)));
         out.push_str(&format!("export const {ns} = {{\n"));
         let mut keys = NameAllocator::new();
         for ep in &eps {
             let key = keys.alloc(camel(&base_name(ep)));
-            out.push_str(&format!("  {key}: '{}' as const,\n", ep.url));
+            // key 出自 pascal()，恒为合法标识符；url 原文来自注解，须转义
+            out.push_str(&format!("  {key}: '{}' as const,\n", esc(&ep.url, '\'')));
         }
         out.push_str("}\n\n");
         for ep in &eps {
@@ -67,7 +108,7 @@ fn render_interface(base: &str, suffix: &str, list: &[DocParam], out: &mut Strin
     out.push_str(&format!("export interface {base}{suffix} {{\n"));
     for p in list {
         let opt = if p.required { "" } else { "?" };
-        out.push_str(&format!("  {}{}: {}\n", p.name, opt, ts_type(p)));
+        out.push_str(&format!("  {}{}: {}\n", member(p.name), opt, ts_type(p)));
     }
     out.push_str("}\n\n");
 }
@@ -95,7 +136,7 @@ fn ts_object(children: &[DocParam]) -> String {
         .iter()
         .map(|c| {
             let opt = if c.required { "" } else { "?" };
-            format!("{}{}: {}", c.name, opt, ts_type(c))
+            format!("{}{}: {}", member(c.name), opt, ts_type(c))
         })
         .collect();
     format!("{{ {} }}", fields.join("; "))

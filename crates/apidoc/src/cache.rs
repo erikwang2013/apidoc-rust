@@ -1,5 +1,6 @@
-//! v2 文档缓存：`api.json` / `export` / `mock` 输出的进程内记忆化。
+//! v2 文档缓存：`mock` 输出的进程内记忆化。
 //!
+//! （`api.json` / `export` 在 `Core::build` 已物化，恒等重建无意义，不走这里。）
 //! 文档数据在进程生命周期内是静态的（注解在编译期收集），所以"缓存"本质是
 //! 记忆化：同一个 key 首次构建后复用，`ttl` 秒后失效重建（`ttl = 0` 表示永久）。
 //! 适配器在 `ApidocConfig.cache` 开启时用它包住构建闭包，关掉时完全不走此模块
@@ -54,7 +55,7 @@ pub fn memo(key: &str, ttl_secs: u64, build: impl FnOnce() -> String) -> String 
     fresh
 }
 
-/// 清空全部缓存（测试用；也让配置热更新后能立即生效）。
+/// 清空全部缓存（测试用；Core 建路由时只读一次配置，没有热更新路径）。
 pub fn clear() {
     lock().clear();
 }

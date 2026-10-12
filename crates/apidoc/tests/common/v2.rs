@@ -9,7 +9,7 @@
 
 use std::future::Future;
 
-use apidoc::auth::{md5_hex, AuthConfig};
+use apidoc::auth::{auth_issue, AuthConfig, AuthResult};
 use apidoc::{AppConfig, ApidocConfig, CacheConfig, TableDef, TableField};
 use serde_json::Value;
 
@@ -45,6 +45,7 @@ fn config() -> ApidocConfig {
         cache: None,
         codegen: Vec::new(),
         apps: Vec::new(),
+        ..Default::default()
     }
 }
 
@@ -83,20 +84,21 @@ fn app_of(key: &str, password: Option<&str>) -> AppConfig {
     }
 }
 
-/// /apidoc/auth 换取 token；`app_key` 为 Some 时带 appKey（应用密码优先）。
-async fn issue_token<F, Fut>(get: &F, adapter: &str, cfg: ApidocConfig, password: &str, app_key: Option<&str>) -> String
-where
-    F: Fn(ApidocConfig, String) -> Fut,
-    Fut: Future<Output = Resp>,
-{
-    let ak = app_key.map(|k| format!("&appKey={k}")).unwrap_or_default();
-    let uri = format!("/apidoc/auth?password={}{ak}", md5_hex(password));
-    let r = get(cfg, uri).await;
-    assert_eq!(r.status, 200, "[{adapter}] 换 token 期望 200，实际 {}", r.status);
-    serde_json::from_str::<Value>(&r.body).expect("auth 响应必须是合法 JSON")["token"]
-        .as_str()
-        .expect("auth 响应的 token 必须是字符串")
-        .to_string()
+/// 换 token：直接走服务端签发函数（路由只是 parse body + 签发 + 组响应，
+/// 其契约由 tests/axum_m6_auth.rs / actix_m6_auth.rs 覆盖）。`app_key` 为 Some
+/// 时应用密码优先。
+fn issue_token(cfg: &ApidocConfig, adapter: &str, password: &str, app_key: Option<&str>) -> String {
+    match auth_issue(password, app_key, cfg.auth.as_ref(), &cfg.apps) {
+        AuthResult::Token(t) => t,
+        other => panic!(
+            "[{adapter}] 换 token 失败：期望 Token，实际 {}",
+            match other {
+                AuthResult::Disabled => "Disabled",
+                AuthResult::Error => "Error",
+                AuthResult::Token(_) => unreachable!(),
+            }
+        ),
+    }
 }
 
 // ---- 1. GET /apidoc/generate ----
@@ -132,11 +134,11 @@ where
     );
     assert!(r.body.contains("CREATE TABLE"), "[{adapter}] schema.sql 期望含 CREATE TABLE，实际 {}", r.body);
     assert!(
-        r.body.contains("id int NOT NULL"),
-        "[{adapter}] schema.sql 期望含字段 `id int NOT NULL`，实际 {}",
+        r.body.contains("`id` int NOT NULL"),
+        "[{adapter}] schema.sql 期望含字段 `` `id` int NOT NULL ``，实际 {}",
         r.body
     );
-    assert!(r.body.contains("name string"), "[{adapter}] schema.sql 期望含字段 `name string`，实际 {}", r.body);
+    assert!(r.body.contains("`name` string"), "[{adapter}] schema.sql 期望含字段 `` `name` string ``，实际 {}", r.body);
 }
 
 pub async fn assert_generate_route_rejects_unknown_and_missing_template<F, Fut>(adapter: &str, get: F)
@@ -211,7 +213,7 @@ where
     assert_eq!(r.status, 401, "[{adapter}] 鉴权开启时 generate 无 token 期望 401，实际 {}", r.status);
 
     // /apidoc/auth 换 token 后两个路由都放行
-    let token = issue_token(&get, adapter, auth_cfg(), "pw", None).await;
+    let token = issue_token(&auth_cfg(), adapter, "pw", None);
     let uri = format!("/apidoc/share?app=api&url=%2Fapi%2Fuser%2Finfo&method=GET&token={}", enc(&token));
     let r = get(auth_cfg(), uri).await;
     assert_eq!(r.status, 200, "[{adapter}] 带 token 的 share 期望 200，实际 {}", r.status);
@@ -254,7 +256,7 @@ where
     let r = get(auth_none_app_pw(), share(None)).await;
     assert_eq!(r.status, 401, "[{adapter}] 应用配了密码时 share 无 token 期望 401，实际 {}", r.status);
     // 应用 token → 200，链接带 token，且该 token 对 appKey=api 守卫放行（端到端闭环）
-    let app_token = issue_token(&get, adapter, auth_none_app_pw(), "apppw", Some("api")).await;
+    let app_token = issue_token(&auth_none_app_pw(), adapter, "apppw", Some("api"));
     let r = get(auth_none_app_pw(), share(Some(&app_token))).await;
     assert_eq!(r.status, 200, "[{adapter}] 带应用 token 的 share 期望 200，实际 {}", r.status);
     let link = link_of(&r.body);
@@ -272,16 +274,39 @@ where
         apps: vec![app_of("api", Some("apppw"))],
         ..config()
     };
-    let global_token = issue_token(&get, adapter, global_plus_app_pw(), "pw", None).await;
+    let global_token = issue_token(&global_plus_app_pw(), adapter, "pw", None);
     let r = get(global_plus_app_pw(), share(Some(&global_token))).await;
     assert_eq!(
         r.status, 401,
         "[{adapter}] 全局 token 分享带独立密码应用期望 401（不提权），实际 {}",
         r.status
     );
-    let app_token = issue_token(&get, adapter, global_plus_app_pw(), "apppw", Some("api")).await;
+    let app_token = issue_token(&global_plus_app_pw(), adapter, "apppw", Some("api"));
     let r = get(global_plus_app_pw(), share(Some(&app_token))).await;
     assert_eq!(r.status, 200, "[{adapter}] 换应用 token 后 share 期望 200，实际 {}", r.status);
+
+    // 回归：`appKey=` 形式的分享请求（守卫接受该别名）必须用同一个应用绑定签发。
+    // 修复前守卫按 appKey 认应用、签发只读 `app` → 回落全局分支，应用密码持有者
+    // 换到的是全局 token（越权拿走整份文档）。
+    let app_token = issue_token(&global_plus_app_pw(), adapter, "apppw", Some("api"));
+    let uri = format!(
+        "/apidoc/share?appKey=api&url=%2Fapi%2Fuser%2Finfo&method=GET&token={}",
+        enc(&app_token)
+    );
+    let r = get(global_plus_app_pw(), uri).await;
+    assert_eq!(r.status, 200, "[{adapter}] appKey 形式的 share 期望 200，实际 {}", r.status);
+    let link = link_of(&r.body);
+    let minted = link_token(&link);
+    // 链接里的 token 必须只解锁该应用：带 appKey 放行，拿它当全局凭据（不带 appKey）
+    // 必须 401。修复前这里换到的是全局 token，第二问会 200（越权拿走整份文档）。
+    let r = get(
+        global_plus_app_pw(),
+        format!("/apidoc/api.json?appKey=api&token={minted}"),
+    )
+    .await;
+    assert_eq!(r.status, 200, "[{adapter}] 链接 token 期望解锁 appKey=api，实际 {}", r.status);
+    let r = get(global_plus_app_pw(), format!("/apidoc/api.json?token={minted}")).await;
+    assert_eq!(r.status, 401, "[{adapter}] 应用 token 不得当全局凭据用（越权回归），实际 {}", r.status);
 }
 
 /// 回归：无任何凭据配置（未配 apps / 应用无密码 + auth: None）时 share 照常 200

@@ -57,7 +57,7 @@ function warnBox(text) {
   w.style.marginTop = '8px';
   return w;
 }
-// 调试事件（对齐 apidoc-php 前置/后置事件）：new Function 执行用户脚本。
+// 调试事件（前置/后置脚本）：new Function 执行用户自己输入的脚本。
 // 返回 { ctx, ret, error }；error 非空表示脚本抛错，调用方继续正常流程。
 // 返回值是对象时浅合并回 ctx（前置改请求）；是字符串时由后置替换展示文本。
 
@@ -180,7 +180,7 @@ function debugForm(ep) {
   const leafQueryRows = leafRows(queryRows);
   const leafParamRows = leafRows(paramRows);
   // mock 预填：一次请求取三类 mock，逐个输入框填值（失败静默留空）
-  fetch(base + 'mock?url=' + encodeURIComponent(ep.url) + '&method=' + ep.method + (authQuery() ? '&' + authQuery() : ''))
+  fetch(base + 'mock?url=' + encodeURIComponent(ep.url) + '&method=' + encodeURIComponent(ep.method) + (authQuery() ? '&' + authQuery() : ''))
     .then(r => (r.ok ? r.json() : null))
     .then(mock => {
       if (!mock) return;

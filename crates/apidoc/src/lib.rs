@@ -15,7 +15,7 @@ pub use linkme::distributed_slice;
 /// M5: markdown / typescript / swagger(OpenAPI3) 三种导出格式。
 pub mod export;
 
-/// M6a: 密码鉴权（authcode token，对齐上游 apidoc-php）。
+/// M6a: 密码鉴权（HMAC-SHA256 签名令牌 + 恒定时间比对 + 失败退避）。
 pub mod auth;
 
 /// M4 mock 引擎（feature "mock"；axum/actix feature 隐含启用）。
@@ -48,7 +48,8 @@ pub const UI_HTML: &str = concat!(
 pub const PET_SVG: &str = include_str!("pet.svg");
 
 // ---- v2 模块（接口已冻结，实现见各文件）----
-/// v2 文档缓存：api.json / export / mock 输出的进程内记忆化（TTL 秒，0 = 永久）。
+/// v2 文档缓存：mock 输出的进程内记忆化（TTL 秒，0 = 永久）。
+/// api.json / export 在构建期已物化，不经此模块。
 pub mod cache;
 /// v2 代码生成器：模板 + 文档模型 → 前端 Api 文件 / 接口骨架 / 建表 SQL。
 pub mod codegen;
@@ -56,6 +57,8 @@ pub mod codegen;
 pub mod share;
 
 use serde::Serialize;
+use std::collections::HashSet;
+use std::sync::{Mutex, OnceLock};
 
 /// Collects every `#[apidoc::*]` annotation from all linked crates.
 #[distributed_slice]
@@ -72,6 +75,9 @@ pub struct DocFragmentEntry {
 }
 
 /// A single annotation payload.
+/// `#[non_exhaustive]`：变体随版本增补（M3 → M6b → v2 已加过 3 轮），
+/// 不标注的话每加一个都是下游 match 的破坏性变更。
+#[non_exhaustive]
 pub enum DocFragment {
     Title(&'static str),
     Desc(&'static str),
@@ -103,7 +109,8 @@ pub enum DocFragment {
 /// A documented example response body (shared by success / error).
 #[derive(Clone, Serialize)]
 pub struct DocExample {
-    /// HTTP status code, kept as a string to align with the PHP version.
+    /// HTTP status code as written in the annotation ("200" / "404" …);
+    /// validated by the macro, and normalized at export time when out of range.
     pub code: &'static str,
     /// Raw response body; stored verbatim, not validated as JSON.
     pub example: &'static str,
@@ -287,6 +294,9 @@ pub struct ApidocConfig {
     #[serde(skip)]
     pub apps: Vec<AppConfig>,
     // ---- v2 服务端配置：全部 #[serde(skip)]，未使用时 api.json 与 v1 字节级一致 ----
+    /// 写进 OpenAPI `info.version` 的「被文档化的 API 版本」；缺省为 apidoc-rust 包版本。
+    #[serde(skip)]
+    pub version: Option<String>,
     #[serde(skip)]
     pub tables: Vec<TableDef>,
     #[serde(skip)]
@@ -349,12 +359,16 @@ impl DocRegistry {
 
     /// 收集所有片段并按 id 合并为端点（不含 ref / table 解析，两个入口共用）。
     fn collect_fragments() -> (Vec<&'static str>, Vec<DocEndpoint>) {
-        // Sort by seq first: linkme's iteration order is linker-defined, not
-        // source order. Cross-crate ordering stays linker-arbitrary; seq ties
-        // between crates keep linkme's stable order. ponytail: acceptable for
-        // M1, revisit if multi-crate endpoint ordering ever matters.
+        // 排序键 (crate, seq)：linkme 的迭代顺序由链接器决定（不是源序），而 seq 是
+        // 每个 crate 各自从 0 开始的进程内计数器（见 apidoc-macros 的 SEQ），所以
+        // 只按 seq 排会让跨 crate 顺序随链接布局漂移（同一份源码两次构建产出不同
+        // 的 api.json/markdown 顺序）。crate 名只用于让跨 crate 顺序可复现，
+        // crate 内仍是源码声明序。
         let mut entries: Vec<&DocFragmentEntry> = DOC_FRAGMENTS.iter().collect();
-        entries.sort_by_key(|e| e.seq);
+        entries.sort_by_key(|e| {
+            let base = id_base(e.id);
+            (base.split("::").next().unwrap_or(base), e.seq)
+        });
         let mut ids: Vec<&'static str> = Vec::new();
         let mut endpoints: Vec<DocEndpoint> = Vec::new();
         for entry in entries {
@@ -445,12 +459,12 @@ fn append_table_fields(ep: &mut DocEndpoint, tables: &[TableDef]) {
     };
     for f in &def.fields {
         ep.returned.push(DocParam {
-            name: leak(&f.name),
-            ty: leak(&f.ty),
+            name: intern(&f.name),
+            ty: intern(&f.ty),
             required: f.required,
-            default: f.default.as_deref().map(leak),
-            desc: f.desc.as_deref().map(leak),
-            mock: f.mock.as_deref().map(leak),
+            default: f.default.as_deref().map(intern),
+            desc: f.desc.as_deref().map(intern),
+            mock: f.mock.as_deref().map(intern),
             // 表字段是标量列，不支持 children。
             children: &[],
         });
@@ -458,12 +472,20 @@ fn append_table_fields(ep: &mut DocEndpoint, tables: &[TableDef]) {
 }
 
 /// 把配置里的运行时字符串提升为 `&'static str`（宏模型只收静态串）。
-/// ponytail: 每次 `collect_doc` 调用 × 每个引用该表的端点 × 字段数都会重新
-/// leak 一次 —— 适配器只在建路由时调一次 collect_doc，实际有界；但 collect_doc
-/// 是公开 API，若在请求路径/循环里反复调用，内存线性增长（实测 200 字段 × 200 次
-/// ≈ 8.8MB）。届时再上一次性缓存复用，或把 DocParam 换成 Cow。
-fn leak(s: &str) -> &'static str {
-    Box::leak(s.to_string().into_boxed_str())
+/// 进程内驻留：同一个串只泄漏一次，反复调用 `collect_doc` 不再线性涨内存。
+/// ponytail: 驻留不回收（有界于"唯一字段串"的数量）；根治要把 DocParam 换成
+/// `Cow<'static, str>`，那是公开数据模型的改动，等真有需要再做。
+fn intern(s: &str) -> &'static str {
+    static POOL: OnceLock<Mutex<HashSet<&'static str>>> = OnceLock::new();
+    let pool = POOL.get_or_init(|| Mutex::new(HashSet::new()));
+    let mut g = pool.lock().unwrap_or_else(|e| e.into_inner());
+    if let Some(existing) = g.get(s) {
+        return existing;
+    }
+    // 不变量：插入的就是即将 return 的同一个引用
+    let leaked: &'static str = Box::leak(s.to_string().into_boxed_str());
+    g.insert(leaked);
+    leaked
 }
 
 /// Copies the ref target's `returned` into `endpoints[idx].returned`.
@@ -479,28 +501,45 @@ fn resolve_ref(
         return false;
     }
     visited.push(idx);
-    let Some(target) = endpoints[idx].r#ref.as_deref() else {
+    // 取出即拷贝：下面要可变借用 endpoints（含写 returned），不能继续持有 ref 的借用
+    let Some(target) = endpoints[idx].r#ref.clone() else {
         return true;
     };
-    let Some(j) = find_ref_target(target, ids) else {
+    let Some(j) = find_ref_target(&target, ids) else {
         eprintln!("apidoc: ref target `{target}` not found for `{}`", ids[idx]);
         return false;
     };
     if !resolve_ref(j, visited, ids, endpoints) {
         return false;
     }
+    if !endpoints[idx].returned.is_empty() {
+        // 复制是整体覆盖（有意如此），但引用方自己的 returned 会无声消失——没有
+        // 这个警告就只能等字段在 UI 里不见了才发现。
+        eprintln!(
+            "apidoc: ref `{target}` overwrites {} own returned field(s) of `{}`",
+            endpoints[idx].returned.len(),
+            ids[idx]
+        );
+    }
     endpoints[idx].returned = endpoints[j].returned.clone();
     true
 }
 
+/// id 去掉 `#行号` 尾缀（宏生成，用于区分同模块重名项）后的基名。
+fn id_base(id: &str) -> &str {
+    id.split('#').next().unwrap_or(id)
+}
+
 /// Locates a ref target: exact id match first, then `::fn_name` suffix match
-/// (the PHP-style global reference by function name).
+/// (referencing an endpoint by its function name). Both compare against the
+/// line-stripped base, so `m3_ref::foo` and `foo` keep matching after the macro
+/// started appending `#<item line>` to ids.
 fn find_ref_target(target: &str, ids: &[&'static str]) -> Option<usize> {
-    if let Some(j) = ids.iter().position(|id| *id == target) {
+    if let Some(j) = ids.iter().position(|id| id_base(id) == target) {
         return Some(j);
     }
     let suffix = format!("::{target}");
-    let mut hits = ids.iter().enumerate().filter(|(_, id)| id.ends_with(&suffix));
+    let mut hits = ids.iter().enumerate().filter(|(_, id)| id_base(id).ends_with(&suffix));
     let (j, _) = hits.next()?;
     if hits.next().is_some() {
         eprintln!("apidoc: ref `{target}` matches multiple endpoints, using `{}`", ids[j]);

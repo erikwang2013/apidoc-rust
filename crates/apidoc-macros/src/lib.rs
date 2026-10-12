@@ -12,7 +12,7 @@ mod args;
 use args::{HeaderArgs, ParamArgs, SuccessArgs};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
-use quote::{format_ident, quote};
+use quote::{format_ident, quote, quote_spanned};
 use std::sync::atomic::{AtomicU32, Ordering};
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
@@ -84,15 +84,15 @@ pub fn header(args: TokenStream, item: TokenStream) -> TokenStream {
         Ok(f) => f,
         Err(e) => return e.to_compile_error().into(),
     };
-    if args.name.as_deref().is_none_or(str::is_empty) {
+    if args.name.as_ref().is_none_or(|l| l.value().is_empty()) {
         return syn::Error::new(
-            Span::call_site(),
+            name_span(args.name.as_ref()),
             "apidoc::header requires a non-empty `name`",
         )
         .to_compile_error()
         .into();
     }
-    let name = args.name.as_deref().unwrap();
+    let name = args.name.as_ref().unwrap();
     let desc = opt_lit(&args.desc);
     let frag = quote! { apidoc::DocFragment::Header(apidoc::DocHeader { name: #name, desc: #desc }) };
     emit_many("header", item_fn, vec![frag])
@@ -225,9 +225,9 @@ fn param_fragment(kind: &str, args: TokenStream, item: TokenStream) -> TokenStre
         Ok(f) => f,
         Err(e) => return e.to_compile_error().into(),
     };
-    if args.name.as_deref().is_none_or(str::is_empty) {
+    if args.name.as_ref().is_none_or(|l| l.value().is_empty()) {
         return syn::Error::new(
-            Span::call_site(),
+            name_span(args.name.as_ref()),
             format!("apidoc::{kind} requires a non-empty `name`"),
         )
         .to_compile_error()
@@ -267,8 +267,9 @@ fn parse_item_fn(kind: &str, item: TokenStream) -> syn::Result<ItemFn> {
 }
 
 fn doc_param_expr(args: &ParamArgs) -> proc_macro2::TokenStream {
-    let name = args.name.as_deref().unwrap_or("");
-    let ty = args.ty.as_deref().unwrap_or("string");
+    // 子参数允许省略 name（顶层在 param_fragment 里已校验非空）
+    let name = args.name.as_ref().map(|l| l.value()).unwrap_or_default();
+    let ty = args.ty.as_ref().map_or_else(|| "string".to_string(), |l| l.value());
     let required = args.required;
     let default = opt_lit(&args.default);
     let desc = opt_lit(&args.desc);
@@ -287,11 +288,16 @@ fn doc_param_expr(args: &ParamArgs) -> proc_macro2::TokenStream {
     }
 }
 
-fn opt_lit(value: &Option<String>) -> proc_macro2::TokenStream {
+fn opt_lit(value: &Option<LitStr>) -> proc_macro2::TokenStream {
     match value {
-        Some(s) => quote! { Some(#s) },
+        Some(lit) => quote! { Some(#lit) },
         None => quote! { None },
     }
+}
+
+/// 出错位置：给了字面量就指向它（精确到 token），没给才落回整个属性。
+fn name_span(lit: Option<&LitStr>) -> Span {
+    lit.map_or_else(Span::call_site, LitStr::span)
 }
 
 /// Emits the original function plus one static fragment registration per
@@ -299,6 +305,11 @@ fn opt_lit(value: &Option<String>) -> proc_macro2::TokenStream {
 /// statics from a single attribute.
 fn emit_many(kind: &str, item_fn: ItemFn, frags: Vec<proc_macro2::TokenStream>) -> TokenStream {
     let fn_ident = item_fn.sig.ident.clone();
+    // id 以「注解项所在行」收尾：同一函数的每个注解拿到同一个 id（行号相同），
+    // 同模块内重名的两个函数（impl 方法、嵌套 fn）拿到不同 id。只用
+    // module_path!()::fn_name 时二者会静默合并成一个端点。
+    // line!() 的 span 钉在函数名上，才会报「项的所在行」而不是各注解自己所在的行。
+    let line_tokens = quote_spanned! {fn_ident.span()=> line!() };
     let kind_upper = kind.to_uppercase();
     let mut out = quote! { #item_fn };
     for frag in frags {
@@ -310,7 +321,7 @@ fn emit_many(kind: &str, item_fn: ItemFn, frags: Vec<proc_macro2::TokenStream>) 
         out.extend(quote! {
             #[apidoc::distributed_slice(apidoc::DOC_FRAGMENTS)]
             static #static_ident: apidoc::DocFragmentEntry = apidoc::DocFragmentEntry {
-                id: concat!(module_path!(), "::", stringify!(#fn_ident)),
+                id: concat!(module_path!(), "::", stringify!(#fn_ident), "#", #line_tokens),
                 seq: #seq,
                 frag: #frag,
             };

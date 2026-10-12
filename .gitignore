@@ -6,7 +6,6 @@ target/
 .env
 tmp
 .cursor
-.github.phpunit.cache
 .claude
 .claude-flow
 .swarm
@@ -15,6 +14,5 @@ ruvector.db
 .superpowers
 .agents
 skills-lock.json
-.php-cs-fixer.cache
 *.backup
 *.bak

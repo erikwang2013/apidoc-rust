@@ -238,9 +238,18 @@ fn builtin_api_ts_has_a_function_per_endpoint_with_url_and_method() {
     assert!(out.contains("示例 API"), "顶部应有 config.title 注释");
     for e in &doc.endpoints {
         assert!(out.contains(&format!("{} {}", e.method, e.url)), "缺 method+url: {}", e.url);
+        // url/method 落进 JS 代码位，必须走 JSON 字面量变量
         assert!(
-            out.contains(&format!("fetch(\"{}\", {{ method: \"{}\" }}", e.url, e.method)),
+            out.contains(&format!(
+                "fetch({:?}, {{ method: {:?} }})",
+                e.url, e.method
+            )),
             "函数体应 fetch 对应 url（{}）",
+            e.url
+        );
+        assert!(
+            out.contains(&format!("[{:?} + \" \" + {:?}]", e.method, e.url)),
+            "对象键应为 method+url 计算键（{}）",
             e.url
         );
         assert!(out.contains(&e.title), "缺 title: {}", e.title);
@@ -276,10 +285,10 @@ fn builtin_handler_rs_has_a_skeleton_per_endpoint() {
 fn builtin_schema_sql_creates_tables_with_fields() {
     let t = find("schema.sql", &[]).expect("内置 schema.sql 缺失");
     let out = render(t, &full_doc());
-    assert!(out.contains("CREATE TABLE IF NOT EXISTS user ("));
-    assert!(out.contains("id INTEGER NOT NULL DEFAULT 0, -- 主键"));
-    assert!(out.contains("nickname VARCHAR(32), -- "));
-    assert!(out.contains("email VARCHAR(128) NOT NULL -- 邮箱"));
+    assert!(out.contains("CREATE TABLE IF NOT EXISTS `user` ("));
+    assert!(out.contains("`id` INTEGER NOT NULL DEFAULT 0, -- 主键"));
+    assert!(out.contains("`nickname` VARCHAR(32), -- "));
+    assert!(out.contains("`email` VARCHAR(128) NOT NULL -- 邮箱"));
     assert!(out.contains(");"));
     assert!(!out.contains(",\n)"), "末字段不能带逗号");
     assert!(!out.contains("{{"), "不应残留未解析标签");
@@ -306,4 +315,93 @@ fn find_prefers_custom_and_falls_back_to_builtin() {
 fn render_is_deterministic() {
     let t = find("api.ts", &[]).unwrap();
     assert_eq!(render(t, &full_doc()), render(t, &full_doc()));
+}
+
+// —— 转义回归：表/字段名与描述来自配置，可能撞保留字或带换行 ——
+
+#[test]
+fn builtin_schema_sql_quotes_identifiers_and_flattens_comments() {
+    let t = find("schema.sql", &[]).expect("内置 schema.sql 缺失");
+    let mut doc = bare_doc();
+    doc.config.tables = vec![apidoc::TableDef {
+        key: "order".into(),
+        title: "订单\n表".into(),
+        fields: vec![apidoc::TableField {
+            name: "select".into(),
+            ty: "varchar(10)".into(),
+            required: true,
+            default: None,
+            desc: Some("第一行\n第二行".into()),
+            mock: None,
+        }],
+    }];
+    let out = render(t, &doc);
+    // 保留字标识符必须加反引号，否则建表语句直接语法错误
+    assert!(out.contains("CREATE TABLE IF NOT EXISTS `order` ( -- 订单 表"), "表名未加引号或注释未折叠:\n{out}");
+    assert!(out.contains("`select` varchar(10) NOT NULL -- 第一行 第二行"), "字段名未加引号或注释未折叠:\n{out}");
+    assert!(out.lines().all(|l| !l.contains("第二行") || l.contains("第一行 第二行")), "注释换行未折叠:\n{out}");
+}
+
+#[test]
+fn codegen_quote_ident_escapes_backticks() {
+    let t = find("schema.sql", &[]).expect("内置 schema.sql 缺失");
+    let mut doc = bare_doc();
+    doc.config.tables = vec![apidoc::TableDef {
+        key: "we`ird".into(),
+        title: "t".into(),
+        fields: vec![apidoc::TableField { name: "a`b".into(), ty: "int".into(), ..Default::default() }],
+    }];
+    let out = render(t, &doc);
+    assert!(out.contains("CREATE TABLE IF NOT EXISTS `we``ird`"), "反引号未翻倍转义:\n{out}");
+    assert!(out.contains("`a``b` int"), "字段反引号未翻倍转义:\n{out}");
+}
+
+// —— 转义回归：注解/配置里的引号、换行不得越出所在结构 ——
+
+#[test]
+fn builtin_api_ts_escapes_values_into_string_literals() {
+    let t = find("api.ts", &[]).expect("内置 api.ts 缺失");
+    let doc = ApiDoc {
+        config: ApidocConfig { title: "标题 */ 出口".into(), description: Some("第一行\n第二行".into()), ..Default::default() },
+        endpoints: vec![ep(
+            "恶意\"标题",
+            "/api/o'brien\";alert(1)//",
+            "GET",
+            "g",
+            "作者*/",
+        )],
+        apps: Vec::new(),
+    };
+    let out = render(t, &doc);
+    // url 里的引号/分号必须被转义在字符串字面量内部，不能落到代码位
+    assert!(out.contains(r#"fetch("/api/o'brien\";alert(1)//""#), "url 未按 JS 字面量转义:\n{out}");
+    assert!(!out.contains("alert(1)//\": async"), "url 越出了字符串字面量:\n{out}");
+    // 换行统一折叠：行注释不会被拆行
+    assert!(!out.lines().any(|l| l == "第二行"), "换行未折叠:\n{out}");
+    // 注释一律 // 行注释（块注释才会被 `*/` 提前关闭），
+    // 所以 `*/` 只会作为普通文本留在注释里，构不成出口
+    assert!(!out.contains("/*"), "不应再产出块注释:\n{out}");
+}
+
+#[test]
+fn sql_default_clause_quotes_strings_and_honours_numbers_and_null() {
+    let t = find("schema.sql", &[]).expect("内置 schema.sql 缺失");
+    let mut doc = bare_doc();
+    doc.config.tables = vec![TableDef {
+        key: "t".into(),
+        title: "t".into(),
+        fields: vec![
+            TableField { name: "a".into(), ty: "varchar(10)".into(), default: Some("hello".into()), ..Default::default() },
+            TableField { name: "b".into(), ty: "varchar(10)".into(), default: Some("it's".into()), ..Default::default() },
+            TableField { name: "c".into(), ty: "int".into(), default: Some("0".into()), ..Default::default() },
+            TableField { name: "d".into(), ty: "int".into(), default: Some("NULL".into()), ..Default::default() },
+            TableField { name: "e".into(), ty: "float".into(), default: Some("-1.5".into()), ..Default::default() },
+        ],
+    }];
+    let out = render(t, &doc);
+    assert!(out.contains("`a` varchar(10) DEFAULT 'hello'"), "字符串默认值应加引号:\n{out}");
+    assert!(out.contains("`b` varchar(10) DEFAULT 'it''s'"), "内部单引号应翻倍:\n{out}");
+    assert!(out.contains("`c` int DEFAULT 0"), "数字默认值不应加引号:\n{out}");
+    assert!(out.contains("`d` int DEFAULT NULL"), "NULL 不应加引号:\n{out}");
+    assert!(out.contains("`e` float DEFAULT -1.5"), "负数默认值不应加引号:\n{out}");
 }

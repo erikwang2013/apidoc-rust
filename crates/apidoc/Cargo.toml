@@ -4,6 +4,7 @@
 name = "apidoc-rust"
 version.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license.workspace = true
 description.workspace = true
 repository.workspace = true
@@ -15,19 +16,25 @@ name = "apidoc"
 [features]
 # 默认零重型依赖（M4 红线）；axum/actix 隐含启用 mock（适配器整体交付）
 mock = ["dep:fake"]
-axum = ["dep:axum", "dep:tower-http", "mock"]
-actix = ["dep:actix-web", "dep:actix-cors", "mock"]
+# bytes：适配器响应用的引用计数缓冲（Ui/导出产物 O(1) 克隆，不再逐请求复制全文）
+axum = ["dep:axum", "dep:tower-http", "dep:bytes", "mock"]
+actix = ["dep:actix-web", "dep:actix-cors", "dep:bytes", "mock"]
 
 [dependencies]
 linkme = "0.3"
 serde = { version = "1", features = ["derive"] }
-# M6a 鉴权：对齐上游 apidoc-php 的 md5 组合 token（唯一允许的新增依赖）
-md5 = "0.7"
+# 鉴权令牌：HMAC-SHA256 签名 + URL 安全 base64（无状态令牌，不自己造密码学）
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
+# secret_key 缺省时的进程内随机密钥（取 OS 熵源）
+getrandom = "0.2"
 # M5 导出（swagger::render 返回 Value）需要；原 dev-dependency 提升为正式依赖
 serde_json = "1"
-apidoc-macros = { path = "../apidoc-macros", version = "1.6.2" }
+apidoc-macros = { path = "../apidoc-macros", version = "2.0.0" }
 # 以下 optional：默认构建不拉任何框架/faker 依赖
 fake = { version = "3", features = ["chrono", "uuid"], optional = true }
+bytes = { version = "1", optional = true }
 axum = { version = "0.8", optional = true }
 tower-http = { version = "0.7", features = ["cors"], optional = true }
 actix-web = { version = "4", features = ["macros"], optional = true }

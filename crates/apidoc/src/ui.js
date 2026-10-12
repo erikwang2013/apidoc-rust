@@ -123,8 +123,9 @@ function render(ep) {
   detail.appendChild(debugPanel(ep));
 }
 // ---------- M6a 密码鉴权 ----------
-// 密码在前端 md5 后提交 /apidoc/auth；token 按应用分别存 localStorage，
-// 后续所有数据请求（api.json / mock）自动附带 token 与 appKey。
+// 密码以 POST body 交给 /apidoc/auth（前端不做摘要，摘要本身会被当成新密码）；
+// token 按应用分别存 localStorage，后续所有数据请求（api.json / mock）自动附带
+// token 与 appKey。
 
 let APIDOC_APP = ''; // 当前选中的应用 key（'' = 默认应用）
 
@@ -188,10 +189,16 @@ function showMask(msg) {
 }
 
 async function doAuth() {
-  const pw = maskPw.value.trim();
-  if (!pw) return;
+  // 原样提交：服务端比的是配置里的原始串，前端 trim 会让"首尾带空格的密码"永远登不进去
+  const pw = maskPw.value;
+  if (!pw.trim()) return;
   maskMsg.textContent = '';
-  const res = await fetch(base + 'auth?password=' + md5(pw) + (APIDOC_APP ? '&appKey=' + encodeURIComponent(APIDOC_APP) : ''));
+  // 密码走 POST body：不进 URL、不进访问日志与浏览器历史；服务端恒定时间比对。
+  const res = await fetch(base + 'auth', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(APIDOC_APP ? { password: pw, appKey: APIDOC_APP } : { password: pw }),
+  });
   if (res.status === 200) {
     localStorage.setItem(tokKey(), (await res.json()).token);
     location.reload();
@@ -204,50 +211,6 @@ async function doAuth() {
 }
 document.getElementById('mask-btn').onclick = doAuth;
 maskPw.addEventListener('keydown', e => { if (e.key === 'Enter') doAuth(); });
-// MD5（标准实现，公开领域算法）：仅用于本地对密码做摘要，绝不落盘
-function md5(input) {
-  const rotl = (x, n) => (x << n) | (x >>> (32 - n));
-  const bytes = [];
-  for (let i = 0; i < input.length; i++) {
-    const c = input.charCodeAt(i);
-    if (c < 0x80) bytes.push(c);
-    else if (c < 0x800) bytes.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f));
-    else bytes.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f));
-  }
-  const bitLen = bytes.length * 8;
-  const padded = bytes.slice();
-  padded.push(0x80);
-  while (padded.length % 64 !== 56) padded.push(0);
-  // 64 位长度低 4 字节（>>> 移位计数按 32 取模，i>=4 时 (bitLen >>> 8*i) 恒等于 bitLen，必须拆开写）
-  for (let i = 0; i < 4; i++) padded.push((bitLen >>> (8 * i)) & 0xff);
-  padded.push(0, 0, 0, 0); // 高 4 字节：消息 <4GiB 时恒为 0（ponytail: 超 4GiB 需 2^32 拆位）
-  const S = [7,12,17,22,7,12,17,22,7,12,17,22,7,12,17,22,5,9,14,20,5,9,14,20,5,9,14,20,5,9,14,20,4,11,16,23,4,11,16,23,4,11,16,23,4,11,16,23,6,10,15,21,6,10,15,21,6,10,15,21,6,10,15,21];
-  const K = [];
-  for (let i = 0; i < 64; i++) K[i] = Math.floor(Math.abs(Math.sin(i + 1)) * 0x100000000) >>> 0;
-  let a0 = 0x67452301, b0 = 0xefcdab89, c0 = 0x98badcfe, d0 = 0x10325476;
-  for (let off = 0; off < padded.length; off += 64) {
-    const M = [];
-    for (let i = 0; i < 16; i++) M[i] = padded[off + i*4] | (padded[off+i*4+1] << 8) | (padded[off+i*4+2] << 16) | (padded[off+i*4+3] << 24);
-    let A = a0, B = b0, C = c0, D = d0;
-    for (let i = 0; i < 64; i++) {
-      let F, g;
-      if (i < 16) { F = (B & C) | (~B & D); g = i; }
-      else if (i < 32) { F = (D & B) | (~D & C); g = (5*i + 1) % 16; }
-      else if (i < 48) { F = B ^ C ^ D; g = (3*i + 5) % 16; }
-      else { F = C ^ (B | ~D); g = (7*i) % 16; }
-      F = (F + A + K[i] + M[g]) >>> 0;
-      A = D; D = C; C = B;
-      B = (B + rotl(F, S[i])) >>> 0;
-    }
-    a0 = (a0 + A) >>> 0; b0 = (b0 + B) >>> 0; c0 = (c0 + C) >>> 0; d0 = (d0 + D) >>> 0;
-  }
-  const hex = n => {
-    let s = '';
-    for (let i = 0; i < 4; i++) s += ((n >>> (8 * i)) & 0xff).toString(16).padStart(2, '0');
-    return s;
-  };
-  return hex(a0) + hex(b0) + hex(c0) + hex(d0);
-}
 // ---------- M6b 多应用/版本 ----------
 // doc.apps 为配置树（key/title/items/endpoints）；未配置 apps 时选择器隐藏，
 // 行为与 M5 完全一致。切换应用/版本后按该节点渲染 endpoints，并重拉数据
@@ -301,12 +264,21 @@ function selectedEps(doc) {
 // 拉取 api.json：401 视为需要鉴权（token 缺失/过期），展示密码遮罩
 
 async function load() {
+  // v2 深链：先把 ?app= 落成"当前应用"再存 token —— token 的 localStorage 键、
+  // 首次请求带的 appKey 都取决于它。顺序反了就会：应用 token 存进应用键、
+  // 首次 api.json 却按全局键读取（空）→ 401 → 遮罩又不带 appKey → 密码永远不对，
+  // 应用分享链接直接打不开。
+  if (!APIDOC_APP && shareParams.get('app')) APIDOC_APP = shareParams.get('app');
   // v2 深链：token 先落盘（按 appKey 分键，与 mask 登录后的键一致）
   const st = shareParams.get('token');
   if (st) {
-    const ak = shareParams.get('app') || '';
+    const ak = APIDOC_APP;
     localStorage.setItem('apidoc_token' + (ak ? '_' + ak : ''), st);
+    // 落盘后立刻把 token 从地址栏与历史里摘掉（delete 只改对象，不改 location）：
+    // 留着等于把 bearer token 挂在浏览历史里。深链参数保留，刷新仍定位同一接口。
     shareParams.delete('token');
+    const rest = shareParams.toString();
+    history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
   }
   const res = await fetch(base + 'api.json' + (authQuery() ? '?' + authQuery() : ''));
   if (res.status === 401) { showMask(''); return; }
@@ -340,10 +312,12 @@ function renderEps(eps) {
     (groups[g] || (groups[g] = [])).push(ep);
   }
   const names = Object.keys(groups).sort((a, b) => a.localeCompare(b));
+  // 各组的链接单独记：nav 里所有 <a> 是整篇文档的先后顺序，拿组内下标 ei 去索引
+  // 会点到别的组（gi>0 必然点错，深链与首次渲染都走 pick）
+  const groupAnchors = [];
   const pick = (gi, ei) => {
-    const links = nav.querySelectorAll('a');
-    for (const x of links) x.classList.remove('active');
-    links[ei].classList.add('active');
+    for (const x of nav.querySelectorAll('a')) x.classList.remove('active');
+    groupAnchors[gi][ei].classList.add('active');
     render(groups[names[gi]][ei]);
   };
   names.forEach((name, gi) => {
@@ -351,6 +325,8 @@ function renderEps(eps) {
     // sort 注解权重优先（大者在前），未标注视为 0；相同权重时稳定排序
     // 保留声明序（seq），再按 method/url 兜底
     groups[name].sort((a, b) => (b.sort || 0) - (a.sort || 0) || a.method.localeCompare(b.method) || a.url.localeCompare(b.url));
+    const anchors = [];
+    groupAnchors.push(anchors);
     groups[name].forEach((ep, ei) => {
       const a = el('a');
       a.appendChild(badge(ep.method));
@@ -359,6 +335,7 @@ function renderEps(eps) {
         location.hash = '#g' + gi + '/e' + ei;
         pick(gi, ei);
       };
+      anchors.push(a);
       nav.appendChild(a);
     });
   });

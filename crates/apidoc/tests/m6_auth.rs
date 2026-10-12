@@ -1,7 +1,7 @@
 //! M6a 密码鉴权核心测试：token 签发/校验、过期、篡改、序列化红线与
 //! auth_issue / auth_guard_ok 的策略（应用密码优先于全局密码）。
 
-use apidoc::auth::{auth_check, auth_guard_ok, auth_issue, auth_token, md5_hex, AuthConfig, AuthResult};
+use apidoc::auth::{auth_check, auth_guard_ok, auth_issue, auth_token, AuthConfig, AuthResult};
 use apidoc::{AppConfig, ApidocConfig, DocRegistry};
 use serde_json::Value;
 use std::time::Duration;
@@ -24,9 +24,9 @@ fn app_pw(password: Option<&str>) -> AppConfig {
 #[test]
 fn token_roundtrip_and_wrong_password_rejected() {
     let c = cfg(true);
-    let ok = auth_token(&md5_hex(PW), &c);
+    let ok = auth_token(PW, &c);
     assert!(auth_check(&ok, &c), "正确密码签发的 token 应通过校验");
-    let bad = auth_token(&md5_hex("wrong"), &c);
+    let bad = auth_token("wrong", &c);
     assert!(!auth_check(&bad, &c), "错误密码签发的 token 不应通过校验");
     assert!(!auth_check("garbage", &c), "非 token 串不应通过校验");
 }
@@ -43,7 +43,7 @@ fn non_ascii_token_does_not_panic() {
 #[test]
 fn tampered_token_rejected() {
     let c = cfg(true);
-    let t = auth_token(&md5_hex(PW), &c);
+    let t = auth_token(PW, &c);
     let mut chars: Vec<char> = t.chars().collect();
     let idx = chars.len() / 2;
     chars[idx] = if chars[idx] == 'A' { 'B' } else { 'A' };
@@ -56,7 +56,7 @@ fn tampered_token_rejected() {
 fn expired_token_rejected() {
     let mut c = cfg(true);
     c.expire = 1;
-    let t = auth_token(&md5_hex(PW), &c);
+    let t = auth_token(PW, &c);
     assert!(auth_check(&t, &c));
     std::thread::sleep(Duration::from_millis(1200));
     assert!(!auth_check(&t, &c), "过期 token 不应通过校验");
@@ -88,6 +88,7 @@ fn config_auth_and_apps_omitted_when_absent() {
         cache: None,
         codegen: Vec::new(),
         apps: Vec::new(),
+        ..Default::default()
     });
     let v: Value = serde_json::to_value(&doc).unwrap();
     assert!(v["config"].get("auth").is_none(), "无 auth 配置时不得出现 auth 键（M5 字节级一致）");
@@ -98,11 +99,11 @@ fn config_auth_and_apps_omitted_when_absent() {
 #[test]
 fn auth_issue_policies() {
     // auth 未配置 → Disabled（404）
-    assert!(matches!(auth_issue(&md5_hex(PW), None, None, &[]), AuthResult::Disabled));
+    assert!(matches!(auth_issue(PW, None, None, &[]), AuthResult::Disabled));
     let c = cfg(true);
     // 全局：密码正确发 token，错误 → Error
-    assert!(matches!(auth_issue(&md5_hex(PW), None, Some(&c), &[]), AuthResult::Token(_)));
-    assert!(matches!(auth_issue(&md5_hex("nope"), None, Some(&c), &[]), AuthResult::Error));
+    assert!(matches!(auth_issue(PW, None, Some(&c), &[]), AuthResult::Token(_)));
+    assert!(matches!(auth_issue("nope", None, Some(&c), &[]), AuthResult::Error));
 }
 
 #[test]
@@ -111,20 +112,20 @@ fn auth_issue_app_password_takes_priority() {
     let c = cfg(true);
     // 应用密码正确（全局密码故意错）→ Token：应用密码优先
     assert!(matches!(
-        auth_issue(&md5_hex("app-pw"), Some("api"), Some(&c), &apps),
+        auth_issue("app-pw", Some("api"), Some(&c), &apps),
         AuthResult::Token(_)
     ));
     // 应用密码错误（全局密码正确）→ Error：不回落全局
-    assert!(matches!(auth_issue(&md5_hex(PW), Some("api"), Some(&c), &apps), AuthResult::Error));
+    assert!(matches!(auth_issue(PW, Some("api"), Some(&c), &apps), AuthResult::Error));
     // 应用未配置密码：回落全局规则
     let no_pw = vec![app_pw(None)];
     assert!(matches!(
-        auth_issue(&md5_hex(PW), Some("api"), Some(&c), &no_pw),
+        auth_issue(PW, Some("api"), Some(&c), &no_pw),
         AuthResult::Token(_)
     ));
     // auth 未配置但应用有密码：应用密码仍可签发（verifyAuth 语义，独立于 enable）
     assert!(matches!(
-        auth_issue(&md5_hex("app-pw"), Some("api"), None, &apps),
+        auth_issue("app-pw", Some("api"), None, &apps),
         AuthResult::Token(_)
     ));
 }
@@ -135,17 +136,38 @@ fn auth_guard_policies() {
     assert!(auth_guard_ok("", None, None, &[]));
     let c = cfg(true);
     assert!(!auth_guard_ok("", None, Some(&c), &[]), "启用后缺 token 应拒绝");
-    let t = auth_token(&md5_hex(PW), &c);
+    let t = auth_token(PW, &c);
     assert!(auth_guard_ok(&t, None, Some(&c), &[]));
     // 应用有密码：只认应用 token（全局未启用也拒绝缺 token）。
     // 签发与守卫必须用同一 auth 配置（真实流程都来自 doc.config.auth）：
     // 这里 auth 为 None，两侧都走默认 secret_key。
     let apps = vec![app_pw(Some("app-pw"))];
     assert!(!auth_guard_ok("", Some("api"), None, &apps), "应用有密码时缺 token 应拒绝");
-    let app_t = auth_token(&md5_hex("app-pw"), &AuthConfig::default());
+    let app_t = auth_token("app-pw", &AuthConfig::default());
     assert!(auth_guard_ok(&app_t, Some("api"), None, &apps));
     assert!(!auth_guard_ok(&t, Some("api"), None, &apps), "全局 token 不能通过应用密码");
     // 应用无密码：回落全局规则
     let no_pw = vec![app_pw(None)];
     assert!(auth_guard_ok("", Some("api"), None, &no_pw), "应用无密码且全局未启用 → 放行");
+}
+
+// —— 空密码失败关闭：空密码的凭据是公开信息，签发即等于放行任何人 ——
+
+#[test]
+fn empty_global_password_never_authenticates() {
+    let empty = AuthConfig { enable: true, password: String::new(), secret_key: "k".into(), expire: 0 };
+    // 空串当提交值（空密码的凭据是公开信息，等价于零凭据登录）
+    assert!(matches!(auth_issue("", None, Some(&empty), &[]), AuthResult::Error));
+    // 手搓一个按空凭据签的 token，校验侧同样拒绝
+    let forged_token = auth_token("", &empty);
+    assert!(!auth_check(&forged_token, &empty), "空密码 token 不得通过校验");
+    assert!(!auth_guard_ok(&forged_token, None, Some(&empty), &[]));
+}
+
+#[test]
+fn empty_app_password_never_authenticates() {
+    let apps = vec![app_pw(Some(""))];
+    assert!(matches!(auth_issue("", Some("api"), None, &apps), AuthResult::Error));
+    let forged_token = auth_token("", &AuthConfig::default());
+    assert!(!auth_guard_ok(&forged_token, Some("api"), None, &apps), "空应用密码 token 不得通过守卫");
 }

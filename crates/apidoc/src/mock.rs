@@ -12,7 +12,7 @@ use serde_json::{json, Map, Value};
 /// 未知 fake 规则只警告一次（每次 /apidoc/mock 请求都会走到这里，全量刷屏无意义）。
 static UNKNOWN_RULE_WARNED: AtomicBool = AtomicBool::new(false);
 
-/// DocEndpoint 中 mock 引擎需要的子集（DocEndpoint 本身不可 Clone）。
+/// DocEndpoint 中 mock 引擎需要的子集（只带匹配与生成用的字段，其余不复制）。
 /// url+method 用于路由精确匹配，三类参数用于生成 mock。
 pub struct MockEndpointSpec {
     pub url: String,

@@ -25,8 +25,6 @@ Rust の手続きマクロ（proc-macro）による API ドキュメント生成
 
 Apidoc は **Rust の手続きマクロ（proc-macro）** を解析して API インターフェースドキュメントを自動生成する Rust プラグインライブラリで、axum、actix-web などの主要フレームワークに対応しています。ドキュメントの自動生成に加えて、オンラインインターフェースデバッグ、Mock デバッグデータ、Json/TypeScript コード生成、インターフェースジェネレータ、コードジェネレータなどの機能を統合し、インターフェースの開発・デバッグ・納品までの全工程をカバーして、API 開発効率の向上を目指しています。
 
-> **プロジェクトの出典**：本プロジェクトは [apidoc-php](https://github.com/erikwang2013/apidoc-php)（PHP 8 の attributes で API ドキュメントを生成する composer 拡張）を参考に、「注釈＝ドキュメント」という能力を Rust ネイティブな形で実現したもので、erikwang2013 が継続的にメンテナンス・拡張しています。
-
 apidoc-rust の実装方針：
 
 - **コンパイル期生成**：ドキュメントは手続きマクロによりコンパイル期に生成され、ドキュメントとコードの同期が常に保たれます；
@@ -50,10 +48,10 @@ apidoc-rust の実装方針：
 
 ### 実装済み（M1–M3）
 
-- **注釈式ドキュメント**：`title` / `desc` / `method` / `url` / `param` / `query` / `returned` の 7 つの属性マクロで項目ごとに注釈します（PHP attributes の書き方に対応）。パラメータは `required` / `default` / `desc` / `mock` / `children` のネストに対応
+- **注釈式ドキュメント**：`title` / `desc` / `method` / `url` / `param` / `query` / `returned` の 7 つの属性マクロで項目ごとに注釈します。パラメータは `required` / `default` / `desc` / `mock` / `children` のネストに対応
 - **コンパイル期検証**：url は `/` で始まる必要があり、method はホワイトリスト、param の name は必須など、不正な注釈はコンパイル期にエラーになります（span 単位で正確）
 - **自動収集**：linkme の `distributed_slice` による静的登録で、手動のインターフェース一覧は不要。`DocRegistry::collect()` が id でマージし、seq で宣言順を復元、crate をまたいで自動収集します
-- **api.json 出力**：serde で統一ドキュメントデータモデル（config + endpoints）をシリアライズし、フィールドは PHP のセマンティクスに合わせます
+- **api.json 出力**：serde で統一ドキュメントデータモデル（config + endpoints）をシリアライズし、フィールド名はモデルとエクスポータで同一の定義を共用します
 - **axum アダプタ + 組み込みドキュメント UI**：ルートをマウントするだけでドキュメントページが使え、グループ別ディレクトリで閲覧できます（M2）
 - **注釈の拡充**：`tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` の 12 個の新注釈（M3）
 
@@ -74,8 +72,8 @@ apidoc-rust の実装方針：
 
 ### 実装済み（M6）
 
-- **パスワード認証（M6a）**：`AuthConfig { enable, password, secret_key, expire }` を有効にすると、クライアントは `GET /apidoc/auth?password=<md5(パスワード)>&appKey=<key>` で token を取得；データルート `/apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` には `?token=xxx` の添付が必要で、token の欠落/期限切れ/誤りは 401 を返し、ドキュメント UI はパスワード入力マスクを表示；token は authcode の暗号化スイートで署名（Discuz authcode を逐行移植：RC4 変種 + md5 チェックサム + padding なし base64）、ペイロードは `{key: md5(md5(元パスワード)), expire: now+expire}`、MAC 比較は定数時間
-- **認証の安全ライン**：`password` / `secret_key` は決してシリアライズされず、api.json の出力は認証を無効にした場合とバイトレベルで一致；auth が無効のとき `/apidoc/auth` は 404 を返し、データルートは直接通過；アプリ設定の独立 password がある場合はアプリのパスワードがグローバルのパスワードより優先；`secret_key` のデフォルトは `"apidoc#hgcode"`（有効かつ未設定のとき stderr に警告が 1 回）、`expire` のデフォルトは 86400 秒
+- **パスワード認証（M6a）**：`AuthConfig { enable, password, secret_key, expire }` を有効にすると、クライアントは `POST /apidoc/auth`（JSON body `{"password": "...", "appKey": "..."}`）で token を取得；データルート `/apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` には `?token=xxx` の添付が必要で、token の欠落/期限切れ/誤りは 401 を返し、ドキュメント UI はパスワード入力マスクを表示します。パスワードはリクエスト body で送信され（URL・アクセスログ・ブラウザ履歴には残りません）、サーバー側で定数時間比較され、クライアント側でのハッシュ化は行いません。token はステートレスな署名付き token `base64url(payload).base64url(HMAC-SHA256(payload))` で、ペイロードは `{"exp": …}`；署名鍵は `secret_key` とクレデンシャルから導出されるため、パスワードを変更すると発行済みの token はすべて無効になります。token は URL セーフな文字のみを使うので、そのまま共有リンクに使えます
+- **認証の安全ライン**：`password` / `secret_key` は決してシリアライズされず、api.json の出力は認証を無効にした場合とバイトレベルで一致；auth が無効のとき `/apidoc/auth` は 404 を返し、データルートは直接通過；アプリ設定の独立 password がある場合はアプリのパスワードがグローバルのパスワードより優先され、空のパスワード（グローバル/アプリ単位のいずれでも）は発行側・検証側の双方で常にフェイルクローズします；`secret_key` は**プロセスごとのランダムキー**にフォールバックし（再起動で token は失効、公開されたデフォルトキーは存在しません）、`expire` のデフォルトは 86400 秒；ログイン失敗が繰り返されると指数バックオフで応答します（最初の 3 回はペナルティなし、その後 1 秒 → 2 秒 → … 最大 60 秒、成功でリセット）；クレデンシャル/token の応答には `Cache-Control: no-store` が付きます
 - **複数アプリ・複数バージョン（M6b）**：`ApidocConfig.apps: Vec<AppConfig>`（`key` / `title` / `items` 再帰サブバージョン / `password`）でアプリツリーを設定、`#[apidoc::app("key")]` でインターフェースを指定のアプリ key に接続、key 未指定のインターフェースはデフォルトアプリに落ちる；api.json の出力に `doc.apps` ツリーが追加され、UI 上部にアプリ/バージョン選択セレクタが出現、token は appKey ごとに localStorage を分けて保存（アプリごとに独立したパスワードを持てる）
 
 ### 実装済み（v2）
@@ -103,11 +101,11 @@ apidoc-rust の実装方針：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 設定（resolver 2）
-├── VERSION                    # プロジェクトバージョン（v1.6.2）
+├── VERSION                    # プロジェクトバージョン（v2.0.0）
 ├── crates/
 │   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
 │   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML
-│   │   ├── src/auth.rs        # M6a パスワード認証（authcode token 発行/検証 + ルートガード）
+│   │   ├── src/auth.rs        # M6a パスワード認証（HMAC token の発行/検証 + ルートガード + バックオフ）
 │   │   ├── src/export/        # M5 エクスポート：markdown / typescript / swagger
 │   │   ├── src/ui.html        # 共有ドキュメント UI（コア crate がエクスポート、両アダプタが参照）
 │   │   ├── tests/             # 統合テスト（マクロ展開/集約/シリアライズ/クロス crate）
@@ -130,9 +128,10 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.6"        # または path = "crates/apidoc"
+apidoc-rust = "2.0"        # または path = "crates/apidoc"
 
 serde_json = "1"      # api.json 出力用
+linkme = "0.3"        # 必須：マクロが生成する登録コードがこれを参照します
 ```
 
 > アダプタは Web フレームワークに応じてどちらか一方を選びます：axum は `features = ["axum"]`、actix-web は `features = ["actix"]`（両者の機能は 1:1）。`mock`（Mock エンジン）はフレームワーク内部の依存で、アダプタ経由で自動的に導入されるため、通常は利用側が直接使う必要はありません。
@@ -169,7 +168,7 @@ fn get_user_info() -> String {
 ```rust
 fn main() {
     let doc = DocRegistry::collect_doc(ApidocConfig {
-        title: "我的 API".to_string(),
+        title: "マイ API".to_string(),
         description: None,
         auth: None,    // M6a パスワード認証、詳細は「8. パスワード認証」
         apps: vec![],  // M6b 複数アプリ・複数バージョン、詳細は「9. 複数アプリ・複数バージョン」
@@ -257,7 +256,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 記述ファイル（applica
 
 - **markdown**：プロジェクト Wiki / リリースノートに貼り付けるのに適しており、グループごとにディレクトリを出力し、各インターフェースにパラメータ表とレスポンスブロック付き；
 - **typescript**：フロントエンドがそのまま型定義として貼り付け可能；未グループのインターフェースは `defaultGroup` 名前空間に入る（`default` は TS の予約語のため識別子にできない）；
-- **swagger**：`info.version` は Cargo パッケージバージョンを取得（現在 1.6.2）、そのまま Swagger UI やコードジェネレータにインポート可能。
+- **swagger**：`info.version` は `ApidocConfig.version`（ドキュメント化された API バージョン）から取得し、未設定時は apidoc-rust のパッケージバージョン（現在 2.0.0）にフォールバック；path パラメータは URL テンプレートに基づくため、そのまま Swagger UI やコードジェネレータにインポート可能。
 
 ### 7. actix-web アダプタ
 
@@ -265,7 +264,7 @@ Web フレームワークに actix-web を使う場合は `features = ["actix"]`
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.6", features = ["actix"] }
+apidoc-rust = { version = "2.0", features = ["actix"] }
 ```
 
 ```rust
@@ -278,7 +277,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .service(apidoc_routes(ApidocConfig {
-                title: "我的 API".to_string(),
+                title: "マイ API".to_string(),
                 description: None,
                 auth: None,    // M6a パスワード認証、詳細は「8. パスワード認証」
                 apps: vec![],  // M6b 複数アプリ・複数バージョン、詳細は「9. 複数アプリ・複数バージョン」
@@ -291,22 +290,24 @@ async fn main() -> std::io::Result<()> {
 }
 ```
 
-マウント後は `/apidoc`（ドキュメント UI）、`/apidoc/api.json`（データ）、`/apidoc/mock`（Mock）、`/apidoc/export`（エクスポート）にアクセスできます。CORS 空設定はリテラル `*` を許可し（クレデンシャルなし）、`allow_origins` ホワイトリストを設定するとリフレクトされた Origin を正確に一致させます。どちらのモードもクレデンシャルは有効にしません。
+マウント後は `/apidoc`（ドキュメント UI）、`/apidoc/api.json`（データ）、`/apidoc/mock`（Mock）、`/apidoc/export`（エクスポート）にアクセスできます。CORS 空設定 — または `["*"]` — はリテラル `*` を許可し（クレデンシャルなし）、`allow_origins` ホワイトリストを設定するとリフレクトされた Origin を正確に一致させます。どちらのモードもクレデンシャルは有効にしません。
 
 ### 8. パスワード認証（M6a）
 
-`auth` を有効にすると、ドキュメントにパスワードが必要になります（上流 apidoc-php の Auth.php に合わせ、token は Discuz authcode の暗号化スイートを逐行移植）：
+`auth` を有効にすると、ドキュメントへのアクセスにパスワードが必要になります（HMAC-SHA256 署名付き token、サーバー側での定数時間比較、ログインバックオフ）：
+
+> **2.0 の破壊的変更**：ログインエンドポイントは `GET /apidoc/auth?password=…` から `POST /apidoc/auth`（JSON body）に移行し、token は旧形式のエンベロープから HMAC-SHA256 署名付き token に変わりました——**旧 token と旧呼び出し方式はもう動作しません**。クライアントは POST する必要があります。`secret_key` を明示的に設定していないデプロイでは、再起動時に発行済み token も失われます（プロセスごとのランダムキーが使用され、公開されたデフォルトは存在しません）。
 
 ```rust
 use apidoc::auth::AuthConfig;
 
 let doc = DocRegistry::collect_doc(ApidocConfig {
-    title: "我的 API".to_string(),
+    title: "マイ API".to_string(),
     description: None,
     auth: Some(AuthConfig {
         enable: true,
         password: "your-password".to_string(),
-        secret_key: "your-secret-key".to_string(), // デフォルト "apidoc#hgcode"（有効かつ未設定のとき stderr に警告が 1 回）
+        secret_key: "your-secret-key".to_string(), // 未設定時はプロセスごとのランダムキー：再起動で token は失効（マルチインスタンス構成では必ず明示設定）
         expire: 86400,                             // 秒；デフォルト 86400
     }),
     apps: vec![],
@@ -315,10 +316,11 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 
 **フロー**：
 
-1. クライアントが `GET /apidoc/auth?password=<md5(パスワード)>&appKey=<key>` で token を取得（成功すると `{"token":"..."}` を返し、パスワード誤りは 401）；auth が無効のときこのルートは 404 を返し、データルートは直接通過
-2. データルート `GET /apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` には `?token=xxx` の添付が必要（特定のアプリを選択した場合は同時に `&appKey=` を付ける）；token の欠落/期限切れ/誤りは 401 を返し、ドキュメント UI が自動的にパスワード入力マスクを表示、パスワード入力後にフロントエンドで md5 化して提出し token を取得
-3. token のペイロードは `{key: md5(md5(元パスワード)), expire: now+expire}`、`secret_key` により authcode で暗号化（RC4 変種 + md5 チェックサム + padding なし base64、MAC 比較は定数時間でタイミングサイドチャネルを防止）
-4. `password` / `secret_key` は決してシリアライズされず、api.json の出力は認証を無効にした場合とバイトレベルで一致；アプリに独立した `password` を設定した場合はアプリのパスワードがグローバルのパスワードより優先
+1. クライアントが `POST /apidoc/auth`（JSON body `{"password": "...", "appKey": "<key>"}`；`appKey` は独立パスワードを持つアプリを選択）で token を取得（成功すると `{"token":"..."}` を返し、パスワード誤りは 401、body が不正な場合は 400）；パスワードは body で送信され（URL やログには残りません）、クライアント側でのハッシュ化は行いません。auth が無効のときこのルートは 404 を返し、データルートは直接通過
+2. データルート `GET /apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` には `?token=xxx` の添付が必要（特定のアプリを選択した場合は同時に `&appKey=` を付ける）；token の欠落/期限切れ/誤りは 401 を返し、ドキュメント UI が自動的にパスワード入力マスクを表示、パスワード入力後にフロントエンドがそのまま POST して token を取得
+3. token は `base64url(payload).base64url(HMAC-SHA256(payload))` で、ペイロードは `{"exp": <Unix 秒>}`；署名鍵は HMAC-SHA256(`secret_key`, クレデンシャル) であるため、パスワードを変更すると古い token は直ちに無効になります。検証では MAC を定数時間で比較してから有効期限を確認；token は URL セーフな文字のみを使用
+4. `password` / `secret_key` は決してシリアライズされず、api.json の出力は認証を無効にした場合とバイトレベルで一致；アプリに独立した `password` を設定した場合はアプリのパスワードがグローバルのパスワードより優先され、空のパスワード（グローバル/アプリ単位）は常にフェイルクローズします
+5. ログイン失敗が繰り返されると指数バックオフで応答します（最初の 3 回はペナルティなし、その後 1 秒 → 2 秒 → … 最大 60 秒、成功でクリア）；クレデンシャル/token の応答には `Cache-Control: no-store` が付きます
 
 ### 9. 複数アプリ・複数バージョン（M6b）
 
@@ -334,7 +336,7 @@ fn get_user_info() -> String {
 
 ```rust
 let doc = DocRegistry::collect_doc(ApidocConfig {
-    title: "我的 API".to_string(),
+    title: "マイ API".to_string(),
     description: None,
     auth: None,
     apps: vec![
@@ -394,7 +396,7 @@ ApidocConfig {
 }
 ```
 
-使用できるテンプレート変数：トップレベルは `title` / `description`；`{{#each endpoints}}` 内は `title` / `url` / `method` / `group` / `desc` / `author`；`{{#each tables}}` 内は `key` / `title`、その中の `{{#each fields}}` 内は `name` / `ty` / `required` / `default` / `desc` / `mock`、ほかに派生変数 `not_null` / `default_clause` / `comma`（有効な SQL をそのまま生成するのに便利）。
+使用できるテンプレート変数：トップレベルは `title` / `description`；`{{#each endpoints}}` 内は `title` / `url` / `method` / `group` / `desc` / `author`；`{{#each tables}}` 内は `key` / `title`、その中の `{{#each fields}}` 内は `name` / `ty` / `required` / `default` / `desc` / `mock`、ほかに派生変数 `not_null` / `default_clause` / `comma` / `key_q` / `name_q`（有効な SQL をそのまま生成するのに便利で、`*_q` は引用符付き識別子）、`url_js` / `method_js`（JSON 文字列リテラルで、JS コードの位置にそのまま貼り付け可能）、`fn_name`（Rust の雛形用に識別子としてサニタイズされた `{method}_{group}`）。
 
 ### 12. デバッグ前処理/後処理スクリプト（v2）
 
@@ -423,7 +425,7 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 | M4 | オンラインデバッグ + Mock エンジン | ✅ 完了 |
 | M5 | markdown / typescript / swagger.json（OpenAPI3）のエクスポート | ✅ 完了 |
 | —  | actix-web アダプタ（axum と機能 1:1） | ✅ 完了 |
-| M6a | パスワード認証（authcode token + パスワードマスク、アプリのパスワード優先） | ✅ 完了 |
+| M6a | パスワード認証（HMAC-SHA256 署名付き token + パスワードマスク、アプリのパスワード優先） | ✅ 完了 |
 | M6b | 複数アプリ・複数バージョン（apps 設定ツリー + app アノテーション + UI セレクタ） | ✅ 完了 |
 | v2 | データテーブルフィールド参照 + ドキュメントキャッシュ + 共有リンク + コードジェネレータ + デバッグイベント | ✅ 完了 |
 

@@ -79,6 +79,7 @@ fn config_description_serializes_when_present() {
             cache: None,
             codegen: Vec::new(),
             apps: Vec::new(),
+            ..Default::default()
         },
         apps: Vec::new(), endpoints: Vec::new(),
     };

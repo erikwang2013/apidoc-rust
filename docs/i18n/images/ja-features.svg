@@ -69,9 +69,9 @@
   <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">実装済み M6a</text>
   <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">パスワード認証</text>
-  <text x="60" y="580" font-size="13" fill="#333">GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; で token 取得</text>
+  <text x="60" y="580" font-size="13" fill="#333">POST /apidoc/auth (JSON body) で token 取得</text>
   <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock は ?token= 必須、欠落/期限切れ/誤りは 401</text>
-  <text x="60" y="620" font-size="13" fill="#333">authcode 暗号化スイートで発行（RC4 変種 + md5 チェックサム、MAC は定数時間）</text>
+  <text x="60" y="620" font-size="13" fill="#333">HMAC-SHA256 署名で発行（MAC は定数時間）</text>
   <text x="60" y="640" font-size="13" fill="#333">password / secret_key は決してシリアライズしない · アプリのパスワードがグローバルより優先</text>
 
   <!-- カード 8：M6b 複数アプリ・複数バージョン -->

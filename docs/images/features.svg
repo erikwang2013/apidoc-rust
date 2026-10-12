@@ -69,9 +69,9 @@
   <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M6a</text>
   <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">密码鉴权</text>
-  <text x="60" y="580" font-size="13" fill="#333">GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; 换 token</text>
+  <text x="60" y="580" font-size="13" fill="#333">POST /apidoc/auth（JSON body）换 token</text>
   <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock 需带 ?token=，缺失/过期/错误返回 401</text>
-  <text x="60" y="620" font-size="13" fill="#333">authcode 加密封套签发（RC4 变体 + md5 校验和，MAC 恒定时间）</text>
+  <text x="60" y="620" font-size="13" fill="#333">HMAC-SHA256 签名令牌（签名恒定时间比对）</text>
   <text x="60" y="640" font-size="13" fill="#333">password / secret_key 永不序列化 · 应用密码优先于全局</text>
 
   <!-- 卡片 8：M6b 多应用多版本 -->

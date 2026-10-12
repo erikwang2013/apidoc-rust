@@ -5,11 +5,11 @@
 
 use std::future::Future;
 
-use apidoc::auth::{md5_hex, AuthConfig};
+use apidoc::auth::AuthConfig;
 use apidoc::{AppConfig, ApidocConfig};
 use serde_json::Value;
 
-use crate::common::{enc, Resp};
+use crate::common::{enc, login_body, Resp};
 
 #[allow(dead_code)]
 #[apidoc::title("受保护接口")]
@@ -33,12 +33,23 @@ fn enabled() -> AuthConfig {
     AuthConfig { enable: true, password: "secret".into(), secret_key: "k".into(), expire: 0 }
 }
 
-pub async fn assert_auth_disabled_route_404_and_data_open<F, Fut>(adapter: &str, get: F)
+pub async fn assert_auth_disabled_route_404_and_data_open<F, Fut, P, PFut>(adapter: &str, get: F, post: P)
 where
     F: Fn(ApidocConfig, String) -> Fut,
     Fut: Future<Output = Resp>,
+    P: Fn(ApidocConfig, String, String) -> PFut,
+    PFut: Future<Output = Resp>,
 {
+    // 登录只走 POST；旧的 GET ?password= 形态必须不复存在（免得密码再进 URL/日志）。
+    // 方法不匹配的具体码由框架决定（axum 405 + Allow，actix 默认 404），
+    // 这里钉的是"不再存在"这件事本身，不假装两框架在这层 1:1。
     let r = get(cfg(None, Vec::new()), "/apidoc/auth".to_string()).await;
+    assert!(
+        r.status == 405 || r.status == 404,
+        "[{adapter}] GET /apidoc/auth 应已不存在（404/405），实际 {}",
+        r.status
+    );
+    let r = post(cfg(None, Vec::new()), "/apidoc/auth".to_string(), login_body("x", None)).await;
     assert_eq!(
         r.status, 404,
         "[{adapter}] auth 未启用时 /apidoc/auth 应 404，实际 {}",
@@ -82,18 +93,32 @@ where
     );
 }
 
-pub async fn assert_auth_issue_and_token_flow<F, Fut>(adapter: &str, get: F)
+pub async fn assert_auth_issue_and_token_flow<F, Fut, P, PFut>(adapter: &str, get: F, post: P)
 where
     F: Fn(ApidocConfig, String) -> Fut,
     Fut: Future<Output = Resp>,
+    P: Fn(ApidocConfig, String, String) -> PFut,
+    PFut: Future<Output = Resp>,
 {
+    // 非法 body → 400（连密码都没有，不进比对）
+    let r = post(cfg(Some(enabled()), Vec::new()), "/apidoc/auth".to_string(), "{".to_string()).await;
+    assert_eq!(r.status, 400, "[{adapter}] 非法 JSON body 期望 400，实际 {}", r.status);
     // 错误密码 → 401 password error
-    let r = get(cfg(Some(enabled()), Vec::new()), "/apidoc/auth?password=deadbeef".to_string()).await;
+    let r = post(
+        cfg(Some(enabled()), Vec::new()),
+        "/apidoc/auth".to_string(),
+        login_body("deadbeef", None),
+    )
+    .await;
     assert_eq!(r.status, 401, "[{adapter}] 错误密码期望 401，实际 {}", r.status);
     assert!(r.body.contains("password error"), "[{adapter}] 错误密码缺 password error 响应体");
     // 正确密码 → token，随后数据路由全部放行
-    let uri = format!("/apidoc/auth?password={}", md5_hex("secret"));
-    let r = get(cfg(Some(enabled()), Vec::new()), uri).await;
+    let r = post(
+        cfg(Some(enabled()), Vec::new()),
+        "/apidoc/auth".to_string(),
+        login_body("secret", None),
+    )
+    .await;
     assert_eq!(r.status, 200, "[{adapter}] 正确密码期望 200，实际 {}", r.status);
     let token: String = serde_json::from_str::<Value>(&r.body).unwrap()["token"].as_str().unwrap().to_string();
     let r = get(
@@ -122,10 +147,12 @@ where
     assert_eq!(r.status, 200, "[{adapter}] 带 token 的 mock 期望 200，实际 {}", r.status);
 }
 
-pub async fn assert_app_password_takes_priority_over_global<F, Fut>(adapter: &str, get: F)
+pub async fn assert_app_password_takes_priority_over_global<F, Fut, P, PFut>(adapter: &str, get: F, post: P)
 where
     F: Fn(ApidocConfig, String) -> Fut,
     Fut: Future<Output = Resp>,
+    P: Fn(ApidocConfig, String, String) -> PFut,
+    PFut: Future<Output = Resp>,
 {
     let apps = vec![AppConfig {
         key: "api".into(),
@@ -137,8 +164,12 @@ where
     let r = get(cfg(Some(enabled()), apps.clone()), "/apidoc/api.json?appKey=api".to_string()).await;
     assert_eq!(r.status, 401, "[{adapter}] 缺 token 应拒绝，实际 {}", r.status);
     // 应用密码签发（appKey 优先：全局密码错也能拿到应用 token）
-    let uri = format!("/apidoc/auth?password={}&appKey=api", md5_hex("app-pw"));
-    let r = get(cfg(Some(enabled()), apps.clone()), uri).await;
+    let r = post(
+        cfg(Some(enabled()), apps.clone()),
+        "/apidoc/auth".to_string(),
+        login_body("app-pw", Some("api")),
+    )
+    .await;
     assert_eq!(r.status, 200, "[{adapter}] 应用密码签发期望 200，实际 {}", r.status);
     let token: String = serde_json::from_str::<Value>(&r.body).unwrap()["token"].as_str().unwrap().to_string();
     let r = get(
@@ -150,8 +181,12 @@ where
     let v: Value = serde_json::from_str(&r.body).unwrap();
     assert_eq!(v["apps"][0]["key"], "api", "[{adapter}] 应用树应进入 api.json，实际 {}", v["apps"]);
     // 全局密码 token 不能通过应用密码
-    let uri = format!("/apidoc/auth?password={}", md5_hex("secret"));
-    let r = get(cfg(Some(enabled()), apps.clone()), uri).await;
+    let r = post(
+        cfg(Some(enabled()), apps.clone()),
+        "/apidoc/auth".to_string(),
+        login_body("secret", None),
+    )
+    .await;
     assert_eq!(r.status, 200, "[{adapter}] 全局密码签发期望 200，实际 {}", r.status);
     let gtoken: String = serde_json::from_str::<Value>(&r.body).unwrap()["token"].as_str().unwrap().to_string();
     let r = get(

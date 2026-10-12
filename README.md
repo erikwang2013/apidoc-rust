@@ -25,8 +25,6 @@
 
 Apidoc 是一款通过解析 **Rust 过程宏（proc-macro）** 自动生成 API 接口文档的 Rust 插件库，兼容 axum、actix-web 等主流框架。除文档自动生成外，还集成了在线接口调试、Mock 调试数据、Json/TypeScript 代码生成、接口生成器、代码生成器等能力，覆盖接口开发、调试、交付的全流程，致力于提升 API 开发效率。
 
-> **项目来源**：本项目参考 [apidoc-php](https://github.com/erikwang2013/apidoc-php)（基于 PHP 8 attributes 生成 API 文档的 composer 扩展），把「注解即文档」的能力以 Rust 原生方式落地，由 erikwang2013 持续维护与扩展。
-
 apidoc-rust 的实现取向：
 
 - **编译期生成**：文档由过程宏在编译期生成，文档与代码永不失同步；
@@ -50,10 +48,10 @@ apidoc-rust 的实现取向：
 
 ### 已实现（M1-M3）
 
-- **注解式文档**：`title` / `desc` / `method` / `url` / `param` / `query` / `returned` 七个属性宏，逐条注解（对应 PHP attributes 写法），参数支持 `required` / `default` / `desc` / `mock` / `children` 嵌套
+- **注解式文档**：`title` / `desc` / `method` / `url` / `param` / `query` / `returned` 七个属性宏，逐条注解，参数支持 `required` / `default` / `desc` / `mock` / `children` 嵌套
 - **编译期校验**：url 必须以 `/` 开头、method 白名单、param name 必填等，非法注解编译期报错（span 精确）
 - **自动收集**：linkme `distributed_slice` 静态注册，无需手动接口清单；`DocRegistry::collect()` 按 id 合并、按 seq 恢复声明顺序，跨 crate 自动收集
-- **api.json 输出**：serde 序列化统一文档数据模型（config + endpoints），字段对齐 PHP 语义
+- **api.json 输出**：serde 序列化统一文档数据模型（config + endpoints），字段名与导出器共用同一份定义
 - **axum 适配器 + 内嵌文档 UI**：挂载路由即得文档页面，分组目录浏览（M2）
 - **注解补齐**：`tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` 12 个新注解（M3）
 
@@ -74,8 +72,8 @@ apidoc-rust 的实现取向：
 
 ### 已实现（M6）
 
-- **密码鉴权（M6a）**：`AuthConfig { enable, password, secret_key, expire }` 开启后，客户端 `GET /apidoc/auth?password=<md5(密码)>&appKey=<key>` 换取 token；数据路由 `/apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` 需附带 `?token=xxx`，token 缺失/过期/错误返回 401，文档 UI 弹出密码遮罩；token 为 authcode 加密封套签发（Discuz authcode 逐行移植：RC4 变体 + md5 校验和 + 无 padding base64），载荷 `{key: md5(md5(原始密码)), expire: now+expire}`，MAC 比对恒定时间
-- **鉴权安全红线**：`password` / `secret_key` 永不序列化，api.json 输出与未启用鉴权时字节级一致；auth 未启用时 `/apidoc/auth` 返回 404、数据路由直接放行；应用配置独立 password 时应用密码优先于全局密码；`secret_key` 缺省 `"apidoc#hgcode"`（启用且未配时 stderr 警告一次）、`expire` 缺省 86400 秒
+- **密码鉴权（M6a）**：`AuthConfig { enable, password, secret_key, expire }` 开启后，客户端 `POST /apidoc/auth`（JSON body `{"password": "...", "appKey": "..."}`）换取 token；数据路由 `/apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` 需附带 `?token=xxx`，token 缺失/过期/错误返回 401，文档 UI 弹出密码遮罩。密码走请求体而不是 URL（不进访问日志/浏览器历史），服务端恒定时间比对，前端不做任何摘要。令牌为 `base64url(payload).base64url(HMAC-SHA256(payload))` 的无状态签名令牌（载荷 `{"exp": …}`），签名密钥由 `secret_key` 与凭据派生——改密码即刻作废旧令牌；只用 URL 安全字符，可直接放进分享链接
+- **鉴权安全红线**：`password` / `secret_key` 永不序列化，api.json 输出与未启用鉴权时字节级一致；auth 未启用时 `/apidoc/auth` 返回 404、数据路由直接放行；应用配置独立 password 时应用密码优先于全局密码，空密码一律失败关闭（签发与校验两侧同规则）；`secret_key` 缺省时取**进程内随机密钥**（重启即失效，不存在公开默认密钥），`expire` 缺省 86400 秒；连续登录失败按指数退避拒答（前 3 次不罚，之后 1s→2s→…封顶 60s）；带凭据/token 的响应统一 `Cache-Control: no-store`
 - **多应用多版本（M6b）**：`ApidocConfig.apps: Vec<AppConfig>`（`key` / `title` / `items` 递归子版本 / `password`）配置应用树，`#[apidoc::app("key")]` 把接口挂到指定应用 key，未挂 key 的接口落默认应用；api.json 输出新增 `doc.apps` 树，UI 顶部出现应用/版本选择器，token 按 appKey 分开存 localStorage（不同应用可有独立密码）
 
 ### 已实现（v2）
@@ -83,7 +81,7 @@ apidoc-rust 的实现取向：
 - **数据表字段引用（`table`）**：`#[apidoc::table("user")]` 按 `ApidocConfig.tables` 配置的表 key 把字段**平铺**并入 `returned`（与 `ref` 同语义，区别是数据源为配置表而非其他端点）；字段支持 `required` / `default` / `desc` / `mock`；未配置的 key 只在 stderr 警告；未使用该注解时输出与 v1 字节级一致
 - **文档缓存**：`ApidocConfig.cache = Some(CacheConfig { enable, ttl })`——`/apidoc/mock` 输出按 `(url, method)` 进程内记忆化，`ttl` 秒后失效重建，`ttl = 0` 表示永久；未配置或未启用时完全不走缓存路径（输出零变化）。api.json / export 在挂载路由时已构建一次，等价于永久缓存
 - **分享链接**：`GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` 深链（`?app=<key>&ep=<接口 url>&method=<方法>[&token=…]`）；文档页每个接口旁有「分享」按钮（写剪贴板，失败降级为可复制的输入框），打开深链即定位到该应用/接口；鉴权开启时链接附带服务端签发的 token（应用独立密码优先于全局密码），打开即免密
-- **代码生成器**：`GET /apidoc/generate?template=<name>` → 渲染后的文本（未知模板 404）；内置 `api.ts`（前端 Api 文件）、`handler.rs`（Rust 接口骨架）、`schema.sql`（按 `tables` 生成建表语句）；`ApidocConfig.codegen` 里的同名模板覆盖内置。模板语法只有两种：`{{变量}}`（未定义则原样保留）与 `{{#each 列表}}…{{/each}}`（可嵌套，如 `tables` × `fields`）
+- **代码生成器**：`GET /apidoc/generate?template=<name>` → 渲染后的文本（未知模板 404）；内置 `api.ts`（前端 Api 文件）、`handler.rs`（Rust 接口骨架）、`schema.sql`（按 `tables` 生成建表语句）；`ApidocConfig.codegen` 里的同名模板覆盖内置。模板语法只有两种：`{{变量}}`（未定义则原样保留）与 `{{#each 列表}}…{{/each}}`（可嵌套，如 `tables` × `fields`）；变量值里的换行统一折叠成空格（三份产物都是行式结构）
 - **调试事件**：在线调试面板新增可折叠的「前置脚本 / 后置脚本」（持久化到 localStorage）——前置以 `new Function('ctx', code)` 在请求前执行，可改 `ctx.url/method/headers/body` 或返回对象浅合并；后置在响应后执行，可读 `status/ms/text/url/method/ep`，返回字符串则替换展示的响应文本；脚本报错只在结果区提示，不中断请求
 
 ## 架构
@@ -103,11 +101,11 @@ apidoc-rust 的实现取向：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 配置（resolver 2）
-├── VERSION                    # 项目版本（v1.6.2）
+├── VERSION                    # 项目版本（v2.0.0）
 ├── crates/
 │   ├── apidoc/                # 单一发布包 apidoc-rust（lib 名 apidoc）
 │   │   ├── src/lib.rs         # 数据模型 + DocRegistry 聚合 + api.json + UI_HTML
-│   │   ├── src/auth.rs        # M6a 密码鉴权（authcode token 签发/校验 + 路由守卫）
+│   │   ├── src/auth.rs        # M6a 密码鉴权（HMAC 令牌签发/校验 + 路由守卫 + 失败退避）
 │   │   ├── src/mock.rs        # M4 Mock 引擎（feature `mock`，axum/actix 隐含启用）
 │   │   ├── src/axum.rs        # axum 适配器（feature `axum`：文档路由 + cors + mock + export）
 │   │   ├── src/actix.rs       # actix-web 适配器（feature `actix`，与 axum 功能 1:1）
@@ -132,11 +130,13 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.6"     # 或 path = "crates/apidoc"
+apidoc-rust = "2.0"     # 或 path = "crates/apidoc"
 serde_json = "1"      # 输出 api.json 用
+linkme = "0.3"        # 宏生成的注册代码引用它（必须直接依赖）
 ```
 
-> 单个发布包 `apidoc-rust`（lib 名 `apidoc`，宏经 re-export 无需单独依赖）：
+> 需要 Rust 1.82+（`rust-version` 已声明）。
+> 单个发布包 `apidoc-rust`（lib 名 `apidoc`；`apidoc-macros` 经 re-export 无需单独依赖，但生成的注册代码引用 `linkme`，所以它必须像上面那样直接列出）：
 > 纯核心零 feature；按 Web 框架二选一开 `features = ["axum"]` 或 `features = ["actix"]`（两者功能 1:1）；Mock 引擎由适配器 feature 隐含启用（`mock` 也可单独开启）。默认构建不拉任何框架依赖。
 
 ### 2. 编写注解
@@ -308,7 +308,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 描述文件（application/j
 
 - **markdown**：适合贴进项目 Wiki / 发布说明，按分组输出目录，每个接口带参数表与响应块；
 - **typescript**：前端可直接粘贴为类型定义；未分组接口落入 `defaultGroup` 命名空间（`default` 是 TS 保留字，不能作标识符）；
-- **swagger**：`info.version` 取 Cargo 包版本（当前 1.6.2），可直接导入 Swagger UI 或代码生成器。
+- **swagger**：`info.version` 取 `ApidocConfig.version`（被文档化的 API 版本），未配置时回落到 apidoc-rust 包版本（当前 2.0.0）；path 参数以 URL 模板为准，可直接导入 Swagger UI 或代码生成器。
 
 ### 7. actix-web 适配器
 
@@ -316,7 +316,7 @@ Web 框架用 actix-web 时开启 `features = ["actix"]`（与 axum 适配器功
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.6", features = ["actix"] }
+apidoc-rust = { version = "2.0", features = ["actix"] }
 ```
 
 ```rust
@@ -342,11 +342,13 @@ async fn main() -> std::io::Result<()> {
 }
 ```
 
-挂载后即可访问 `/apidoc`（文档 UI）、`/apidoc/api.json`（数据）、`/apidoc/mock`（Mock）、`/apidoc/export`（导出）。CORS 空配置放行字面 `*`（不携带凭据），配置 `allow_origins` 白名单则精确匹配反射 Origin，两种模式均不开凭据。
+挂载后即可访问 `/apidoc`（文档 UI）、`/apidoc/api.json`（数据）、`/apidoc/mock`（Mock）、`/apidoc/export`（导出）。CORS 空配置或 `["*"]` 放行字面 `*`（不携带凭据），配置 `allow_origins` 白名单则精确匹配反射 Origin，两种模式均不开凭据。
 
 ### 8. 密码鉴权（M6a）
 
-开启 `auth` 后文档需要密码才能访问（对齐上游 apidoc-php 的 Auth.php，token 为 Discuz authcode 加密封套逐行移植）：
+开启 `auth` 后文档需要密码才能访问（HMAC-SHA256 签名令牌，服务端恒定时间比对，登录失败退避）：
+
+> **2.0 破坏性变更**：登录端点由 `GET /apidoc/auth?password=…` 改为 `POST /apidoc/auth`（JSON body），令牌由旧版的加密封套改为 HMAC-SHA256 签名令牌——**旧令牌与旧调用方式全部失效**，客户端需改为 POST。另外未显式配置 `secret_key` 的部署，进程重启会作废已签发令牌（改用进程内随机密钥，不再有公开默认值）。
 
 ```rust
 use apidoc::auth::AuthConfig;
@@ -357,7 +359,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
     auth: Some(AuthConfig {
         enable: true,
         password: "your-password".to_string(),
-        secret_key: "your-secret-key".to_string(), // 缺省 "apidoc#hgcode"（启用且未配时 stderr 警告一次）
+        secret_key: "your-secret-key".to_string(), // 缺省取进程内随机密钥：重启即失效（多实例部署务必显式配置）
         expire: 86400,                             // 秒；缺省 86400
     }),
     apps: vec![],
@@ -366,10 +368,11 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 
 **流程**：
 
-1. 客户端 `GET /apidoc/auth?password=<md5(密码)>&appKey=<key>` 换取 token（成功返回 `{"token":"..."}`，密码错误返回 401）；auth 未启用时该路由返回 404，数据路由直接放行
-2. 数据路由 `GET /apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` 需附带 `?token=xxx`（选择了具体应用时同时带 `&appKey=`）；token 缺失/过期/错误返回 401，文档 UI 自动弹出密码遮罩，输入密码后前端本地 md5 提交换取 token
-3. token 载荷为 `{key: md5(md5(原始密码)), expire: now+expire}`，由 `secret_key` 经 authcode 加密（RC4 变体 + md5 校验和 + 无 padding base64，MAC 比对恒定时间防时序侧信道）
-4. `password` / `secret_key` 永不序列化，api.json 输出与未启用鉴权时字节级一致；应用配置了独立 `password` 时应用密码优先于全局密码
+1. 客户端 `POST /apidoc/auth`（JSON body `{"password": "...", "appKey": "<key>"}`，`appKey` 用于应用独立密码）换取 token（成功返回 `{"token":"..."}`，密码错误返回 401，body 非法返回 400）；密码走请求体不进 URL/日志，前端不做任何摘要。auth 未启用时该路由返回 404，数据路由直接放行
+2. 数据路由 `GET /apidoc/api.json`、`/apidoc/export`、`/apidoc/mock` 需附带 `?token=xxx`（选择了具体应用时同时带 `&appKey=`）；token 缺失/过期/错误返回 401，文档 UI 自动弹出密码遮罩，输入密码后直接 POST 换取 token
+3. token 为 `base64url(payload).base64url(HMAC-SHA256(payload))`，载荷是 `{"exp": <unix 秒>}`；签名密钥 = HMAC-SHA256(`secret_key`, 凭据)，所以改密码即刻作废旧令牌。校验恒定时间比对 + 过期检查；令牌只用 URL 安全字符
+4. `password` / `secret_key` 永不序列化，api.json 输出与未启用鉴权时字节级一致；应用配置了独立 `password` 时应用密码优先于全局密码，空密码（全局或应用）一律失败关闭
+5. 连续登录失败按指数退避拒答（前 3 次不罚，之后 1s→2s→…封顶 60s，成功即清零）；带凭据/token 的响应统一 `Cache-Control: no-store`
 
 ### 9. 多应用与多版本（M6b）
 
@@ -445,7 +448,7 @@ ApidocConfig {
 }
 ```
 
-模板可用变量：顶层 `title` / `description`；`{{#each endpoints}}` 内 `title` / `url` / `method` / `group` / `desc` / `author`；`{{#each tables}}` 内 `key` / `title`，其 `{{#each fields}}` 内 `name` / `ty` / `required` / `default` / `desc` / `mock`，另有派生变量 `not_null` / `default_clause` / `comma`（便于直接生成合法 SQL）。
+模板可用变量：顶层 `title` / `description`；`{{#each endpoints}}` 内 `title` / `url` / `method` / `group` / `desc` / `author`；`{{#each tables}}` 内 `key` / `title`，其 `{{#each fields}}` 内 `name` / `ty` / `required` / `default` / `desc` / `mock`，另有派生变量：`not_null` / `default_clause` / `comma` / `key_q` / `name_q`（便于直接生成合法 SQL；`*_q` 是带引号的标识符），以及 endpoints 块内的 `url_js` / `method_js`（JSON 字符串字面量，可直接落进 JS 代码位）与 `fn_name`（过标识符清洗的 `{method}_{group}`，供 Rust 骨架用）。
 
 ### 12. 调试前置/后置脚本（v2）
 
@@ -474,7 +477,7 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 | M4 | 在线调试 + Mock 引擎 | ✅ 已完成 |
 | M5 | 导出 markdown / typescript / swagger.json（OpenAPI3） | ✅ 已完成 |
 | —  | actix-web 适配器（与 axum 功能 1:1） | ✅ 已完成 |
-| M6a | 密码鉴权（authcode token + 密码遮罩，应用密码优先） | ✅ 已完成 |
+| M6a | 密码鉴权（HMAC-SHA256 签名令牌 + 密码遮罩，应用密码优先） | ✅ 已完成 |
 | M6b | 多应用多版本（apps 配置树 + app 注解 + UI 选择器） | ✅ 已完成 |
 | v2 | 数据表字段引用 + 文档缓存 + 分享链接 + 代码生成器 + 调试事件 | ✅ 已完成 |
 

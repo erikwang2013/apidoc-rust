@@ -25,8 +25,6 @@ Toolkit für die Generierung von API-Dokumentation und die Entwicklung von Schni
 
 Apidoc ist eine Rust-Plugin-Bibliothek, die durch die Auswertung von **Rust-Prozessmakros (proc-macro)** automatisch API-Dokumentation erzeugt und mit axum, actix-web und weiteren gängigen Frameworks kompatibel ist. Neben der automatischen Dokumentationserzeugung vereint sie Online-Schnittstellen-Debugging, Mock-Debug-Daten, Json/TypeScript-Codegenerierung, einen Schnittstellen-Generator und einen Code-Generator und deckt damit den gesamten Ablauf von Entwicklung, Debugging und Auslieferung der Schnittstellen ab — mit dem Ziel, die Effizienz der API-Entwicklung zu steigern.
 
-> **Projektursprung**: apidoc-rust entstand in Anlehnung an [apidoc-php](https://github.com/erikwang2013/apidoc-php) (eine Composer-Erweiterung, die API-Dokumentation auf Basis von PHP-8-Attributen erzeugt) und setzt das Konzept „Annotationen sind Dokumentation" auf native Rust-Art um; es wird von erikwang2013 kontinuierlich gepflegt und erweitert.
-
 Der Umsetzungsansatz von apidoc-rust:
 
 - **Generierung zur Kompilierzeit**: Die Dokumentation wird von Prozessmakros zur Kompilierzeit erzeugt — Dokumentation und Code geraten nie aus dem Gleichschritt;
@@ -50,10 +48,10 @@ Der Umsetzungsansatz von apidoc-rust:
 
 ### Umgesetzt (M1-M3)
 
-- **Annotationen als Dokumentation**: sieben Attributmakros `title` / `desc` / `method` / `url` / `param` / `query` / `returned`, jeweils als Annotation (entspricht der PHP-attributes-Schreibweise); Parameter unterstützen `required` / `default` / `desc` / `mock` / `children`-Verschachtelung
+- **Annotationen als Dokumentation**: sieben Attributmakros `title` / `desc` / `method` / `url` / `param` / `query` / `returned`, jeweils als eigene Annotation; Parameter unterstützen `required` / `default` / `desc` / `mock` / `children`-Verschachtelung
 - **Validierung zur Kompilierzeit**: url muss mit `/` beginnen, method-Whitelist, param name ist Pflicht usw.; ungültige Annotationen führen zur Kompilierzeit zu Fehlern (präzise Span)
 - **Automatische Sammlung**: statische Registrierung über linkme `distributed_slice`, keine manuelle Interface-Liste nötig; `DocRegistry::collect()` führt nach id zusammen und stellt die Deklarationsreihenfolge nach seq wieder her, automatische Sammlung über crates hinweg
-- **api.json-Ausgabe**: serde serialisiert das einheitliche Dokumentationsdatenmodell (config + endpoints), Felder semantisch an PHP ausgerichtet
+- **api.json-Ausgabe**: serde serialisiert das einheitliche Dokumentationsdatenmodell (config + endpoints); die Feldnamen werden zwischen Modell und Exportern geteilt
 - **axum-Adapter + eingebettete Dokumentations-UI**: Route einhängen genügt für die Dokumentationsseite, mit gruppiertem Verzeichnis (M2)
 - **Annotationen vervollständigt**: 12 neue Annotationen `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` (M3)
 
@@ -74,8 +72,8 @@ Der Umsetzungsansatz von apidoc-rust:
 
 ### Umgesetzt (M6)
 
-- **Passwort-Authentifizierung (M6a)**: Mit aktiviertem `AuthConfig { enable, password, secret_key, expire }` tauscht der Client `GET /apidoc/auth?password=<md5(Passwort)>&appKey=<key>` gegen ein Token; die Datenrouten `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` benötigen `?token=xxx`, ein fehlendes/abgelaufenes/falsches Token liefert 401, und die Dokumentations-UI zeigt ein Passwort-Overlay; das Token wird mit der authcode-Verschlüsselung ausgestellt (Zeile für Zeile von Discuz authcode portiert: RC4-Variante + md5-Prüfsumme + Base64 ohne Padding), Payload `{key: md5(md5(Passwort im Klartext)), expire: now+expire}`, MAC-Vergleich in konstanter Zeit
-- **Sicherheits-Rotlinien der Authentifizierung**: `password` / `secret_key` werden nie serialisiert — die api.json-Ausgabe ist byte-identisch zum Zustand ohne aktivierte Authentifizierung; bei deaktivierter Auth liefert `/apidoc/auth` 404 und die Datenrouten sind direkt durchlässig; hat eine App-Konfiguration ein eigenes Passwort, hat das App-Passwort Vorrang vor dem globalen; `secret_key` hat als Standard `"apidoc#hgcode"` (bei aktivierter, aber nicht konfigurierter Auth einmalige stderr-Warnung), `expire` hat als Standard 86400 Sekunden
+- **Passwort-Authentifizierung (M6a)**: Mit aktiviertem `AuthConfig { enable, password, secret_key, expire }` ruft der Client `POST /apidoc/auth` auf (JSON-Body `{"password": "...", "appKey": "..."}`) und erhält ein Token; die Datenrouten `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` benötigen `?token=xxx`, ein fehlendes/abgelaufenes/falsches Token liefert 401, und die Dokumentations-UI zeigt ein Passwort-Overlay. Das Passwort wandert im Request-Body (nie in der URL, in Logs oder in der Browser-Historie), wird serverseitig in konstanter Zeit verglichen und clientseitig nie gehasht. Das Token ist ein zustandsloses signiertes Token `base64url(payload).base64url(HMAC-SHA256(payload))` mit Payload `{"exp": …}`; sein Signaturschlüssel wird aus `secret_key` und dem Credential abgeleitet, ein Passwortwechsel macht also jedes ausgestellte Token ungültig. Tokens verwenden ausschließlich URL-sichere Zeichen und passen damit direkt in Teilen-Links
+- **Sicherheits-Rotlinien der Authentifizierung**: `password` / `secret_key` werden nie serialisiert — die api.json-Ausgabe ist byte-identisch zum Zustand ohne aktivierte Authentifizierung; bei deaktivierter Auth liefert `/apidoc/auth` 404 und die Datenrouten sind direkt durchlässig; hat eine App-Konfiguration ein eigenes Passwort, hat das App-Passwort Vorrang vor dem globalen, und ein leeres Passwort (global oder je App) schlägt auf der ausstellenden wie der prüfenden Seite immer sicher fehl; `secret_key` fällt auf einen **zufälligen Schlüssel je Prozess** zurück (Tokens sterben beim Neustart — es gibt keinen öffentlichen Standardschlüssel), `expire` hat als Standard 86400 Sekunden; wiederholte fehlgeschlagene Logins werden mit exponentiellem Backoff beantwortet (keine Strafe für die ersten 3, danach 1s → 2s → … begrenzt auf 60s, bei Erfolg zurückgesetzt); jede Antwort mit Zugangsdaten/Token trägt `Cache-Control: no-store`
 - **Mehrere Anwendungen und Versionen (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / rekursive Unterversionen in `items` / `password`) konfiguriert den App-Baum; `#[apidoc::app("key")]` hängt Schnittstellen an eine bestimmte App-Key, Schnittstellen ohne Key landen in der Standard-App; die api.json-Ausgabe erhält den `doc.apps`-Baum, oben in der UI erscheint ein App-/Versions-Auswahlfeld, und Tokens werden je appKey getrennt im localStorage gespeichert (verschiedene Apps können unabhängige Passwörter haben)
 
 ### Umgesetzt (v2)
@@ -83,7 +81,7 @@ Der Umsetzungsansatz von apidoc-rust:
 - **Feldreferenzen auf Datenbanktabellen (`table`)**: `#[apidoc::table("user")]` **faltet** die Felder der per Key in `ApidocConfig.tables` konfigurierten Tabelle in `returned` ein (gleiche Semantik wie `ref`, Unterschied: Datenquelle ist die konfigurierte Tabelle statt eines anderen Endpunkts); Felder unterstützen `required` / `default` / `desc` / `mock`; ein nicht konfigurierter Key erzeugt nur eine stderr-Warnung; ohne diese Annotation ist die Ausgabe byte-identisch zu v1
 - **Dokumentations-Cache**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — die `/apidoc/mock`-Ausgabe wird prozessintern nach `(url, method)` memoisiert und nach `ttl` Sekunden neu aufgebaut, `ttl = 0` bedeutet dauerhaft; ohne Konfiguration oder bei deaktiviertem Cache wird der Cache-Pfad gar nicht erst beschritten (keinerlei Ausgabänderung). api.json / export werden beim Einhängen der Routen einmal erzeugt — das entspricht einem permanenten Cache
 - **Teilen-Links**: `GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` als Deep-Link (`?app=<key>&ep=<Endpunkt-URL>&method=<Methode>[&token=…]`); neben jeder Schnittstelle auf der Dokumentationsseite gibt es einen „Teilen"-Button (schreibt in die Zwischenablage, bei Fehlern ersatzweise ein kopierbares Eingabefeld), und das Öffnen des Deep-Links springt direkt zu dieser App/Schnittstelle; bei aktivierter Authentifizierung trägt der Link ein serverseitig ausgestelltes Token (App-Passwort hat Vorrang vor dem globalen) und öffnet ohne Passworteingabe
-- **Code-Generator**: `GET /apidoc/generate?template=<name>` → gerenderter Text (unbekanntes Template — 404); eingebaut sind `api.ts` (Frontend-Api-Datei), `handler.rs` (Rust-Schnittstellengerüst) und `schema.sql` (CREATE-TABLE-Anweisungen aus `tables`); ein gleichnamiges Template in `ApidocConfig.codegen` überschreibt das eingebaute. Die Template-Syntax kennt nur zwei Konstrukte: `{{变量}}` (bleibt unverändert, wenn nicht definiert) und `{{#each 列表}}…{{/each}}` (verschachtelbar, z. B. `tables` × `fields`)
+- **Code-Generator**: `GET /apidoc/generate?template=<name>` → gerenderter Text (unbekanntes Template — 404); eingebaut sind `api.ts` (Frontend-Api-Datei), `handler.rs` (Rust-Schnittstellengerüst) und `schema.sql` (CREATE-TABLE-Anweisungen aus `tables`); ein gleichnamiges Template in `ApidocConfig.codegen` überschreibt das eingebaute. Die Template-Syntax kennt nur zwei Konstrukte: `{{variable}}` (bleibt unverändert, wenn nicht definiert) und `{{#each list}}…{{/each}}` (verschachtelbar, z. B. `tables` × `fields`)
 - **Debug-Events**: Das Online-Debugging-Panel erhält ausklappbare „Vor-Skript / Nach-Skript"-Bereiche (in localStorage persistiert) — das Vor-Skript läuft vor der Anfrage über `new Function('ctx', code)` und kann `ctx.url/method/headers/body` ändern oder ein Objekt für eine flache Zusammenführung zurückgeben; das Nach-Skript läuft nach der Antwort, kann `status/ms/text/url/method/ep` lesen und durch die Rückgabe eines Strings den angezeigten Antworttext ersetzen; Skriptfehler werden nur im Ergebnisbereich gemeldet und brechen die Anfrage nicht ab
 
 ## Architektur
@@ -103,11 +101,11 @@ Der Umsetzungsansatz von apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Workspace-Konfiguration (resolver 2)
-├── VERSION                    # Projektversion (v1.6.2)
+├── VERSION                    # Projektversion (v2.0.0)
 ├── crates/
 │   ├── apidoc/                # Laufzeitkern (frameworkunabhängig)
 │   │   ├── src/lib.rs         # Datenmodell + DocRegistry-Aggregation + api.json + UI_HTML
-│   │   ├── src/auth.rs        # M6a-Passwort-Authentifizierung (authcode-Token-Ausstellung/-Prüfung + Routenwächter)
+│   │   ├── src/auth.rs        # M6a-Passwort-Authentifizierung (HMAC-Token-Ausstellung/-Prüfung + Routenwächter + Backoff)
 │   │   ├── src/export/        # M5-Exporte: markdown / typescript / swagger
 │   │   ├── src/ui.html        # gemeinsame Dokumentations-UI (vom Kern-Crate exportiert, beide Adapter verweisen darauf)
 │   │   ├── tests/             # Integrationstests (Makroexpansion/Aggregation/Serialisierung/über crates hinweg)
@@ -130,9 +128,10 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.6"        # oder path = "crates/apidoc"
+apidoc-rust = "2.0"        # oder path = "crates/apidoc"
 
 serde_json = "1"      # für die Ausgabe von api.json
+linkme = "0.3"        # erforderlich: der makro-erzeugte Registrierungscode verweist darauf
 ```
 
 > Adapter je nach Web-Framework wählen: für axum `features = ["axum"]`, für actix-web `features = ["actix"]` (beide funktional 1:1). `mock` (Mock-Engine) ist eine interne Framework-Abhängigkeit, die automatisch vom Adapter eingebunden wird; Verbraucher müssen sie in der Regel nicht direkt verwenden.
@@ -169,7 +168,7 @@ fn get_user_info() -> String {
 ```rust
 fn main() {
     let doc = DocRegistry::collect_doc(ApidocConfig {
-        title: "我的 API".to_string(),
+        title: "Meine API".to_string(),
         description: None,
         auth: None,    // M6a-Passwort-Authentifizierung, siehe „8. Passwort-Authentifizierung"
         apps: vec![],  // M6b mehrere Anwendungen und Versionen, siehe „9. Mehrere Anwendungen und Versionen"
@@ -257,7 +256,7 @@ GET /apidoc/export?format=swagger   # OpenAPI-3.0.0-Beschreibungsdatei (applicat
 
 - **markdown**: geeignet zum Einfügen in Projekt-Wiki / Release-Notizen, Ausgabe eines Verzeichnisses nach Gruppen, jede Schnittstelle mit Parametertabelle und Antwortblock;
 - **typescript**: das Frontend kann es direkt als Typdefinitionen einfügen; nicht gruppierte Schnittstellen landen im Namensraum `defaultGroup` (`default` ist ein TS-Schlüsselwort und kann kein Bezeichner sein);
-- **swagger**: `info.version` stammt aus der Cargo-Paketversion (aktuell 1.6.2), direkt importierbar in Swagger UI oder Code-Generatoren.
+- **swagger**: `info.version` stammt aus `ApidocConfig.version` (der dokumentierten API-Version), ersatzweise aus der apidoc-rust-Paketversion (aktuell 2.0.0); Pfadparameter stammen aus dem URL-Template, die Spezifikation ist daher direkt in Swagger UI oder Code-Generatoren importierbar.
 
 ### 7. actix-web-Adapter
 
@@ -265,7 +264,7 @@ Bei Verwendung von actix-web `features = ["actix"]` einbinden (funktional 1:1 zu
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.6", features = ["actix"] }
+apidoc-rust = { version = "2.0", features = ["actix"] }
 ```
 
 ```rust
@@ -278,7 +277,7 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .service(apidoc_routes(ApidocConfig {
-                title: "我的 API".to_string(),
+                title: "Meine API".to_string(),
                 description: None,
                 auth: None,    // M6a-Passwort-Authentifizierung, siehe „8. Passwort-Authentifizierung"
                 apps: vec![],  // M6b mehrere Anwendungen und Versionen, siehe „9. Mehrere Anwendungen und Versionen"
@@ -291,22 +290,24 @@ async fn main() -> std::io::Result<()> {
 }
 ```
 
-Nach dem Einhängen sind `/apidoc` (Dokumentations-UI), `/apidoc/api.json` (Daten), `/apidoc/mock` (Mock) und `/apidoc/export` (Export) erreichbar. Eine leere CORS-Konfiguration erlaubt das literale `*` (ohne Anmeldedaten); mit einer `allow_origins`-Whitelist wird der Origin per exakter Übereinstimmung reflektiert — in beiden Modi werden keine Anmeldedaten aktiviert.
+Nach dem Einhängen sind `/apidoc` (Dokumentations-UI), `/apidoc/api.json` (Daten), `/apidoc/mock` (Mock) und `/apidoc/export` (Export) erreichbar. Eine leere CORS-Konfiguration — oder `["*"]` — erlaubt das literale `*` (ohne Anmeldedaten); mit einer `allow_origins`-Whitelist wird der Origin per exakter Übereinstimmung reflektiert — in beiden Modi werden keine Anmeldedaten aktiviert.
 
 ### 8. Passwort-Authentifizierung (M6a)
 
-Mit aktiviertem `auth` benötigt die Dokumentation ein Passwort (angelehnt an die Auth.php des Upstreams apidoc-php; das Token ist eine Zeile-für-Zeile-Portierung der Discuz-authcode-Verschlüsselung):
+Mit aktiviertem `auth` benötigt die Dokumentation ein Passwort für den Zugriff (HMAC-SHA256-signierte Tokens, Vergleich in konstanter Zeit auf dem Server, Login-Backoff):
+
+> **Breaking Change in 2.0**: Der Login-Endpunkt wechselte von `GET /apidoc/auth?password=…` zu `POST /apidoc/auth` (JSON-Body), und Tokens wechselten von der früheren Hülle zu HMAC-SHA256-signierten Tokens — **alte Tokens und alte Aufrufstile funktionieren nicht mehr**, Clients müssen POST verwenden. Deployments ohne expliziten `secret_key` verlieren außerdem ausgestellte Tokens beim Neustart (es wird ein zufälliger Schlüssel je Prozess verwendet; es gibt keinen öffentlichen Standard).
 
 ```rust
 use apidoc::auth::AuthConfig;
 
 let doc = DocRegistry::collect_doc(ApidocConfig {
-    title: "我的 API".to_string(),
+    title: "Meine API".to_string(),
     description: None,
     auth: Some(AuthConfig {
         enable: true,
         password: "your-password".to_string(),
-        secret_key: "your-secret-key".to_string(), // Standard „apidoc#hgcode" (einmalige stderr-Warnung bei aktivierter, aber nicht konfigurierter Auth)
+        secret_key: "your-secret-key".to_string(), // fällt auf einen zufälligen Schlüssel je Prozess zurück: ein Neustart macht Tokens ungültig; für Multi-Instanz-Deployments explizit setzen
         expire: 86400,                             // Sekunden; Standard 86400
     }),
     apps: vec![],
@@ -315,10 +316,11 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 
 **Ablauf**:
 
-1. Der Client ruft `GET /apidoc/auth?password=<md5(Passwort)>&appKey=<key>` auf und erhält ein Token (bei Erfolg `{"token":"..."}`, bei falschem Passwort 401); bei deaktivierter Auth liefert diese Route 404 und die Datenrouten sind direkt durchlässig
-2. Die Datenrouten `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` benötigen `?token=xxx` (bei ausgewählter App zusätzlich `&appKey=`); ein fehlendes/abgelaufenes/falsches Token liefert 401, die Dokumentations-UI öffnet automatisch das Passwort-Overlay, und nach Eingabe des Passworts hasht das Frontend es lokal per md5 und tauscht es gegen ein Token
-3. Die Token-Payload ist `{key: md5(md5(Passwort im Klartext)), expire: now+expire}`, per `secret_key` mit authcode verschlüsselt (RC4-Variante + md5-Prüfsumme + Base64 ohne Padding, MAC-Vergleich in konstanter Zeit gegen Timing-Seitenkanäle)
-4. `password` / `secret_key` werden nie serialisiert — die api.json-Ausgabe ist byte-identisch zum Zustand ohne aktivierte Authentifizierung; hat eine App-Konfiguration ein eigenes `password`, hat das App-Passwort Vorrang vor dem globalen
+1. Der Client ruft `POST /apidoc/auth` auf (JSON-Body `{"password": "...", "appKey": "<key>"}`; `appKey` wählt eine App mit eigenem Passwort) und erhält ein Token (bei Erfolg `{"token":"..."}`, bei falschem Passwort 401, bei fehlerhaftem Body 400); das Passwort wandert im Body — nie in der URL oder in Logs — und wird clientseitig nie gehasht. Bei deaktivierter Auth liefert diese Route 404 und die Datenrouten sind direkt durchlässig
+2. Die Datenrouten `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` benötigen `?token=xxx` (bei ausgewählter App zusätzlich `&appKey=`); ein fehlendes/abgelaufenes/falsches Token liefert 401, die Dokumentations-UI öffnet automatisch das Passwort-Overlay, und nach Eingabe des Passworts sendet das Frontend es direkt per POST und tauscht es gegen ein Token
+3. Das Token ist `base64url(payload).base64url(HMAC-SHA256(payload))` mit Payload `{"exp": <Unix-Sekunden>}`; der Signaturschlüssel ist HMAC-SHA256(`secret_key`, Credential), ein Passwortwechsel macht alte Tokens also sofort ungültig. Bei der Prüfung wird der MAC in konstanter Zeit verglichen und danach der Ablauf geprüft; Tokens verwenden ausschließlich URL-sichere Zeichen
+4. `password` / `secret_key` werden nie serialisiert — die api.json-Ausgabe ist byte-identisch zum Zustand ohne aktivierte Authentifizierung; hat eine App-Konfiguration ein eigenes `password`, hat das App-Passwort Vorrang vor dem globalen, und ein leeres Passwort (global oder je App) schlägt immer sicher fehl
+5. Wiederholte fehlgeschlagene Logins werden mit exponentiellem Backoff beantwortet (keine Strafe für die ersten 3, danach 1s → 2s → … begrenzt auf 60s, bei Erfolg zurückgesetzt); Antworten mit Zugangsdaten/Token tragen `Cache-Control: no-store`
 
 ### 9. Mehrere Anwendungen und Versionen (M6b)
 
@@ -334,7 +336,7 @@ fn get_user_info() -> String {
 
 ```rust
 let doc = DocRegistry::collect_doc(ApidocConfig {
-    title: "我的 API".to_string(),
+    title: "Meine API".to_string(),
     description: None,
     auth: None,
     apps: vec![
@@ -394,7 +396,7 @@ ApidocConfig {
 }
 ```
 
-Verfügbare Template-Variablen: oberste Ebene `title` / `description`; innerhalb `{{#each endpoints}}` `title` / `url` / `method` / `group` / `desc` / `author`; innerhalb `{{#each tables}}` `key` / `title` und darin innerhalb `{{#each fields}}` `name` / `ty` / `required` / `default` / `desc` / `mock`; dazu die abgeleiteten Variablen `not_null` / `default_clause` / `comma` (für direkt gültiges SQL).
+Verfügbare Template-Variablen: oberste Ebene `title` / `description`; innerhalb `{{#each endpoints}}` `title` / `url` / `method` / `group` / `desc` / `author`; innerhalb `{{#each tables}}` `key` / `title` und darin innerhalb `{{#each fields}}` `name` / `ty` / `required` / `default` / `desc` / `mock`; dazu die abgeleiteten Variablen `not_null` / `default_clause` / `comma` / `key_q` / `name_q` (praktisch für direkt gültiges SQL; die `*_q`-Variablen sind quotierte Bezeichner) sowie innerhalb `{{#each endpoints}}` `url_js` / `method_js` (JSON-String-Literale, direkt für JS-Codepositionen) und `fn_name` (ein bezeichnerbereinigtes `{method}_{group}` für das Rust-Gerüst).
 
 ### 12. Debug-Vor- und Nachskripte (v2)
 
@@ -423,7 +425,7 @@ Skriptfehler werden nur im Debug-Ergebnisbereich gemeldet und brechen die Anfrag
 | M4 | Online-Debugging + Mock-Engine | ✅ Abgeschlossen |
 | M5 | Export als markdown / typescript / swagger.json (OpenAPI3) | ✅ Abgeschlossen |
 | —  | actix-web-Adapter (funktional 1:1 zu axum) | ✅ Abgeschlossen |
-| M6a | Passwort-Authentifizierung (authcode-Token + Passwort-Overlay, App-Passwort hat Vorrang) | ✅ Abgeschlossen |
+| M6a | Passwort-Authentifizierung (HMAC-SHA256-signiertes Token + Passwort-Overlay, App-Passwort hat Vorrang) | ✅ Abgeschlossen |
 | M6b | Mehrere Anwendungen und Versionen (apps-Konfigurationsbaum + app-Annotation + UI-Auswahl) | ✅ Abgeschlossen |
 | v2 | Feldreferenzen auf Datenbanktabellen + Dokumentations-Cache + Teilen-Links + Code-Generator + Debug-Events | ✅ Abgeschlossen |
 

@@ -69,9 +69,9 @@
   <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Реализовано M6a</text>
   <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">Парольная аутентификация</text>
-  <text x="60" y="580" font-size="13" fill="#333">GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; обмен на token</text>
+  <text x="60" y="580" font-size="13" fill="#333">POST /apidoc/auth (JSON body) обмен на token</text>
   <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock требуют ?token=; отсутствует/истёк/ошибка — 401</text>
-  <text x="60" y="620" font-size="13" fill="#333">Крипто-набор authcode (вариант RC4 + контрольная сумма md5, MAC за постоянное время)</text>
+  <text x="60" y="620" font-size="13" fill="#333">Подпись HMAC-SHA256 (MAC за постоянное время)</text>
   <text x="60" y="640" font-size="13" fill="#333">password / secret_key никогда не сериализуются · пароль приложения приоритетнее глобального</text>
 
   <!-- Карточка 8: M6b несколько приложений и версий -->

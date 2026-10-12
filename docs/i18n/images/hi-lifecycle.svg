@@ -67,7 +67,7 @@
   <circle cx="890" cy="310" r="34" fill="#c0392b"/>
   <text x="890" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
   <text x="890" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">प्रमाणीकरण: token प्राप्त करें</text>
-  <text x="890" y="395" text-anchor="middle" font-size="12" fill="#555">फ्रंटएंड md5 सबमिट</text>
+  <text x="890" y="395" text-anchor="middle" font-size="12" fill="#555">फ्रंटएंड POST से पासवर्ड भेजता है</text>
   <text x="890" y="412" text-anchor="middle" font-size="12" fill="#555">डेटा रूट को ?token= चाहिए (401)</text>
   <text x="890" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M6a</text>
 

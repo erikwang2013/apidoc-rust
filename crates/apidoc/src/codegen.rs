@@ -12,22 +12,27 @@
 //! 变量表（spec 之外，字段级另补 3 个派生变量，让冻结的 if/变换语法能输出合法
 //! SQL——派生值即成品字符串，不新增任何语法）：
 //! - 顶层：`title`（config.title）/ `description`（None 时为空串）；
-//! - endpoints 项：`title`/`url`/`method`/`group`/`desc`/`author`；
-//! - tables 项：`key`/`title`；
+//! - endpoints 项：`title`/`url`/`method`/`group`/`desc`/`author`，
+//!   加派生 `url_js` / `method_js`（JSON 字符串字面量，可直接落进 JS 代码位）；
+//! - tables 项：`key`/`title`，加派生 `key_q`（反引号标识符）；
 //! - fields 项：`name`/`ty`/`required`(true|false)/`default`/`desc`/`mock`，
-//!   加派生 `not_null`（`" NOT NULL"`|空）与 `default_clause`（`" DEFAULT x"`|空）；
+//!   加派生 `not_null`（`" NOT NULL"`|空）、`default_clause`（`" DEFAULT x"`|空，
+//!   值按 SQL 字面量处理：数字/NULL 原样，其余单引号包裹）与 `name_q`（反引号标识符）；
 //! - 任意 each 块内：`comma`（非末项为 `","`，末项为空串，SQL 用）。
+//!
+//! 转义策略（三类危险位各归各的派生变量，模板本身不做上下文感知转义）：
+//! 标识符 → `*_q`；JS 字符串字面量 → `*_js`；行式结构里的裸换行 → 所有变量统一
+//! 折叠（见 [`line_safe`]）。注释放 `//` 或 `--` 行注释，所以 `*/` 不构成出口。
 //!
 //! - 嵌套深度上限 [`MAX_DEPTH`]（32 层，防栈溢出）与展开预算 [`MAX_EXPANSIONS`]
 //!   （10 万次 item 迭代，防自嵌套指数放大）：超限的块连同在展开中的祖先链一并
 //!   回退为原文，原子不半展开（`/apidoc/generate` 每请求重渲染，不能卡死进程）。
 //!
 //! 已知边界（冻结语法的直接后果，模板内无法规避）：
-//! - 无字符串变换，`/api/user` 变不成合法标识符——`api.ts` 用对象键 `"METHOD url"`
-//!   承载 method+url（合法且唯一），`handler.rs` 函数名只能拼 `{{method}}_{{group}}`
-//!   （同组同方法可能重名，骨架模板可接受）；
-//! - 无 if，`api.ts`/`handler.rs` 的 group 只能逐条以注释标注，做不出真正的分节头；
-//! - 不做转义：模板来源可信（编译期注解/项目配置），需要时再加。
+//! - 无字符串变换，`/api/user` 变不成合法标识符——`api.ts` 用计算键
+//!   `[method_js + " " + url_js]` 承载 method+url（合法且唯一），`handler.rs`
+//!   函数名只能拼 `{{method}}_{{group}}`（同组同方法可能重名，骨架模板可接受）；
+//! - 无 if，`api.ts`/`handler.rs` 的 group 只能逐条以注释标注，做不出真正的分节头。
 
 use crate::{ApiDoc, DocEndpoint, TableDef, TableField};
 
@@ -47,21 +52,16 @@ const MAX_EXPANSIONS: usize = 100_000;
 pub const TEMPLATES: &[(&str, &str)] = &[
     (
         "api.ts",
-        r#"/**
- * {{title}} —— 前端 Api 文件
- * {{description}}
- * 由 apidoc-rust codegen 自动生成，请勿手改。
- */
+        r#"// {{title}} —— 前端 Api 文件
+// {{description}}
+// 由 apidoc-rust codegen 自动生成，请勿手改。
 
 export const api = {
 {{#each endpoints}}
-  /**
-   * {{title}}
-   * {{method}} {{url}} | 分组: {{group}} | 作者: {{author}}
-   * {{desc}}
-   */
-  "{{method}} {{url}}": async (): Promise<unknown> => {
-    const res = await fetch("{{url}}", { method: "{{method}}" });
+  // {{title}} | {{method}} {{url}} | 分组: {{group}} | 作者: {{author}}
+  // {{desc}}
+  [{{method_js}} + " " + {{url_js}}]: async (): Promise<unknown> => {
+    const res = await fetch({{url_js}}, { method: {{method_js}} });
     return res.json();
   },
 {{/each}}
@@ -75,7 +75,7 @@ export const api = {
 // 由 apidoc-rust codegen 自动生成，请勿手改。
 {{#each endpoints}}
 // {{title}} {{method}} {{url}}
-fn {{method}}_{{group}}() {}
+fn {{fn_name}}() {}
 {{/each}}
 "#,
     ),
@@ -85,8 +85,8 @@ fn {{method}}_{{group}}() {}
 -- {{description}}
 -- 由 apidoc-rust codegen 自动生成，请勿手改。
 {{#each tables}}
-CREATE TABLE IF NOT EXISTS {{key}} ( -- {{title}}
-{{#each fields}}  {{name}} {{ty}}{{not_null}}{{default_clause}}{{comma}} -- {{desc}}
+CREATE TABLE IF NOT EXISTS {{key_q}} ( -- {{title}}
+{{#each fields}}  {{name_q}} {{ty}}{{not_null}}{{default_clause}}{{comma}} -- {{desc}}
 {{/each}});
 {{/each}}
 "#,
@@ -258,6 +258,7 @@ fn each_items<'a>(name: &str, stack: &[Frame<'a>], doc: &'a ApiDoc) -> Vec<Frame
 }
 
 /// 查一个变量名：作用域链由内向外，再顶层。未命中返回 None（调用方原样保留）。
+/// 所有文本值统一过 [`line_safe`] —— 这是唯一的统一出口，派生变量也不例外。
 fn lookup(key: &str, stack: &[Frame<'_>], doc: &ApiDoc) -> Option<String> {
     // comma 是位置派生量，只由最内层块决定
     if key == "comma" {
@@ -267,14 +268,63 @@ fn lookup(key: &str, stack: &[Frame<'_>], doc: &ApiDoc) -> Option<String> {
     }
     for f in stack.iter().rev() {
         if let Some(v) = item_var(&f.item, key) {
-            return Some(v);
+            return Some(line_safe(v));
         }
     }
     match key {
-        "title" => Some(doc.config.title.clone()),
-        "description" => Some(doc.config.description.clone().unwrap_or_default()),
+        "title" => Some(line_safe(doc.config.title.clone())),
+        "description" => Some(line_safe(doc.config.description.clone().unwrap_or_default())),
         _ => None,
     }
+}
+
+/// 折叠换行：三份内置产物（行注释 / 字符串字面量 / SQL 行）都是行式结构，值里的
+/// 裸换行只会把一行拆成两行（注释越界、SQL 断句）。需要多行文本就不该走 codegen。
+/// ponytail: 一刀切折叠，没有上下文感知；真要多行文本的模板再说。
+fn line_safe(s: String) -> String {
+    if s.contains(['\n', '\r']) {
+        s.replace('\r', "").replace('\n', " ")
+    } else {
+        s
+    }
+}
+
+/// SQL 标识符：反引号包裹（MySQL/SQLite），内部反引号翻倍转义。
+/// 表/字段名来自配置，`order` / `select` / `key` 这类保留字不加引号必产出非法 SQL。
+fn quote_ident(s: &str) -> String {
+    format!("`{}`", s.replace('`', "``"))
+}
+
+/// SQL 字面量：数字与 NULL 原样，其余单引号包裹、内部单引号翻倍。
+/// `DEFAULT hello` 是语法错误，字符串默认值必须带引号。
+fn sql_literal(s: &str) -> String {
+    let t = s.trim();
+    let numeric =
+        !t.is_empty() && !t.chars().any(|c| c.is_ascii_alphabetic()) && t.parse::<f64>().is_ok();
+    if numeric || t.eq_ignore_ascii_case("null") {
+        t.to_string()
+    } else {
+        format!("'{}'", t.replace('\'', "''"))
+    }
+}
+
+/// JS 字符串字面量：JSON 转义（双引号包裹）。JS 字符串与 JSON 字面量同构。
+fn js_str(s: &str) -> String {
+    serde_json::to_string(s).expect("a string always serializes")
+}
+
+/// Rust 函数名：`{method}_{group}` 过标识符清洗（非标识符字符 → `_`），
+/// 空或数字开头补 `_`。group 带空格/符号时原样拼会产出非法 Rust。
+/// 同组同方法仍可能重名——模板没有去重能力，骨架模板可接受。
+fn fn_ident(method: &str, group: &str) -> String {
+    let mut out = String::with_capacity(method.len() + group.len() + 1);
+    for c in format!("{method}_{group}").chars() {
+        out.push(if c.is_alphanumeric() || c == '_' { c } else { '_' });
+    }
+    if out.is_empty() || out.chars().next().is_some_and(|c| c.is_numeric()) {
+        out.insert(0, '_');
+    }
+    out
 }
 
 /// 当前项自己的字段：定义 → Some(值)；不属于该类型 → None（继续往外找）。
@@ -287,15 +337,22 @@ fn item_var(item: &Item<'_>, key: &str) -> Option<String> {
             "group" => e.group.clone(),
             "desc" => e.desc.clone(),
             "author" => e.author.clone(),
+            // 落进 JS 代码位（字符串字面量）的 url/method 必须带引号转义
+            "url_js" => js_str(&e.url),
+            "method_js" => js_str(&e.method),
+            // 落进 Rust 代码位的函数名：必须过标识符清洗（group 可能带空格/符号）
+            "fn_name" => fn_ident(&e.method, &e.group),
             _ => return None,
         },
         Item::Table(t) => match key {
             "key" => t.key.clone(),
             "title" => t.title.clone(),
+            "key_q" => quote_ident(&t.key),
             _ => return None,
         },
         Item::Field(f) => match key {
             "name" => f.name.clone(),
+            "name_q" => quote_ident(&f.name),
             "ty" => f.ty.clone(),
             // 布尔按文本渲染（spec）：true / false
             "required" => f.required.to_string(),
@@ -307,7 +364,7 @@ fn item_var(item: &Item<'_>, key: &str) -> Option<String> {
             "default_clause" => f
                 .default
                 .as_ref()
-                .map(|d| format!(" DEFAULT {d}"))
+                .map(|d| format!(" DEFAULT {}", sql_literal(d)))
                 .unwrap_or_default(),
             _ => return None,
         },

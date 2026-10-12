@@ -51,10 +51,11 @@ impl Parse for SuccessArgs {
 
 /// Parsed `name` / `desc` keyword arguments of header. Dedicated parser so
 /// unknown keys (ty / required / mock / children) fail loudly instead of
-/// being silently dropped.
+/// being silently dropped. Literals are kept raw so errors can point at the
+/// exact token rather than the whole attribute.
 pub struct HeaderArgs {
-    pub name: Option<String>,
-    pub desc: Option<String>,
+    pub name: Option<LitStr>,
+    pub desc: Option<LitStr>,
 }
 
 impl Parse for HeaderArgs {
@@ -62,8 +63,8 @@ impl Parse for HeaderArgs {
         let mut out = HeaderArgs { name: None, desc: None };
         kv_loop(input, |key, value| {
             match key.to_string().as_str() {
-                "name" => out.name = Some(value.value()),
-                "desc" => out.desc = Some(value.value()),
+                "name" => out.name = Some(value),
+                "desc" => out.desc = Some(value),
                 other => {
                     return Err(syn::Error::new(
                         key.span(),
@@ -77,14 +78,15 @@ impl Parse for HeaderArgs {
     }
 }
 
-/// Parsed keyword arguments of param / query / returned.
+/// Parsed keyword arguments of param / query / returned. Literals are kept raw
+/// so errors point at the exact token rather than the whole attribute.
 pub struct ParamArgs {
-    pub name: Option<String>,
-    pub ty: Option<String>,
+    pub name: Option<LitStr>,
+    pub ty: Option<LitStr>,
     pub required: bool,
-    pub default: Option<String>,
-    pub desc: Option<String>,
-    pub mock: Option<String>,
+    pub default: Option<LitStr>,
+    pub desc: Option<LitStr>,
+    pub mock: Option<LitStr>,
     pub children: Vec<ParamArgs>,
 }
 
@@ -120,11 +122,11 @@ impl Parse for ParamArgs {
                 input.parse::<Token![=]>()?;
                 let value: LitStr = input.parse()?;
                 match key.to_string().as_str() {
-                    "name" => out.name = Some(value.value()),
-                    "ty" | "type" => out.ty = Some(value.value()),
-                    "default" => out.default = Some(value.value()),
-                    "desc" => out.desc = Some(value.value()),
-                    "mock" => out.mock = Some(value.value()),
+                    "name" => out.name = Some(value),
+                    "ty" | "type" => out.ty = Some(value),
+                    "default" => out.default = Some(value),
+                    "desc" => out.desc = Some(value),
+                    "mock" => out.mock = Some(value),
                     other => {
                         return Err(syn::Error::new(
                             key.span(),

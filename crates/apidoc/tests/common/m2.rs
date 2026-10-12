@@ -68,6 +68,7 @@ fn config() -> ApidocConfig {
         cache: None,
         codegen: Vec::new(),
         apps: Vec::new(),
+        ..Default::default()
     }
 }
 
@@ -199,8 +200,10 @@ pub fn assert_ui_html_has_grouping_markers(adapter: &str) {
     assert!(js.contains("location.hash"), "[{adapter}] 缺少 hash 恢复选中");
     assert!(js.contains("#g' + gi + '/e' + ei"), "[{adapter}] 缺少分组/端点 hash 标记");
     assert!(js.contains("textContent"), "[{adapter}] 缺少 textContent 安全注入");
-    // M6a：密码遮罩与 md5 提交；M6b：应用/版本选择器
-    assert!(js.contains("function md5"), "[{adapter}] 缺少前端 md5");
+    // M6a：密码遮罩 + POST 登录（密码不做前端摘要，也不进 URL）；M6b：应用/版本选择器
+    assert!(js.contains("method: 'POST'"), "[{adapter}] 缺少 POST 登录");
+    assert!(!js.contains("function md5"), "[{adapter}] 前端不应再有 md5（摘要会被当成新密码）");
+    assert!(!js.contains("auth?password="), "[{adapter}] 密码不得再出现在 URL 里");
     assert!(js.contains("apidoc_token"), "[{adapter}] 缺少 token 存取");
     assert!(js.contains("apps-sel"), "[{adapter}] 缺少应用选择器");
     assert!(!js.contains("innerHTML"), "[{adapter}] 禁用 innerHTML");
@@ -229,6 +232,7 @@ pub fn assert_ui_html_fields_all_present_in_api_json(adapter: &str) {
             items: vec![apidoc::AppConfig { key: "v2".into(), title: "V2".into(), items: vec![], password: None }],
             password: None,
         }],
+            ..Default::default()
     });
     let v: Value = serde_json::to_value(&doc).unwrap();
     // 红线：password / secret_key 永不进任何输出

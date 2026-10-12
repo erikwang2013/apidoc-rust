@@ -25,8 +25,6 @@ Rust 프로시저 매크로(proc-macro) 기반 API 문서 생성·인터페이�
 
 Apidoc은 **Rust 프로시저 매크로(proc-macro)** 를 파싱해 API 인터페이스 문서를 자동 생성하는 Rust 플러그인 라이브러리로, axum·actix-web 등 주요 프레임워크를 지원합니다. 문서 자동 생성 외에도 온라인 인터페이스 디버깅, Mock 디버깅 데이터, Json/TypeScript 코드 생성, 인터페이스 생성기, 코드 생성기 등의 기능을 통합해 인터페이스 개발·디버깅·납품의 전 과정을 아우르며, API 개발 효율 향상을 목표로 합니다.
 
-> **프로젝트 출처**: 본 프로젝트는 [apidoc-php](https://github.com/erikwang2013/apidoc-php)(PHP 8 attributes 기반으로 API 문서를 생성하는 composer 확장)를 참고해 "주석이 곧 문서"라는 능력을 Rust 네이티브 방식으로 구현한 것으로, erikwang2013이 지속적으로 유지·확장하고 있습니다.
-
 apidoc-rust의 구현 방향:
 
 - **컴파일 타임 생성**: 문서는 프로시저 매크로에 의해 컴파일 타임에 생성되어, 문서와 코드가 결코 동기화되지 않을 일이 없습니다;
@@ -50,10 +48,10 @@ apidoc-rust의 구현 방향:
 
 ### 구현됨 (M1-M3)
 
-- **주석 기반 문서**: `title` / `desc` / `method` / `url` / `param` / `query` / `returned` 7개 속성 매크로로 개별 주석 작성(PHP attributes 방식에 대응), 파라미터는 `required` / `default` / `desc` / `mock` / `children` 중첩 지원
+- **주석 기반 문서**: `title` / `desc` / `method` / `url` / `param` / `query` / `returned` 7개 속성 매크로로 개별 주석 작성, 파라미터는 `required` / `default` / `desc` / `mock` / `children` 중첩 지원
 - **컴파일 타임 검증**: url은 반드시 `/`로 시작, method 화이트리스트, param name 필수 등, 잘못된 주석은 컴파일 타임에 오류 발생(span 정밀)
 - **자동 수집**: linkme `distributed_slice` 정적 등록으로 수동 인터페이스 목록 불필요; `DocRegistry::collect()`가 id별로 병합하고 seq로 선언 순서를 복원하며, 크로스 crate 자동 수집
-- **api.json 출력**: serde 직렬화로 통일된 문서 데이터 모델(config + endpoints) 생성, 필드는 PHP 의미론에 정렬
+- **api.json 출력**: serde 직렬화로 통일된 문서 데이터 모델(config + endpoints) 생성, 필드명은 모델과 내보내기가 동일한 정의를 공유합니다
 - **axum 어댑터 + 내장 문서 UI**: 라우트를 마운트하면 문서 페이지가 제공되며, 그룹 목차 탐색 지원(M2)
 - **주석 보강**: `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` 12개 신규 주석(M3)
 
@@ -74,8 +72,8 @@ apidoc-rust의 구현 방향:
 
 ### 구현됨 (M6)
 
-- **비밀번호 인증(M6a)**: `AuthConfig { enable, password, secret_key, expire }` 활성화 시 클라이언트가 `GET /apidoc/auth?password=<md5(비밀번호)>&appKey=<key>`로 token 교환; 데이터 라우트 `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock`에는 `?token=xxx`를 첨부해야 하며, token이 없거나/만료/오류면 401 반환, 문서 UI에 비밀번호 마스크 팝업; token은 authcode 암호화 스위트로 서명(Discuz authcode를 줄 단위로 이식: RC4 변형 + md5 체크섬 + 패딩 없는 base64), 페이로드는 `{key: md5(md5(원본 비밀번호)), expire: now+expire}`, MAC 비교는 상수 시간
-- **인증 보안 레드라인**: `password` / `secret_key`는 절대 직렬화되지 않으며, api.json 출력은 인증 미활성화 시와 바이트 수준 동일; auth 미활성화 시 `/apidoc/auth`는 404 반환, 데이터 라우트는 그냥 통과; 앱 설정에 독립 password가 있으면 앱 비밀번호가 전역 비밀번호보다 우선; `secret_key` 기본값 `"apidoc#hgcode"`(활성화 시 미설정이면 stderr 경고 1회), `expire` 기본값 86400초
+- **비밀번호 인증(M6a)**: `AuthConfig { enable, password, secret_key, expire }` 활성화 시 클라이언트가 `POST /apidoc/auth`(JSON body `{"password": "...", "appKey": "..."}`)로 token 교환; 데이터 라우트 `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock`에는 `?token=xxx`를 첨부해야 하며, token이 없거나/만료/오류면 401 반환, 문서 UI에 비밀번호 마스크 팝업. 비밀번호는 요청 body로 전송되어(URL, 접근 로그, 브라우저 기록에 남지 않음) 서버 측에서 상수 시간으로 비교되며, 클라이언트 측에서는 해싱하지 않습니다. token은 `base64url(payload).base64url(HMAC-SHA256(payload))` 형식의 무상태 서명 token이고 페이로드는 `{"exp": …}`; 서명 키는 `secret_key`와 자격 증명에서 파생되므로 비밀번호를 바꾸면 발급된 모든 token이 즉시 무효화됩니다. token은 URL 안전 문자만 사용하므로 공유 링크에 그대로 넣을 수 있습니다
+- **인증 보안 레드라인**: `password` / `secret_key`는 절대 직렬화되지 않으며, api.json 출력은 인증 미활성화 시와 바이트 수준 동일; auth 미활성화 시 `/apidoc/auth`는 404 반환, 데이터 라우트는 그냥 통과; 앱 설정에 독립 password가 있으면 앱 비밀번호가 전역 비밀번호보다 우선하고, 빈 비밀번호(전역/앱 모두)는 발급·검증 양쪽에서 항상 실패 폐쇄(fail closed)됩니다; `secret_key`가 미설정이면 **프로세스별 랜덤 키**로 폴백하며(재시작 시 token 무효, 공개된 기본 키는 존재하지 않음), `expire` 기본값은 86400초; 로그인 실패가 반복되면 지수 백오프로 응답합니다(처음 3회는 패널티 없음, 이후 1초 → 2초 → … 최대 60초, 성공 시 초기화); 자격 증명/token 응답에는 `Cache-Control: no-store`가 붙습니다
 - **다중 앱·다중 버전(M6b)**: `ApidocConfig.apps: Vec<AppConfig>`(`key` / `title` / `items` 재귀 하위 버전 / `password`)로 앱 트리 설정, `#[apidoc::app("key")]`로 인터페이스를 지정 앱 key에 연결, key 미지정 인터페이스는 기본 앱에 포함; api.json 출력에 `doc.apps` 트리 추가, UI 상단에 앱/버전 선택기 등장, token은 appKey별로 localStorage에 분리 저장(앱마다 독립 비밀번호 가능)
 
 ### 구현됨 (v2)
@@ -103,11 +101,11 @@ apidoc-rust의 구현 방향:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 설정(resolver 2)
-├── VERSION                    # 프로젝트 버전(v1.6.2)
+├── VERSION                    # 프로젝트 버전(v2.0.0)
 ├── crates/
 │   ├── apidoc/                # 런타임 코어(프레임워크 무관)
 │   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML
-│   │   ├── src/auth.rs        # M6a 비밀번호 인증(authcode token 발급/검증 + 라우트 가드)
+│   │   ├── src/auth.rs        # M6a 비밀번호 인증(HMAC token 발급/검증 + 라우트 가드 + 백오프)
 │   │   ├── src/export/        # M5 내보내기: markdown / typescript / swagger
 │   │   ├── src/ui.html        # 공유 문서 UI(코어 crate에서 내보내며, 두 어댑터가 참조)
 │   │   ├── tests/             # 통합 테스트(매크로 확장/집계/직렬화/크로스 crate)
@@ -130,9 +128,10 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.6"        # 또는 path = "crates/apidoc"
+apidoc-rust = "2.0"        # 또는 path = "crates/apidoc"
 
 serde_json = "1"      # api.json 출력용
+linkme = "0.3"        # 필수: 매크로가 생성한 등록 코드가 이를 참조합니다
 ```
 
 > Web 프레임워크에 따라 어댑터를 선택: axum은 `features = ["axum"]`, actix-web은 `features = ["actix"]`(둘 다 기능 1:1). `mock`(Mock 엔진)은 프레임워크 내부 의존성으로 어댑터가 자동으로 가져오므로, 일반적인 소비 측은 직접 사용할 필요가 없습니다.
@@ -257,7 +256,7 @@ GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 설명 파일(application/js
 
 - **markdown**: 프로젝트 Wiki / 릴리스 노트에 붙여넣기 적합, 그룹별 목차 출력, 각 인터페이스에 파라미터 테이블과 응답 블록 포함;
 - **typescript**: 프론트엔드가 바로 타입 정의로 붙여넣기 가능; 그룹 없는 인터페이스는 `defaultGroup` 네임스페이스에 포함(`default`는 TS 예약어라 식별자로 사용 불가);
-- **swagger**: `info.version`은 Cargo 패키지 버전 사용(현재 1.6.2), Swagger UI나 코드 생성기에 바로 가져오기 가능.
+- **swagger**: `info.version`은 `ApidocConfig.version`(문서화된 API 버전)에서 가져오고, 미설정 시 apidoc-rust 패키지 버전(현재 2.0.0)으로 폴백; path 파라미터는 URL 템플릿 기준이므로 Swagger UI나 코드 생성기에 바로 가져올 수 있습니다.
 
 ### 7. actix-web 어댑터
 
@@ -265,7 +264,7 @@ Web 프레임워크로 actix-web을 사용할 때 `features = ["actix"]` 연결(
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.6", features = ["actix"] }
+apidoc-rust = { version = "2.0", features = ["actix"] }
 ```
 
 ```rust
@@ -291,11 +290,13 @@ async fn main() -> std::io::Result<()> {
 }
 ```
 
-마운트 후 `/apidoc`(문서 UI), `/apidoc/api.json`(데이터), `/apidoc/mock`(Mock), `/apidoc/export`(내보내기)에 접근할 수 있습니다. CORS 빈 설정은 리터럴 `*`를 허용(자격 증명 미포함), `allow_origins` 화이트리스트를 설정하면 정확 일치로 Origin을 반사하며, 두 모드 모두 자격 증명을 열지 않습니다.
+마운트 후 `/apidoc`(문서 UI), `/apidoc/api.json`(데이터), `/apidoc/mock`(Mock), `/apidoc/export`(내보내기)에 접근할 수 있습니다. CORS 빈 설정 — 또는 `["*"]` — 은 리터럴 `*`를 허용(자격 증명 미포함), `allow_origins` 화이트리스트를 설정하면 정확 일치로 Origin을 반사하며, 두 모드 모두 자격 증명을 열지 않습니다.
 
 ### 8. 비밀번호 인증(M6a)
 
-`auth`를 활성화하면 문서에 비밀번호가 필요합니다(상위 apidoc-php의 Auth.php에 맞춰 token은 Discuz authcode 암호화 스위트를 줄 단위로 이식):
+`auth`를 활성화하면 문서 접근에 비밀번호가 필요합니다(HMAC-SHA256 서명 token, 서버 측 상수 시간 비교, 로그인 백오프):
+
+> **2.0의 호환성 깨지는 변경**: 로그인 엔드포인트가 `GET /apidoc/auth?password=…`에서 `POST /apidoc/auth`(JSON body)로 바뀌었고, token은 이전 형식의 엔벨로프에서 HMAC-SHA256 서명 token으로 변경되었습니다 — **기존 token과 기존 호출 방식은 더 이상 동작하지 않으며**, 클라이언트는 반드시 POST해야 합니다. `secret_key`를 명시적으로 설정하지 않은 배포에서는 재시작 시 발급된 token도 사라집니다(프로세스별 랜덤 키가 사용되며, 공개된 기본값은 없습니다).
 
 ```rust
 use apidoc::auth::AuthConfig;
@@ -306,7 +307,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
     auth: Some(AuthConfig {
         enable: true,
         password: "your-password".to_string(),
-        secret_key: "your-secret-key".to_string(), // 기본값 "apidoc#hgcode"(활성화 시 미설정이면 stderr 경고 1회)
+        secret_key: "your-secret-key".to_string(), // 미설정 시 프로세스별 랜덤 키: 재시작 시 token 무효(다중 인스턴스 배포에서는 반드시 명시 설정)
         expire: 86400,                             // 초; 기본값 86400
     }),
     apps: vec![],
@@ -315,10 +316,11 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 
 **흐름**:
 
-1. 클라이언트가 `GET /apidoc/auth?password=<md5(비밀번호)>&appKey=<key>`로 token 교환(성공 시 `{"token":"..."}` 반환, 비밀번호 오류는 401); auth 미활성화 시 이 라우트는 404 반환, 데이터 라우트는 그냥 통과
-2. 데이터 라우트 `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock`에는 `?token=xxx` 첨부 필요(특정 앱 선택 시 동시에 `&appKey=` 첨부); token이 없거나/만료/오류면 401 반환, 문서 UI가 자동으로 비밀번호 마스크 팝업, 비밀번호 입력 후 프론트엔드에서 md5로 제출해 token 교환
-3. token 페이로드는 `{key: md5(md5(원본 비밀번호)), expire: now+expire}`, `secret_key`로 authcode 암호화(RC4 변형 + md5 체크섬 + 패딩 없는 base64, MAC 비교 상수 시간으로 타이밍 사이드 채널 방지)
-4. `password` / `secret_key`는 절대 직렬화되지 않으며, api.json 출력은 인증 미활성화 시와 바이트 수준 동일; 앱에 독립 `password`를 설정하면 앱 비밀번호가 전역 비밀번호보다 우선
+1. 클라이언트가 `POST /apidoc/auth`(JSON body `{"password": "...", "appKey": "<key>"}`; `appKey`는 독립 비밀번호를 가진 앱 선택)로 token 교환(성공 시 `{"token":"..."}` 반환, 비밀번호 오류는 401, body가 잘못된 경우 400); 비밀번호는 body로 전송되며(URL이나 로그에 남지 않음) 클라이언트 측 해싱은 하지 않습니다. auth 미활성화 시 이 라우트는 404 반환, 데이터 라우트는 그냥 통과
+2. 데이터 라우트 `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock`에는 `?token=xxx` 첨부 필요(특정 앱 선택 시 동시에 `&appKey=` 첨부); token이 없거나/만료/오류면 401 반환, 문서 UI가 자동으로 비밀번호 마스크 팝업, 비밀번호 입력 후 프런트엔드가 그대로 POST해 token 교환
+3. token은 `base64url(payload).base64url(HMAC-SHA256(payload))`이며 페이로드는 `{"exp": <Unix 초>}`; 서명 키는 HMAC-SHA256(`secret_key`, 자격 증명)이므로 비밀번호를 바꾸면 기존 token은 즉시 무효화됩니다. 검증은 MAC을 상수 시간으로 비교한 뒤 만료를 확인하며, token은 URL 안전 문자만 사용
+4. `password` / `secret_key`는 절대 직렬화되지 않으며, api.json 출력은 인증 미활성화 시와 바이트 수준 동일; 앱에 독립 `password`를 설정하면 앱 비밀번호가 전역 비밀번호보다 우선하고, 빈 비밀번호(전역/앱)는 항상 실패 폐쇄됩니다
+5. 로그인 실패가 반복되면 지수 백오프로 응답합니다(처음 3회는 패널티 없음, 이후 1초 → 2초 → … 최대 60초, 성공 시 초기화); 자격 증명/token 응답에는 `Cache-Control: no-store`가 붙습니다
 
 ### 9. 다중 앱·다중 버전(M6b)
 
@@ -394,7 +396,7 @@ ApidocConfig {
 }
 ```
 
-사용 가능한 템플릿 변수: 최상위 `title` / `description`; `{{#each endpoints}}` 내부 `title` / `url` / `method` / `group` / `desc` / `author`; `{{#each tables}}` 내부 `key` / `title`, 그 안의 `{{#each fields}}` 내부 `name` / `ty` / `required` / `default` / `desc` / `mock`, 그 외 파생 변수 `not_null` / `default_clause` / `comma`(유효한 SQL을 바로 생성하기 편리).
+사용 가능한 템플릿 변수: 최상위 `title` / `description`; `{{#each endpoints}}` 내부 `title` / `url` / `method` / `group` / `desc` / `author`; `{{#each tables}}` 내부 `key` / `title`, 그 안의 `{{#each fields}}` 내부 `name` / `ty` / `required` / `default` / `desc` / `mock`, 그 외 파생 변수 `not_null` / `default_clause` / `comma` / `key_q` / `name_q`(유효한 SQL을 바로 생성하기 편리하며, `*_q`는 인용된 식별자), `url_js` / `method_js`(JSON 문자열 리터럴로, JS 코드 위치에 바로 넣을 수 있음), `fn_name`(Rust 골격용으로 식별자 정제된 `{method}_{group}`).
 
 ### 12. 디버그 사전/사후 스크립트(v2)
 
@@ -423,7 +425,7 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 | M4 | 온라인 디버깅 + Mock 엔진 | ✅ 완료 |
 | M5 | markdown / typescript / swagger.json 내보내기(OpenAPI3) | ✅ 완료 |
 | —  | actix-web 어댑터(axum과 기능 1:1) | ✅ 완료 |
-| M6a | 비밀번호 인증(authcode token + 비밀번호 마스크, 앱 비밀번호 우선) | ✅ 완료 |
+| M6a | 비밀번호 인증(HMAC-SHA256 서명 token + 비밀번호 마스크, 앱 비밀번호 우선) | ✅ 완료 |
 | M6b | 다중 앱·다중 버전(apps 설정 트리 + app 주석 + UI 선택기) | ✅ 완료 |
 | v2 | 데이터 테이블 필드 참조 + 문서 캐시 + 공유 링크 + 코드 생성기 + 디버깅 이벤트 | ✅ 완료 |
 
@@ -484,4 +486,4 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 ## License
 
-[MIT](LICENSE)
+[MIT](../../LICENSE)

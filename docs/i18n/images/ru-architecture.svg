@@ -41,7 +41,7 @@
   <rect x="120" y="350" width="700" height="40" rx="8" fill="#fdedec" stroke="#c0392b" stroke-width="2"/>
   <rect x="730" y="354" width="62" height="20" rx="10" fill="#c0392b"/>
   <text x="761" y="368" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M6a</text>
-  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; обмен на token (крипто-набор authcode; password/secret_key никогда не сериализуются)</text>
+  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: POST /apidoc/auth (JSON body) обмен на token (подпись HMAC-SHA256; password/secret_key никогда не сериализуются)</text>
 
   <!-- Слой адаптеров, завершён -->
   <rect x="120" y="402" width="700" height="76" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -60,7 +60,7 @@
   <text x="750" y="509" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
   <text x="140" y="515" font-size="16" font-weight="bold" fill="#1e8449">Слой отображения (завершён) · UI-панель отладки (встроенный Html, без внешних зависимостей)</text>
   <text x="140" y="537" font-size="13" fill="#333">Разделы / онлайн-отладка (CORS) / предзаполнение Mock</text>
-  <text x="140" y="553" font-size="13" fill="#333">M6: маскирование пароля (md5 на фронте для обмена на token) · селектор приложения/версии · token хранится по appKey в localStorage</text>
+  <text x="140" y="553" font-size="13" fill="#333">M6: маскирование пароля (POST для обмена на token) · селектор приложения/версии · token хранится по appKey в localStorage</text>
 
   <!-- Поток данных -->
   <rect x="120" y="566" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
@@ -68,7 +68,7 @@
   <text x="750" y="585" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
   <text x="140" y="588" font-size="13" fill="#333" font-family="monospace">браузер → /apidoc (панель отладки) → CORS → целевой API (реальный запрос)</text>
   <text x="140" y="606" font-size="13" fill="#333" font-family="monospace">браузер → /apidoc/mock → Mock-данные (crate fake · 15 правил)</text>
-  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">браузер → /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token; роуты данных с ?token=</text>
+  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">браузер → POST /apidoc/auth (JSON body) → token; роуты данных с ?token=</text>
 
   <!-- workspace -->
   <rect x="120" y="642" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>

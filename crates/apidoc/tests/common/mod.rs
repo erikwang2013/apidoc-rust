@@ -30,8 +30,17 @@ impl Resp {
 }
 
 /// token 含 base64 的 + / 字符，作为 query 传值须百分号编码（同 ui.js 的 encodeURIComponent）。
+/// 新令牌只用 URL 安全字符，这里保留是为了钉住"链接 token 原样回灌"的端到端语义。
 pub fn enc(s: &str) -> String {
     s.replace('+', "%2B").replace('/', "%2F")
+}
+
+/// POST /apidoc/auth 的 JSON 请求体（密码走 body，不走 URL）。
+pub fn login_body(password: &str, app_key: Option<&str>) -> String {
+    match app_key {
+        Some(k) => serde_json::json!({ "password": password, "appKey": k }).to_string(),
+        None => serde_json::json!({ "password": password }).to_string(),
+    }
 }
 
 /// 解析 share 响应的 {"url": ...}。

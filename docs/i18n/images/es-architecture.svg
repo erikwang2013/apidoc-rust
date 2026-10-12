@@ -41,7 +41,7 @@
   <rect x="120" y="350" width="700" height="40" rx="8" fill="#fdedec" stroke="#c0392b" stroke-width="2"/>
   <rect x="730" y="354" width="62" height="20" rx="10" fill="#c0392b"/>
   <text x="761" y="368" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M6a</text>
-  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; para obtener token (sobre de cifrado authcode, password/secret_key nunca se serializan)</text>
+  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: POST /apidoc/auth (JSON body) para obtener token (firma HMAC-SHA256; password/secret_key nunca se serializan)</text>
 
   <!-- Capa de adaptadores, terminada -->
   <rect x="120" y="402" width="700" height="76" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -60,7 +60,7 @@
   <text x="750" y="509" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
   <text x="140" y="515" font-size="16" font-weight="bold" fill="#1e8449">Capa de presentación (completada) · panel de depuración de la UI de documentación (Html integrado, cero dependencias externas)</text>
   <text x="140" y="537" font-size="13" fill="#333">Exploración de directorios / depuración en línea (CORS directo) / prellenado Mock</text>
-  <text x="140" y="553" font-size="13" fill="#333">M6: máscara de contraseña (md5 en el frontend para obtener token) · selector de aplicación/versión · token guardado en localStorage por appKey</text>
+  <text x="140" y="553" font-size="13" fill="#333">M6: máscara de contraseña (POST para obtener el token) · selector de aplicación/versión · token guardado en localStorage por appKey</text>
 
   <!-- Flujo de datos -->
   <rect x="120" y="566" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
@@ -68,7 +68,7 @@
   <text x="750" y="585" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
   <text x="140" y="588" font-size="13" fill="#333" font-family="monospace">Navegador → /apidoc (panel de depuración) → conexión CORS directa → interfaz de destino (petición real)</text>
   <text x="140" y="606" font-size="13" fill="#333" font-family="monospace">Navegador → /apidoc/mock → datos Mock (crate fake · 15 reglas)</text>
-  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">Navegador → /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token, las rutas de datos se acceden con ?token=</text>
+  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">Navegador → POST /apidoc/auth (JSON body) → token, las rutas de datos se acceden con ?token=</text>
 
   <!-- workspace -->
   <rect x="120" y="642" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>

@@ -5,11 +5,11 @@
 
 use crate::route_core::{self, Core, R};
 use crate::ApidocConfig;
-use axum::body::Body;
+use axum::body::{Body, Bytes};
 use axum::extract::{Query, State};
 use axum::http::{header, HeaderValue, StatusCode};
 use axum::response::Response;
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -17,22 +17,30 @@ use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
 pub use crate::route_core::CorsConfig;
 
-/// 生成 CORS 层。用法：`.merge(apidoc::axum::apidoc_routes(cfg)).layer(apidoc::axum::cors_layer(cfg))`。
+/// 生成 CORS 层。用法：
+/// `.merge(apidoc::axum::apidoc_routes(cfg.clone())).layer(apidoc::axum::cors_layer(cors_cfg))`
+/// —— 两个参数是两份不同配置（`ApidocConfig` 与 `CorsConfig`），不是同一个值。
 /// 注意 layer 必须在 merge 之后调用（或对最终 router 调用），否则 CORS 只覆盖
 /// /apidoc 两条路由；M4 要的是用户自己的业务路由也能被浏览器跨域直连。
 /// 方法/头默认全放行（M4 要任意 method 与 Content-Type/Authorization 等头）。
 pub fn cors_layer(config: CorsConfig) -> CorsLayer {
-    let origin = if config.allow_origins.is_empty() {
+    let wildcard = config.allow_origins.iter().any(|o| o == "*");
+    let origin = if config.allow_origins.is_empty() || wildcard {
         AllowOrigin::any()
     } else {
-        AllowOrigin::list(
-            config
-                .allow_origins
-                .into_iter()
-                .map(|o| HeaderValue::from_str(&o).expect("valid origin")),
-        )
+        AllowOrigin::list(config.allow_origins.into_iter().map(|o| {
+            HeaderValue::from_str(&o)
+                .unwrap_or_else(|_| panic!("apidoc: invalid origin `{o}` in CorsConfig.allow_origins"))
+        }))
     };
-    CorsLayer::new().allow_origin(origin).allow_methods(Any).allow_headers(Any)
+    // expose_headers(Any) 与 actix 侧对齐：actix-cors 默认把所有响应头放进
+    // Access-Control-Expose-Headers，tower-http 默认一个都不放——同一份配置
+    // 在两个适配器上必须能读到同样的头。
+    CorsLayer::new()
+        .allow_origin(origin)
+        .allow_methods(Any)
+        .allow_headers(Any)
+        .expose_headers(Any)
 }
 
 /// 挂载 GET /apidoc（UI）与 GET /apidoc/api.json（数据），返回 Router<()>，
@@ -46,7 +54,8 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
         // UI 页与宠物图标不设守卫（见 route_core::UI/PET）。
         .route("/apidoc", get(|| async { response(route_core::UI) }))
         .route("/apidoc/pet.svg", get(|| async { response(route_core::PET) }))
-        .route("/apidoc/auth", get(auth))
+        // 登录用 POST：密码走 body，不进 URL/日志（GET 的 ?password= 已废弃）
+        .route("/apidoc/auth", post(auth))
         // 以下数据路由均经 route_core 守卫，失败 401 DENIED_BODY
         .route("/apidoc/api.json", get(api_json))
         .route("/apidoc/export", get(export))
@@ -57,8 +66,8 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
 }
 
 // 各 handler 一行转发 core：判定与渲染在 route_core（两框架共享同一实现）。
-async fn auth(State(core): State<Arc<Core>>, Query(q): Query<HashMap<String, String>>) -> Response {
-    response(core.auth(&q))
+async fn auth(State(core): State<Arc<Core>>, body: Bytes) -> Response {
+    response(core.auth(&body))
 }
 
 async fn api_json(State(core): State<Arc<Core>>, Query(q): Query<HashMap<String, String>>) -> Response {
@@ -88,5 +97,7 @@ fn response(r: R) -> Response {
     if let Some(ct) = r.ct {
         res.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static(ct));
     }
+    // 这些响应里带着 /apidoc/auth 的凭据与 token，任何一层缓存都不该留存
+    res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     res
 }

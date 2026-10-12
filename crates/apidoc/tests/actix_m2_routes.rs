@@ -79,6 +79,7 @@ async fn cors_whitelist_matches_exactly_and_never_credentials() {
                 cache: None,
                 codegen: Vec::new(),
                 apps: Vec::new(),
+                ..Default::default()
             }))
             .wrap(cors_layer(CorsConfig {
                 allow_origins: vec!["http://localhost:3000".into()],

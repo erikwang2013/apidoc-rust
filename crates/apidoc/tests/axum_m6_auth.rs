@@ -14,12 +14,19 @@ use axum::http::Request;
 use axum::Router;
 use tower::ServiceExt;
 
-/// driver：建 Router、发 GET、把响应归一化成 common::Resp（断言体共享）。
-async fn get(cfg: ApidocConfig, uri: String) -> common::Resp {
+/// driver：建 Router、发请求、把响应归一化成 common::Resp（断言体共享）。
+async fn request(cfg: ApidocConfig, uri: String, method: &str, body: Body) -> common::Resp {
     let res = Router::new()
         .merge(apidoc_routes(cfg))
         .layer(cors_layer(CorsConfig::default()))
-        .oneshot(Request::builder().uri(uri.as_str()).body(Body::empty()).unwrap())
+        .oneshot(
+            Request::builder()
+                .method(method)
+                .uri(uri.as_str())
+                .header("content-type", "application/json")
+                .body(body)
+                .unwrap(),
+        )
         .await
         .unwrap();
     let status = res.status();
@@ -34,9 +41,17 @@ async fn get(cfg: ApidocConfig, uri: String) -> common::Resp {
     )
 }
 
+async fn get(cfg: ApidocConfig, uri: String) -> common::Resp {
+    request(cfg, uri, "GET", Body::empty()).await
+}
+
+async fn post(cfg: ApidocConfig, uri: String, body: String) -> common::Resp {
+    request(cfg, uri, "POST", Body::from(body)).await
+}
+
 #[tokio::test]
 async fn auth_disabled_route_404_and_data_open() {
-    m6::assert_auth_disabled_route_404_and_data_open("axum", get).await;
+    m6::assert_auth_disabled_route_404_and_data_open("axum", get, post).await;
 }
 
 #[tokio::test]
@@ -46,10 +61,10 @@ async fn auth_enabled_guards_data_routes_and_keeps_ui_open() {
 
 #[tokio::test]
 async fn auth_issue_and_token_flow() {
-    m6::assert_auth_issue_and_token_flow("axum", get).await;
+    m6::assert_auth_issue_and_token_flow("axum", get, post).await;
 }
 
 #[tokio::test]
 async fn app_password_takes_priority_over_global() {
-    m6::assert_app_password_takes_priority_over_global("axum", get).await;
+    m6::assert_app_password_takes_priority_over_global("axum", get, post).await;
 }

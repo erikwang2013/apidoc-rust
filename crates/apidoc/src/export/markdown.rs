@@ -43,7 +43,7 @@ fn render_endpoint(ep: &DocEndpoint, out: &mut String) {
             out.push_str(&format!(
                 "| {} | {} | {} | {} | {} |\n",
                 cell(&path),
-                p.ty,
+                cell(p.ty),
                 if p.required { "是" } else { "否" },
                 cell(p.default.unwrap_or("-")),
                 cell(p.desc.unwrap_or("-")),
@@ -54,7 +54,13 @@ fn render_endpoint(ep: &DocEndpoint, out: &mut String) {
 
     for (label, examples) in [("成功响应", &ep.success), ("错误响应", &ep.error)] {
         for ex in examples {
-            out.push_str(&format!("**{label} {}**\n\n```json\n{}\n```\n\n", ex.code, ex.example));
+            // 围栏至少 3 个反引号，且要比正文里最长的一串更长，否则示例里的 ``` 会提前
+            // 关掉代码块，后面的文档全被吞进代码块
+            let fence = "`".repeat(longest_backtick_run(ex.example).max(2) + 1);
+            out.push_str(&format!(
+                "**{label} {}**\n\n{fence}json\n{}\n{fence}\n\n",
+                ex.code, ex.example
+            ));
         }
     }
     if !ep.md.is_empty() {
@@ -63,7 +69,12 @@ fn render_endpoint(ep: &DocEndpoint, out: &mut String) {
     }
 }
 
-/// 表格单元格转义：`|` 会拆列，换行吞掉。
+/// 表格单元格转义：`|` 会拆列，裸换行会把一行拆成两行（表格断在中间）。
 fn cell(s: &str) -> String {
-    s.replace('|', "\\|")
+    s.replace('|', "\\|").replace('\n', " ").replace('\r', "")
+}
+
+/// 正文里最长的一串连续反引号长度（代码围栏至少要比它长 1）。
+fn longest_backtick_run(s: &str) -> usize {
+    s.split(|c| c != '`').map(str::len).max().unwrap_or(0)
 }

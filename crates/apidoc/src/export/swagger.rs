@@ -13,12 +13,11 @@ pub fn render(doc: &ApiDoc, version: &str) -> Value {
         let path = convert_path(&ep.url);
         let op = render_operation(ep);
         let method = ep.method.to_lowercase();
-        paths
-            .entry(path)
-            .or_insert_with(|| json!({}))
-            .as_object_mut()
-            .expect("path must be object")
-            .insert(method, op);
+        // 同一个 path 多方法：合并进同一个 object（serializer 路径不留可 panic 的 expect）
+        if let Some(m) = paths.entry(path).or_insert_with(|| Value::Object(Map::new())).as_object_mut()
+        {
+            m.insert(method, op);
+        }
     }
     let mut info = json!({ "title": doc.config.title, "version": version });
     if let Some(desc) = &doc.config.description {
@@ -45,8 +44,32 @@ fn convert_path(url: &str) -> String {
 fn render_operation(ep: &DocEndpoint) -> Value {
     let mut op = Map::new();
     let mut parameters = Vec::new();
+    // path 参数以 URL 模板为准：OpenAPI 要求模板里的 `{x}` 必须声明，声明的
+    // in:path 参数也必须出现在模板里。route_param 注解只提供类型/描述，名字对不上
+    // 的丢弃并告警——照抄注解会让任何「注解与 URL 不逐字一致」的接口产出非法 spec。
+    let spec = path_placeholders(&ep.url);
+    for name in &spec {
+        let declared = ep.route_params.iter().find(|p| p.name == name);
+        let mut o = Map::new();
+        o.insert("name".into(), Value::String(name.clone()));
+        o.insert("in".into(), Value::String("path".into()));
+        o.insert("required".into(), Value::Bool(true));
+        o.insert(
+            "schema".into(),
+            json!({ "type": schema_type(declared.map_or("string", |p| p.ty)) }),
+        );
+        if let Some(desc) = declared.and_then(|p| p.desc) {
+            o.insert("description".into(), Value::String(desc.to_string()));
+        }
+        parameters.push(Value::Object(o));
+    }
     for p in &ep.route_params {
-        parameters.push(param_obj(p, "path", true));
+        if !spec.iter().any(|n| n == p.name) {
+            eprintln!(
+                "apidoc: route_param `{}` of `{}` is not in its url template, dropping it (declaring it as in:path would make the OpenAPI spec invalid)",
+                p.name, ep.url
+            );
+        }
     }
     for p in &ep.querys {
         parameters.push(param_obj(p, "query", p.required));
@@ -69,11 +92,16 @@ fn render_operation(ep: &DocEndpoint) -> Value {
     }
     let mut responses = Map::new();
     for ex in &ep.success {
-        responses.insert(ex.code.to_string(), success_response(ex, &ep.returned));
+        let code = success_code(ex.code);
+        if responses.insert(code.clone(), success_response(ex, &ep.returned)).is_some() {
+            eprintln!("apidoc: duplicate response code {code} for `{}`, keeping the first", ep.url);
+        }
     }
     for ex in &ep.error {
         let code = error_code(ex.code);
-        responses.insert(code.clone(), error_response(ex, &code));
+        if responses.insert(code.clone(), error_response(ex, &code)).is_some() {
+            eprintln!("apidoc: duplicate response code {code} for `{}`, keeping the first", ep.url);
+        }
     }
     if responses.is_empty() {
         responses.insert("200".into(), json!({ "description": "OK" }));
@@ -147,6 +175,31 @@ fn error_code(code: &str) -> String {
         Ok(n) if (400..=599).contains(&n) => code.to_string(),
         _ => "500".to_string(),
     }
+}
+
+/// success 例子的状态码不合 OpenAPI（`^[1-5](\d{2}|XX)$`）时归 200。
+/// （注解层已校验 100-599，这里兜住手工构造 DocExample 的路径。）
+fn success_code(code: &str) -> String {
+    match code.parse::<u16>() {
+        Ok(n) if (100..=599).contains(&n) => code.to_string(),
+        _ => "200".to_string(),
+    }
+}
+
+/// URL 模板里的路径占位符（`:id` 与 `{id}` 两种写法），按出现顺序、去重。
+fn path_placeholders(url: &str) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for seg in url.split('/') {
+        let name = seg
+            .strip_prefix(':')
+            .or_else(|| seg.strip_prefix('{').and_then(|s| s.strip_suffix('}')));
+        if let Some(n) = name {
+            if !n.is_empty() && !out.iter().any(|x| x == n) {
+                out.push(n.to_string());
+            }
+        }
+    }
+    out
 }
 
 fn status_text(code: &str) -> &'static str {

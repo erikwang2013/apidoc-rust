@@ -25,8 +25,6 @@ Alat pembuat dokumentasi API dan pengembangan antarmuka berbasis makro prosedura
 
 Apidoc adalah pustaka plugin Rust yang secara otomatis menghasilkan dokumentasi antarmuka API dengan mengurai **makro prosedural (proc-macro) Rust**, dan kompatibel dengan kerangka kerja populer seperti axum dan actix-web. Selain pembuatan dokumentasi otomatis, Apidoc juga mengintegrasikan debugging antarmuka online, data uji Mock, pembuatan kode Json/TypeScript, generator antarmuka, generator kode, dan kemampuan lainnya, mencakup seluruh alur pengembangan, debugging, dan penyerahan antarmuka, dengan tujuan meningkatkan efisiensi pengembangan API.
 
-> **Asal Proyek**: proyek ini mengacu pada [apidoc-php](https://github.com/erikwang2013/apidoc-php) (ekstensi composer yang menghasilkan dokumentasi API berdasarkan PHP 8 attributes), mewujudkan kemampuan "anotasi sebagai dokumentasi" secara native di Rust, dan terus dipelihara serta dikembangkan oleh erikwang2013.
-
 Pendekatan implementasi apidoc-rust:
 
 - **Dihasilkan saat kompilasi**: dokumentasi dihasilkan oleh makro prosedural pada waktu kompilasi, dokumentasi tidak akan pernah kehilangan sinkronisasi dengan kode;
@@ -50,10 +48,10 @@ Pendekatan implementasi apidoc-rust:
 
 ### Sudah Diimplementasikan (M1–M3)
 
-- **Dokumentasi berbasis anotasi**: tujuh makro atribut `title` / `desc` / `method` / `url` / `param` / `query` / `returned`, anotasi satu per satu (setara dengan penulisan PHP attributes), parameter mendukung nesting `required` / `default` / `desc` / `mock` / `children`
+- **Dokumentasi berbasis anotasi**: tujuh makro atribut `title` / `desc` / `method` / `url` / `param` / `query` / `returned`, anotasi satu per satu, parameter mendukung nesting `required` / `default` / `desc` / `mock` / `children`
 - **Validasi waktu kompilasi**: url harus diawali `/`, whitelist method, param name wajib diisi, dll.; anotasi tidak valid menghasilkan error saat kompilasi (span presisi)
 - **Pengumpulan otomatis**: registrasi statis linkme `distributed_slice`, tanpa daftar API manual; `DocRegistry::collect()` menggabungkan berdasarkan id, mengembalikan urutan deklarasi berdasarkan seq, pengumpulan otomatis antar-crate
-- **Output api.json**: serde melakukan serialisasi model data dokumentasi terpadu (config + endpoints), field selaras dengan semantik PHP
+- **Output api.json**: serde melakukan serialisasi model data dokumentasi terpadu (config + endpoints), dengan nama field yang sama antara model dan pengekspor
 - **Adaptor axum + UI dokumentasi tertanam**: pasang rute langsung dapat halaman dokumentasi, penelusuran direktori berkelompok (M2)
 - **Pelengkapan anotasi**: 12 anotasi baru `tag` / `group` / `author` / `header` / `route_param` / `response_status` / `success` / `error` / `not_debug` / `md` / `sort` / `ref` (M3)
 
@@ -74,8 +72,8 @@ Pendekatan implementasi apidoc-rust:
 
 ### Sudah Diimplementasikan (M6)
 
-- **Otentikasi Kata Sandi (M6a)**: dengan `AuthConfig { enable, password, secret_key, expire }` diaktifkan, klien memanggil `GET /apidoc/auth?password=<md5(kata sandi)>&appKey=<key>` untuk mendapatkan token; rute data `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` wajib menyertakan `?token=xxx`; token hilang/kedaluwarsa/salah mengembalikan 401 dan UI dokumentasi menampilkan masker kata sandi; token diterbitkan dengan enkripsi authcode (porting baris per baris dari authcode Discuz: varian RC4 + checksum md5 + base64 tanpa padding), payload `{key: md5(md5(kata sandi asli)), expire: now+expire}`, perbandingan MAC waktu konstan
-- **Garis merah keamanan autentikasi**: `password` / `secret_key` tidak pernah diserialisasi; output api.json identik byte demi byte dengan saat autentikasi nonaktif; saat auth nonaktif, `/apidoc/auth` mengembalikan 404 dan rute data langsung diizinkan; saat aplikasi mengonfigurasi `password` sendiri, kata sandi aplikasi diutamakan dari kata sandi global; `secret_key` default `"apidoc#hgcode"` (peringatan stderr sekali jika diaktifkan tanpa konfigurasi), `expire` default 86400 detik
+- **Otentikasi Kata Sandi (M6a)**: dengan `AuthConfig { enable, password, secret_key, expire }` diaktifkan, klien memanggil `POST /apidoc/auth` (body JSON `{"password": "...", "appKey": "..."}`) untuk mendapatkan token; rute data `/apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` wajib menyertakan `?token=xxx`; token hilang/kedaluwarsa/salah mengembalikan 401 dan UI dokumentasi menampilkan masker kata sandi. Kata sandi dikirim di body permintaan (tidak pernah di URL, log, atau riwayat browser), dibandingkan di server dalam waktu konstan, dan tidak pernah di-hash di sisi klien. Token adalah token bertanda tangan stateless `base64url(payload).base64url(HMAC-SHA256(payload))` dengan payload `{"exp": …}`; kunci penanda tangannya diturunkan dari `secret_key` dan kredensial, sehingga mengubah kata sandi membatalkan semua token yang telah diterbitkan. Token hanya memakai karakter yang aman untuk URL sehingga langsung bisa dipakai di tautan berbagi
+- **Garis merah keamanan autentikasi**: `password` / `secret_key` tidak pernah diserialisasi; output api.json identik byte demi byte dengan saat autentikasi nonaktif; saat auth nonaktif, `/apidoc/auth` mengembalikan 404 dan rute data langsung diizinkan; saat aplikasi mengonfigurasi `password` sendiri, kata sandi aplikasi diutamakan dari kata sandi global, dan kata sandi kosong (global atau per aplikasi) selalu gagal tertutup (fail closed) baik saat penerbitan maupun verifikasi; `secret_key` secara default diganti dengan **kunci acak per proses** (token mati saat proses dimulai ulang — tidak ada kunci default publik), `expire` default 86400 detik; login gagal berulang dibalas backoff eksponensial (tanpa penalti untuk 3 kali pertama, lalu 1s → 2s → … dibatasi 60s, direset saat berhasil); setiap respons kredensial/token membawa `Cache-Control: no-store`
 - **Multi-Aplikasi Multi-Versi (M6b)**: `ApidocConfig.apps: Vec<AppConfig>` (`key` / `title` / `items` sub-versi rekursif / `password`) mengonfigurasi pohon aplikasi; `#[apidoc::app("key")]` menggantung antarmuka ke aplikasi dengan key tersebut dan antarmuka tanpa key masuk ke aplikasi default; output api.json menambah pohon `doc.apps`; muncul pemilih aplikasi/versi di bagian atas UI dan token disimpan terpisah di localStorage per appKey (aplikasi berbeda dapat memiliki kata sandi independen)
 
 ### Sudah Diimplementasikan (v2)
@@ -103,11 +101,11 @@ Pendekatan implementasi apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Konfigurasi workspace (resolver 2)
-├── VERSION                    # Versi proyek (v1.6.2)
+├── VERSION                    # Versi proyek (v2.0.0)
 ├── crates/
 │   ├── apidoc/                # Inti runtime (independen kerangka kerja)
 │   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json + UI_HTML
-│   │   ├── src/auth.rs        # otentikasi M6a (penerbitan/validasi token authcode + pengawal rute)
+│   │   ├── src/auth.rs        # otentikasi M6a (penerbitan/validasi token HMAC + pengawal rute + backoff)
 │   │   ├── src/export/        # Ekspor M5: markdown / typescript / swagger
 │   │   ├── src/ui.html        # UI dokumentasi bersama (diekspor crate inti, dirujuk kedua adaptor)
 │   │   ├── tests/             # Tes integrasi (ekspansi makro/agregasi/serialisasi/antar-crate)
@@ -130,9 +128,10 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "1.6"        # atau path = "crates/apidoc"
+apidoc-rust = "2.0"        # atau path = "crates/apidoc"
 
 serde_json = "1"      # untuk output api.json
+linkme = "0.3"        # wajib: kode registrasi hasil makro merujuknya
 ```
 
 > Adaptor dipilih salah satu sesuai kerangka web: axum memakai `features = ["axum"]`, actix-web memakai `features = ["actix"]` (keduanya fungsionalitas 1:1). `mock` (mesin Mock) adalah dependensi internal kerangka kerja, ditambahkan otomatis melalui adaptor, umumnya konsumen tidak perlu menggunakannya langsung.
@@ -257,7 +256,7 @@ GET /apidoc/export?format=swagger   # file deskripsi OpenAPI 3.0.0 (application/
 
 - **markdown**: cocok ditempel ke Wiki proyek / catatan rilis, mengeluarkan direktori per grup, setiap antarmuka dengan tabel parameter dan blok respons;
 - **typescript**: frontend bisa langsung ditempel sebagai definisi tipe; antarmuka tanpa group masuk ke namespace `defaultGroup` (`default` kata cadangan TS, tidak bisa dijadikan pengenal);
-- **swagger**: `info.version` diambil dari versi paket Cargo (saat ini 1.6.2), bisa langsung diimpor ke Swagger UI atau generator kode.
+- **swagger**: `info.version` diambil dari `ApidocConfig.version` (versi API yang didokumentasikan); jika tidak diisi, memakai versi paket apidoc-rust (saat ini 2.0.0); parameter path diambil dari template URL, sehingga spesifikasinya bisa langsung diimpor ke Swagger UI atau generator kode.
 
 ### 7. Adaptor actix-web
 
@@ -265,7 +264,7 @@ Saat kerangka web memakai actix-web, pasang `features = ["actix"]` (fungsionalit
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "1.6", features = ["actix"] }
+apidoc-rust = { version = "2.0", features = ["actix"] }
 ```
 
 ```rust
@@ -291,11 +290,13 @@ async fn main() -> std::io::Result<()> {
 }
 ```
 
-Setelah dipasang bisa mengakses `/apidoc` (UI dokumentasi), `/apidoc/api.json` (data), `/apidoc/mock` (Mock), `/apidoc/export` (ekspor). Konfigurasi CORS kosong mengizinkan literal `*` (tanpa membawa kredensial), jika mengonfigurasi whitelist `allow_origins` maka mencocokkan Origin yang dipantulkan secara presisi, kedua mode tidak membuka kredensial.
+Setelah dipasang bisa mengakses `/apidoc` (UI dokumentasi), `/apidoc/api.json` (data), `/apidoc/mock` (Mock), `/apidoc/export` (ekspor). Konfigurasi CORS kosong — atau `["*"]` — mengizinkan literal `*` (tanpa membawa kredensial), jika mengonfigurasi whitelist `allow_origins` maka mencocokkan Origin yang dipantulkan secara presisi, kedua mode tidak membuka kredensial.
 
 ### 8. Otentikasi Kata Sandi (M6a)
 
-Setelah `auth` diaktifkan, dokumentasi memerlukan kata sandi untuk diakses (selaras dengan Auth.php apidoc-php, token merupakan porting baris per baris enkripsi authcode Discuz):
+Setelah `auth` diaktifkan, dokumentasi memerlukan kata sandi untuk diakses (token bertanda tangan HMAC-SHA256, perbandingan waktu konstan di server, backoff login):
+
+> **Perubahan breaking di 2.0**: endpoint login berpindah dari `GET /apidoc/auth?password=…` ke `POST /apidoc/auth` (body JSON), dan token berubah dari envelope lama menjadi token bertanda tangan HMAC-SHA256 — **token lama dan cara pemanggilan lama tidak lagi berfungsi**, klien harus memakai POST. Deployment tanpa `secret_key` eksplisit juga kehilangan token yang telah diterbitkan saat restart (dipakai kunci acak per proses; tidak ada nilai default publik).
 
 ```rust
 use apidoc::auth::AuthConfig;
@@ -306,7 +307,7 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
     auth: Some(AuthConfig {
         enable: true,
         password: "your-password".to_string(),
-        secret_key: "your-secret-key".to_string(), // default "apidoc#hgcode" (peringatan stderr sekali jika diaktifkan tanpa konfigurasi)
+        secret_key: "your-secret-key".to_string(), // jika tidak diisi, memakai kunci acak per proses: restart membatalkan token; setel eksplisit untuk deployment multi-instance
         expire: 86400,                             // detik; default 86400
     }),
     apps: vec![],
@@ -315,10 +316,11 @@ let doc = DocRegistry::collect_doc(ApidocConfig {
 
 **Alur**:
 
-1. Klien memanggil `GET /apidoc/auth?password=<md5(kata sandi)>&appKey=<key>` untuk mendapatkan token (sukses → `{"token":"..."}`, kata sandi salah → 401); saat auth nonaktif rute ini mengembalikan 404 dan rute data langsung diizinkan
-2. Rute data `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` wajib menyertakan `?token=xxx` (serta `&appKey=` bila aplikasi tertentu dipilih); token hilang/kedaluwarsa/salah mengembalikan 401 dan UI dokumentasi otomatis menampilkan masker kata sandi; setelah memasukkan kata sandi, frontend menghitung md5 lokal lalu mengirim untuk mendapatkan token
-3. Payload token adalah `{key: md5(md5(kata sandi asli)), expire: now+expire}`, dienkripsi oleh `secret_key` melalui authcode (varian RC4 + checksum md5 + base64 tanpa padding, perbandingan MAC waktu konstan mencegah side-channel waktu)
-4. `password` / `secret_key` tidak pernah diserialisasi; output api.json identik byte demi byte dengan saat autentikasi nonaktif; saat aplikasi mengonfigurasi `password` sendiri, kata sandi aplikasi diutamakan dari kata sandi global
+1. Klien memanggil `POST /apidoc/auth` (body JSON `{"password": "...", "appKey": "<key>"}`; `appKey` memilih aplikasi yang punya kata sandi sendiri) untuk mendapatkan token (sukses → `{"token":"..."}`, kata sandi salah → 401, body tidak valid → 400); kata sandi dikirim di body — tidak pernah di URL atau log — dan tidak pernah di-hash di sisi klien. Saat auth nonaktif rute ini mengembalikan 404 dan rute data langsung diizinkan
+2. Rute data `GET /apidoc/api.json`, `/apidoc/export`, `/apidoc/mock` wajib menyertakan `?token=xxx` (serta `&appKey=` bila aplikasi tertentu dipilih); token hilang/kedaluwarsa/salah mengembalikan 401, UI dokumentasi otomatis menampilkan masker kata sandi, dan setelah kata sandi dimasukkan frontend mengirimkannya langsung lewat POST untuk ditukar dengan token
+3. Token adalah `base64url(payload).base64url(HMAC-SHA256(payload))` dengan payload `{"exp": <detik unix>}`; kunci penanda tangannya adalah HMAC-SHA256(`secret_key`, kredensial), sehingga mengubah kata sandi langsung membatalkan token lama. Verifikasi membandingkan MAC dalam waktu konstan lalu memeriksa kedaluwarsa; token hanya memakai karakter yang aman untuk URL
+4. `password` / `secret_key` tidak pernah diserialisasi; output api.json identik byte demi byte dengan saat autentikasi nonaktif; saat aplikasi mengonfigurasi `password` sendiri, kata sandi aplikasi diutamakan dari kata sandi global, dan kata sandi kosong (global atau per aplikasi) selalu gagal tertutup (fail closed)
+5. Login gagal berulang dibalas backoff eksponensial (tanpa penalti untuk 3 kali pertama, lalu 1s → 2s → … dibatasi 60s, direset saat berhasil); respons kredensial/token membawa `Cache-Control: no-store`
 
 ### 9. Multi-Aplikasi Multi-Versi (M6b)
 
@@ -394,7 +396,7 @@ ApidocConfig {
 }
 ```
 
-Variabel yang tersedia di template: level teratas `title` / `description`; di dalam `{{#each endpoints}}`, `title` / `url` / `method` / `group` / `desc` / `author`; di dalam `{{#each tables}}`, `key` / `title`, dan di dalam `{{#each fields}}`-nya, `name` / `ty` / `required` / `default` / `desc` / `mock`; tersedia pula variabel turunan `not_null` / `default_clause` / `comma` (agar dapat langsung menghasilkan SQL yang valid).
+Variabel yang tersedia di template: level teratas `title` / `description`; di dalam `{{#each endpoints}}`, `title` / `url` / `method` / `group` / `desc` / `author`; di dalam `{{#each tables}}`, `key` / `title`, dan di dalam `{{#each fields}}`-nya, `name` / `ty` / `required` / `default` / `desc` / `mock`; tersedia pula variabel turunan `not_null` / `default_clause` / `comma` / `key_q` / `name_q` (agar dapat langsung menghasilkan SQL yang valid), serta `url_js` / `method_js` di dalam `{{#each endpoints}}` (literal string JSON) dan `fn_name` (`{method}_{group}` yang disanitasi menjadi pengenal untuk kerangka Rust).
 
 ### 12. Skrip Pra/Pasca Debugging (v2)
 
@@ -423,7 +425,7 @@ Error skrip hanya diberitahukan di area hasil debugging dan tidak menghentikan p
 | M4 | Debugging online + mesin Mock | ✅ Selesai |
 | M5 | Ekspor markdown / typescript / swagger.json (OpenAPI3) | ✅ Selesai |
 | —  | Adaptor actix-web (fungsionalitas 1:1 dengan axum) | ✅ Selesai |
-| M6a | Otentikasi kata sandi (token authcode + masker kata sandi, kata sandi aplikasi diutamakan) | ✅ Selesai |
+| M6a | Otentikasi kata sandi (token bertanda tangan HMAC-SHA256 + masker kata sandi, kata sandi aplikasi diutamakan) | ✅ Selesai |
 | M6b | Multi-aplikasi multi-versi (pohon konfigurasi apps + anotasi app + pemilih UI) | ✅ Selesai |
 | v2 | referensi field tabel data + cache dokumentasi + tautan berbagi + generator kode + peristiwa debugging | ✅ Selesai |
 

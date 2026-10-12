@@ -56,7 +56,7 @@ fn returned_keep_declaration_order_and_children_too() {
     let eps = DocRegistry::collect();
     let ep = eps.iter().find(|e| e.returned.iter().any(|p| p.name == "r1")).unwrap();
     assert_eq!(names(&ep.returned), ["r1"]);
-    assert_eq!(names(&ep.returned[0].children), ["c1", "c2", "c3"]);
+    assert_eq!(names(ep.returned[0].children), ["c1", "c2", "c3"]);
 }
 
 #[test]

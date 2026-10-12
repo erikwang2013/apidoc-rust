@@ -73,6 +73,11 @@ fn decode(s: &str) -> String {
 
 // ---------- build_url ----------
 
+/// token_of：token_for 现在收 (auth, apps) 两参，测试里仍按整份配置调用。
+fn token_of(c: &ApidocConfig, app_key: Option<&str>) -> Option<String> {
+    token_for(c.auth.as_ref(), &c.apps, app_key)
+}
+
 #[test]
 fn base_forms_normalize_to_single_slash() {
     // 带尾斜杠、不带尾斜杠、空串三种输入（空串 → 同源相对路径）
@@ -131,18 +136,18 @@ fn encoding_is_reversible() {
 
 #[test]
 fn global_branch_needs_enabled_auth_and_password() {
-    assert!(token_for(&cfg(true, "", vec![]), None).is_none(), "全局密码为空：不签发");
-    assert!(token_for(&cfg(false, "gpass", vec![]), None).is_none(), "未开鉴权：不签发");
-    assert!(token_for(&ApidocConfig::default(), None).is_none(), "未配置 auth：不签发");
+    assert!(token_of(&cfg(true, "", vec![]), None).is_none(), "全局密码为空：不签发");
+    assert!(token_of(&cfg(false, "gpass", vec![]), None).is_none(), "未开鉴权：不签发");
+    assert!(token_of(&ApidocConfig::default(), None).is_none(), "未配置 auth：不签发");
     assert!(
-        token_for(&cfg(true, "gpass", vec![app("api", None)]), Some("missing")).is_some(),
+        token_of(&cfg(true, "gpass", vec![app("api", None)]), Some("missing")).is_some(),
         "未知应用回落全局密码（全局密码存在，应签发）"
     );
     // 边界：应用密码配成空串时本函数拒绝签发（失败关闭）、不回落全局 —— 因为数据路由守卫
     // 对该应用走 auth_check_app(_, "", _)，用全局密码签出的 token 反而会被拒，宁可不给 token。
-    // 注意 auth_issue 在该边界仍会签发（M6 既有行为），二者不一致，要统一应改 auth 侧。
+    // 签发 / 登录 / 守卫三处现在共用 auth::resolve_credential 这一条判定，边界行为一致。
     assert!(
-        token_for(&cfg(true, "gpass", vec![app("api", Some(""))]), Some("api")).is_none(),
+        token_of(&cfg(true, "gpass", vec![app("api", Some(""))]), Some("api")).is_none(),
         "空串应用密码：不签发"
     );
 }
@@ -153,7 +158,7 @@ fn global_token_passes_auth_check() {
     let ac = auth_of(&c);
     // 显式全局（None）与未知应用 key 都应落回全局密码
     for key in [None, Some("api"), Some("missing")] {
-        let t = token_for(&c, key).expect("全局密码存在应签发 token");
+        let t = token_of(&c, key).expect("全局密码存在应签发 token");
         assert!(auth_check(&t, ac), "{key:?} 签发的全局 token 必须通过 auth_check");
     }
 }
@@ -163,13 +168,13 @@ fn app_token_passes_auth_check_app() {
     let c = cfg(true, "gpass", vec![app("api", Some("apppass"))]);
     let ac = auth_of(&c);
 
-    let t = token_for(&c, Some("api")).expect("应用独立密码应签发 token");
+    let t = token_of(&c, Some("api")).expect("应用独立密码应签发 token");
     // 硬性验收：应用 token 必须被 auth_check_app 认账（= 数据路由守卫对该应用放行）
     assert!(auth_check_app(&t, "apppass", ac), "应用 token 必须通过 auth_check_app");
     assert!(!auth_check(&t, ac), "应用 token 不应被全局校验接受");
 
     // 应用独立密码优先：全局 token 反向不被应用校验接受
-    let g = token_for(&c, None).expect("全局密码应签发 token");
+    let g = token_of(&c, None).expect("全局密码应签发 token");
     assert!(auth_check(&g, ac), "全局 token 必须通过 auth_check");
     assert!(!auth_check_app(&g, "apppass", ac), "全局 token 不应通过应用密码校验");
     assert!(!auth_check_app(&t, "gpass", ac), "拿全局密码去校验应用 token 应失败");
@@ -186,14 +191,14 @@ fn app_password_signs_even_without_global_auth() {
     ] {
         // 守卫/signing 都走同一份配置（auth 缺省时即 AuthConfig::default()）
         let ac = c.auth.as_ref().unwrap_or(&default);
-        let t = token_for(&c, Some("api")).expect("应用独立密码应签发，不受全局 enable/auth 影响");
+        let t = token_of(&c, Some("api")).expect("应用独立密码应签发，不受全局 enable/auth 影响");
         assert!(auth_check_app(&t, "apppass", ac), "应用 token 必须通过 auth_check_app");
         assert!(auth_guard_ok(&t, Some("api"), c.auth.as_ref(), &c.apps), "守卫必须放行");
         assert!(!auth_guard_ok("", Some("api"), c.auth.as_ref(), &c.apps), "空 token 不应放行");
     }
     // 未开鉴权 + 应用无独立密码：守卫本就不拦，仍不签发（全局分支）
-    assert!(token_for(&cfg(false, "gpass", vec![app("api", None)]), Some("api")).is_none());
-    assert!(token_for(&cfg_no_auth(vec![app("api", None)]), Some("api")).is_none());
+    assert!(token_of(&cfg(false, "gpass", vec![app("api", None)]), Some("api")).is_none());
+    assert!(token_of(&cfg_no_auth(vec![app("api", None)]), Some("api")).is_none());
 }
 
 #[test]
@@ -202,7 +207,7 @@ fn nested_app_password_is_found() {
     let mut parent = app("api", None);
     parent.items.push(app("v2", Some("v2pass")));
     let c = cfg(true, "gpass", vec![parent]);
-    let t = token_for(&c, Some("v2")).expect("嵌套应用密码应被找到");
+    let t = token_of(&c, Some("v2")).expect("嵌套应用密码应被找到");
     assert!(auth_check_app(&t, "v2pass", auth_of(&c)));
 }
 
@@ -212,7 +217,7 @@ fn nested_app_password_is_found() {
 fn share_url_token_unlocks_data_route() {
     // 应用独立密码场景：token 经 URL 编码后取回，必须能解锁该应用数据路由
     let c = cfg(true, "gpass", vec![app("api", Some("apppass"))]);
-    let t = token_for(&c, Some("api")).expect("应签发 token");
+    let t = token_of(&c, Some("api")).expect("应签发 token");
     let url = build_url("https://a.com", Some("api"), Some(&ep("/api/x", "GET")), Some(&t));
     let from_url = query(&url, "token");
     assert_eq!(from_url, t, "URL 里的 token 应无损取回");
@@ -222,7 +227,7 @@ fn share_url_token_unlocks_data_route() {
 
     // 全局密码场景（应用无独立密码）：同一个 token 对默认应用与该应用都放行
     let c2 = cfg(true, "gpass", vec![app("api", None)]);
-    let t2 = token_for(&c2, Some("api")).expect("应回落全局密码");
+    let t2 = token_of(&c2, Some("api")).expect("应回落全局密码");
     assert!(auth_guard_ok(&t2, Some("api"), c2.auth.as_ref(), &c2.apps));
     assert!(auth_guard_ok(&t2, None, c2.auth.as_ref(), &c2.apps));
     assert!(!auth_guard_ok("bad", None, c2.auth.as_ref(), &c2.apps), "乱码 token 不应放行");

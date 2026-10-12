@@ -13,15 +13,19 @@ use actix_web::App;
 use apidoc::actix::{apidoc_routes, cors_layer, CorsConfig};
 use apidoc::ApidocConfig;
 
-/// driver：建 App、发 GET、把响应归一化成 common::Resp（断言体共享）。
-async fn get(cfg: ApidocConfig, uri: String) -> common::Resp {
+/// driver：建 App、发请求、把响应归一化成 common::Resp（断言体共享）。
+async fn request(cfg: ApidocConfig, uri: String, method: &str, body: Option<String>) -> common::Resp {
     let svc = actix_test::init_service(
         App::new()
             .service(apidoc_routes(cfg))
             .wrap(cors_layer(CorsConfig::default())),
     )
     .await;
-    let res = actix_test::call_service(&svc, actix_test::TestRequest::get().uri(&uri).to_request()).await;
+    let mut req = actix_test::TestRequest::with_uri(&uri).method(method.parse().unwrap());
+    if let Some(b) = body {
+        req = req.insert_header(("content-type", "application/json")).set_payload(b);
+    }
+    let res = actix_test::call_service(&svc, req.to_request()).await;
     let status = res.status();
     let headers = res.headers().clone();
     let body = actix_test::read_body(res).await;
@@ -34,9 +38,17 @@ async fn get(cfg: ApidocConfig, uri: String) -> common::Resp {
     )
 }
 
+async fn get(cfg: ApidocConfig, uri: String) -> common::Resp {
+    request(cfg, uri, "GET", None).await
+}
+
+async fn post(cfg: ApidocConfig, uri: String, body: String) -> common::Resp {
+    request(cfg, uri, "POST", Some(body)).await
+}
+
 #[actix_web::test]
 async fn auth_disabled_route_404_and_data_open() {
-    m6::assert_auth_disabled_route_404_and_data_open("actix", get).await;
+    m6::assert_auth_disabled_route_404_and_data_open("actix", get, post).await;
 }
 
 #[actix_web::test]
@@ -46,10 +58,10 @@ async fn auth_enabled_guards_data_routes_and_keeps_ui_open() {
 
 #[actix_web::test]
 async fn auth_issue_and_token_flow() {
-    m6::assert_auth_issue_and_token_flow("actix", get).await;
+    m6::assert_auth_issue_and_token_flow("actix", get, post).await;
 }
 
 #[actix_web::test]
 async fn app_password_takes_priority_over_global() {
-    m6::assert_app_password_takes_priority_over_global("actix", get).await;
+    m6::assert_app_password_takes_priority_over_global("actix", get, post).await;
 }

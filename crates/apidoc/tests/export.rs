@@ -130,11 +130,12 @@ fn swagger_paths_params_body_responses_and_not_debug_exclusion() {
     assert_eq!(v["info"]["description"], "导出测试");
     // :id 占位符 → {id}
     let op = &v["paths"]["/api/user/{id}"]["get"];
-    // 参数：route_param → in:path required、query → in:query
+    // 参数：path 参数以 URL 模板为准（名字），类型与描述取自同名 route_param；
+    // query → in:query
     assert_eq!(
         op["parameters"],
         json!([
-            { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } },
+            { "name": "id", "in": "path", "required": true, "description": "用户 ID", "schema": { "type": "integer" } },
             { "name": "verbose", "in": "query", "required": false, "schema": { "type": "boolean" } },
         ])
     );
@@ -217,4 +218,104 @@ fn swagger_error_code_outside_4xx_5xx_maps_to_500() {
     let op = &v["paths"]["/api/bad"]["post"];
     assert_eq!(op["responses"]["500"]["description"], "Internal Server Error");
     assert!(op["responses"].get("200").is_none(), "2xx 不应出现在 error 响应");
+}
+
+// —— 转义回归：注解文本是自由字符串，导出产物必须始终合法 ——
+
+fn one_endpoint(ep: apidoc::DocEndpoint) -> ApiDoc {
+    ApiDoc {
+        config: ApidocConfig { title: "t".into(), ..Default::default() },
+        apps: Vec::new(),
+        endpoints: vec![ep],
+    }
+}
+
+#[test]
+fn typescript_escapes_url_quotes_and_odd_member_names() {
+    let ep = apidoc::DocEndpoint {
+        url: "/api/it's\nx".into(),
+        method: "GET".into(),
+        querys: vec![
+            apidoc::DocParam { name: "ok_name", ty: "string", required: false, default: None, desc: None, mock: None, children: &[] },
+            apidoc::DocParam { name: "user-name", ty: "string", required: false, default: None, desc: None, mock: None, children: &[] },
+        ],
+        ..Default::default()
+    };
+    let ts = apidoc::export::typescript::render(&one_endpoint(ep));
+    // URL 里的单引号/换行转义（键名本身由 pascal 清洗，去掉引号与换行）
+    assert!(ts.contains(r#": '/api/it\'s\nx' as const,"#), "URL 未转义:\n{ts}");
+    // 合法标识符不加引号，非法成员名加双引号
+    assert!(ts.contains("ok_name?: string"), "合法标识符不应加引号:\n{ts}");
+    assert!(ts.contains(r#""user-name"?: string"#), "非法标识符应加引号:\n{ts}");
+}
+
+#[test]
+fn typescript_group_names_sanitize_and_dedup() {
+    let mk = |group: &str, url: &str| apidoc::DocEndpoint {
+        url: url.into(),
+        method: "GET".into(),
+        group: group.into(),
+        ..Default::default()
+    };
+    let doc = ApiDoc {
+        config: ApidocConfig { title: "t".into(), ..Default::default() },
+        apps: Vec::new(),
+        endpoints: vec![mk("用户 组", "/a"), mk("用户-组", "/b")],
+    };
+    let ts = apidoc::export::typescript::render(&doc);
+    // 空格/连字符不是标识符字符，须剔除；两家清洗后同名则加序号，不能重名声明
+    assert!(ts.contains("export const 用户组 = {"), "命名空间应过标识符清洗:\n{ts}");
+    assert!(ts.contains("export const 用户组2 = {"), "清洗后撞名应加序号:\n{ts}");
+}
+
+#[test]
+fn markdown_table_cells_collapse_newlines_and_escape_pipes() {
+    let ep = apidoc::DocEndpoint {
+        url: "/x".into(),
+        method: "GET".into(),
+        querys: vec![apidoc::DocParam {
+            name: "q",
+            ty: "string",
+            required: false,
+            default: None,
+            desc: Some("第一行\n第二行|带竖线"),
+            mock: None,
+            children: &[],
+        }],
+        ..Default::default()
+    };
+    let md = apidoc::export::markdown::render(&one_endpoint(ep));
+    let row = md.lines().find(|l| l.starts_with("| q |")).expect("缺参数行");
+    assert_eq!(row, r"| q | string | 否 | - | 第一行 第二行\|带竖线 |");
+    assert_eq!(md.lines().filter(|l| l.starts_with("| q |")).count(), 1, "换行不应拆行");
+}
+
+#[test]
+fn markdown_example_fence_outgrows_backticks_in_body() {
+    let mut ep = apidoc::DocEndpoint {
+        url: "/x".into(),
+        method: "GET".into(),
+        ..Default::default()
+    };
+    ep.success.push(apidoc::DocExample { code: "200", example: "{\"a\": \"```json\"}" });
+    let md = apidoc::export::markdown::render(&one_endpoint(ep));
+    // 围栏必须长于正文里最长的反引号串，否则示例会提前关掉代码块
+    assert!(md.contains("````json\n{\"a\": \"```json\"}\n````"), "围栏未加长:\n{md}");
+}
+
+#[test]
+fn swagger_path_params_come_from_url_not_from_annotations() {
+    let mut ep = apidoc::DocEndpoint {
+        url: "/api/user/:id/orders".into(),
+        method: "GET".into(),
+        ..Default::default()
+    };
+    // 注解名与占位符不一致：按 URL 出参，别名只告警不落进 spec
+    ep.route_params.push(apidoc::DocParam {
+        name: "user_id", ty: "int", required: true, default: None, desc: None, mock: None, children: &[],
+    });
+    let v = apidoc::export::swagger::render(&one_endpoint(ep), "1.0.0");
+    let params = &v["paths"]["/api/user/{id}/orders"]["get"]["parameters"];
+    assert_eq!(params[0]["name"], "id", "path 参数应取自 URL 占位符");
+    assert_eq!(params.as_array().unwrap().len(), 1, "对不上 URL 的注解不应落进 spec: {params}");
 }

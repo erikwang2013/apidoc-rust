@@ -41,7 +41,7 @@
   <rect x="120" y="350" width="700" height="40" rx="8" fill="#fdedec" stroke="#c0392b" stroke-width="2"/>
   <rect x="730" y="354" width="62" height="20" rx="10" fill="#c0392b"/>
   <text x="761" y="368" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M6a</text>
-  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: GET /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token (authcode एन्क्रिप्शन लिफाफा, password/secret_key कभी क्रमांकित नहीं)</text>
+  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: POST /apidoc/auth (JSON body) → token (HMAC-SHA256 हस्ताक्षर, password/secret_key कभी क्रमांकित नहीं)</text>
 
   <!-- अडैप्टर परत, पूर्ण -->
   <rect x="120" y="402" width="700" height="76" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -60,7 +60,7 @@
   <text x="750" y="509" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
   <text x="140" y="515" font-size="16" font-weight="bold" fill="#1e8449">प्रदर्शन परत (पूर्ण) · दस्तावेज़ UI डिबग पैनल (एम्बेडेड Html, शून्य बाहरी निर्भरता)</text>
   <text x="140" y="537" font-size="13" fill="#333">कैटलॉग ब्राउज़िंग / ऑनलाइन डिबगिंग (सीधा CORS) / मॉक प्री-फिल</text>
-  <text x="140" y="553" font-size="13" fill="#333">M6: पासवर्ड मास्क (फ्रंटएंड md5 से token प्राप्त) · ऐप/संस्करण चयनकर्ता · token appKey के अनुसार localStorage में</text>
+  <text x="140" y="553" font-size="13" fill="#333">M6: पासवर्ड मास्क (POST से token प्राप्त) · ऐप/संस्करण चयनकर्ता · token appKey के अनुसार localStorage में</text>
 
   <!-- डेटा फ़्लो -->
   <rect x="120" y="566" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
@@ -68,7 +68,7 @@
   <text x="750" y="585" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
   <text x="140" y="588" font-size="13" fill="#333" font-family="monospace">ब्राउज़र → /apidoc (डिबग पैनल) → CORS सीधा कनेक्शन → लक्ष्य इंटरफ़ेस (वास्तविक अनुरोध)</text>
   <text x="140" y="606" font-size="13" fill="#333" font-family="monospace">ब्राउज़र → /apidoc/mock → मॉक डेटा (fake crate · 15 नियम)</text>
-  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">ब्राउज़र → /apidoc/auth?password=&lt;md5&gt;&amp;appKey=&lt;key&gt; → token, डेटा रूट ?token= के साथ एक्सेस</text>
+  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">ब्राउज़र → POST /apidoc/auth (JSON body) → token, डेटा रूट ?token= के साथ एक्सेस</text>
 
   <!-- workspace -->
   <rect x="120" y="642" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
