@@ -465,3 +465,78 @@ registerStreamAdapter('graphql-ws', {
     };
   },
 });
+
+// ---------- SSE（Server-Sent Events） ----------
+// 默认 GET 流；POST 模式通过 protocol_opts.method / body 传入首个请求体。
+registerStreamAdapter('sse', {
+  hint: 'SSE 默认 GET；POST 模式请在 protocol_opts 设置 method=POST 与 body。认证请放 URL query。',
+  connect(targetUrl, opts, handlers) {
+    const o = opts.opts || {};
+    const method = (o.method || 'GET').toUpperCase();
+    const controller = new AbortController();
+    let closed = false;
+    let buffer = '';
+    let reader = null;
+    const headers = {};
+    if (o.headers) {
+      try { Object.assign(headers, JSON.parse(o.headers)); } catch (e) {}
+    }
+    const init = { method, headers, signal: controller.signal };
+    if (method !== 'GET' && o.body !== undefined) init.body = o.body;
+
+    const pump = async () => {
+      const res = await fetch(targetUrl, init);
+      if (!res.ok) {
+        handlers.onError('SSE HTTP ' + res.status);
+        return;
+      }
+      if (!res.body) {
+        handlers.onError('SSE 响应不支持流式读取');
+        return;
+      }
+      handlers.onOpen();
+      reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      for (;;) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const decoded = sseDecode(buffer);
+        buffer = decoded.rest;
+        for (const ev of decoded.events) {
+          handlers.onFrame({ dir: 'in', encoding: 'utf8', data: JSON.stringify(ev) });
+        }
+      }
+      if (!closed) handlers.onClose(200, 'stream ended');
+    };
+    pump().catch(e => {
+      if (!closed && e.name !== 'AbortError') {
+        handlers.onError('SSE 连接失败：' + (e.message || e));
+      }
+    });
+
+    return {
+      send(payload) {
+        if (method === 'GET') {
+          throw new Error('SSE 默认 GET；请在 protocol_opts.method 设为 POST 后再发送 body');
+        }
+        if (payload.encoding !== 'utf8') throw new Error('SSE 仅支持 utf8 body');
+        fetch(targetUrl, { method, headers, body: payload.data, signal: controller.signal })
+          .then(r => {
+            if (!r.ok) handlers.onError('SSE POST HTTP ' + r.status);
+            else handlers.onFrame({ dir: 'out', encoding: 'utf8', data: payload.data });
+          })
+          .catch(e => {
+            if (!closed) handlers.onError('SSE POST 失败：' + (e.message || e));
+          });
+      },
+      close() {
+        closed = true;
+        try { controller.abort(); } catch (e) {}
+        if (reader) {
+          try { reader.cancel(); } catch (e) {}
+        }
+      },
+    };
+  },
+});

@@ -43,6 +43,15 @@ fn ui_has_stream_panel_and_ws_adapter() {
     assert!(!ui.contains("innerHTML"));
 }
 
+/// P1：SSE 适配器与断开能力。
+#[test]
+fn ui_has_sse_adapter_and_abort() {
+    let ui = include_str!("../src/ui.debug.stream.js");
+    assert!(ui.contains("'sse'"));
+    assert!(ui.contains("AbortController"));
+    assert!(ui.contains("sseDecode"));
+}
+
 /// P1：HTTP 族协议预设入口。
 #[test]
 fn ui_has_http_protocol_presets() {
