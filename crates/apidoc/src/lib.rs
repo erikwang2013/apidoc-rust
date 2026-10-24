@@ -68,7 +68,7 @@ use std::sync::{Mutex, OnceLock};
 pub mod protocol;
 
 #[cfg(feature = "debug-http")]
-mod debug;
+pub mod debug;
 
 /// Collects every `#[apidoc::*]` annotation from all linked crates.
 #[distributed_slice]

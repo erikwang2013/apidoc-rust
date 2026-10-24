@@ -23,6 +23,8 @@ actix = ["dep:actix-web", "dep:actix-cors", "dep:bytes", "mock"]
 debug-http = ["dep:reqwest", "dep:tokio"]
 # P2 长连接会话桥：服务端 WebSocket 执行器 + 适配器升级路由。
 debug-session = ["debug-http", "dep:async-trait", "dep:tokio-tungstenite", "dep:futures-util", "dep:actix-ws", "axum?/ws"]
+# P2 原始 socket：TCP/UDP/Raw/Unix（复用 debug-http 的 tokio/guard）
+debug-sockets = ["debug-http"]
 
 [dependencies]
 linkme = "0.3"

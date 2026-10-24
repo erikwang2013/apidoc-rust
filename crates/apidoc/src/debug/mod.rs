@@ -10,6 +10,8 @@ mod http;
 pub(crate) mod session;
 #[cfg(feature = "debug-session")]
 mod ws_client;
+#[cfg(feature = "debug-sockets")]
+mod sockets;
 
 use crate::{DebugConfig, DocEndpoint};
 use base64::Engine;
@@ -43,7 +45,7 @@ pub struct EndpointRef {
 }
 
 /// 二进制安全的载荷：encoding = utf8 / hex / base64。
-#[derive(Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Payload {
     pub encoding: String,
     pub data: String,
@@ -84,7 +86,7 @@ fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub struct DebugResponse {
     pub status: u16,
     pub ms: u64,
@@ -105,6 +107,8 @@ pub async fn execute(
         | "odata" | "mcp" | "a2a" | "webhook" => http::execute(cfg, req).await,
         // HTTP/3 需要 QUIC 执行器，P0 只保留文档/UI 标识；服务端代发在后续阶段接入。
         "http3" => Err("HTTP/3 server executor is not available in this build yet".into()),
+        #[cfg(feature = "debug-sockets")]
+        "tcp" | "udp" | "raw" | "unix" => sockets::execute(cfg, req).await,
         other => Err(format!("protocol `{other}` has no server executor in this build")),
     }
 }

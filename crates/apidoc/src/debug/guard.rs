@@ -28,14 +28,24 @@ pub async fn check(cfg: &DebugConfig, target: &str) -> Result<CheckedTarget, Str
         }
     }
     let host = url.host_str().ok_or("target URL requires a host")?.to_string();
-    if !host_allowed(cfg, &host) {
+    let port = url.port_or_known_default().ok_or("target URL requires a port")?;
+    let addrs = check_host(cfg, &host, port).await?;
+    Ok(CheckedTarget { url, host, addrs })
+}
+
+/// 供原始 socket（tcp/udp/raw）复用：allowlist + DNS + 逐 IP 校验。
+pub(crate) async fn check_host(
+    cfg: &DebugConfig,
+    host: &str,
+    port: u16,
+) -> Result<Vec<SocketAddr>, String> {
+    if !host_allowed(cfg, host) {
         return Err(format!("target host `{host}` is not in DebugConfig.allow_hosts"));
     }
-    let port = url.port_or_known_default().ok_or("target URL requires a port")?;
     let addrs: Vec<SocketAddr> = if let Ok(ip) = host.parse::<IpAddr>() {
         vec![SocketAddr::new(ip, port)]
     } else {
-        let lookup = tokio::net::lookup_host((host.as_str(), port));
+        let lookup = tokio::net::lookup_host((host, port));
         let timeout = std::time::Duration::from_millis(cfg.timeout_ms.max(1));
         tokio::time::timeout(timeout, lookup)
             .await
@@ -49,7 +59,7 @@ pub async fn check(cfg: &DebugConfig, target: &str) -> Result<CheckedTarget, Str
     for addr in &addrs {
         check_ip(cfg, addr.ip())?;
     }
-    Ok(CheckedTarget { url, host, addrs })
+    Ok(addrs)
 }
 
 fn host_allowed(cfg: &DebugConfig, host: &str) -> bool {
