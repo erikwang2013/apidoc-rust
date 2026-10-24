@@ -82,10 +82,17 @@ function runScript(code, ctx) {
 
 function debugForm(ep) {
   const form = el('div');
+  const dbgCfg = DOC && DOC.config && DOC.config.debug;
+  // 服务端专有协议：目标不是 HTTP path，base 直接取 protocol_opts.target。
+  const serverOnly =
+    ep.protocol && ep.protocol !== 'http' && ep.protocol !== 'http2' && !HTTP_FAMILY.has(ep.protocol);
   const baseRow = el('div', 'debug-row');
   baseRow.appendChild(el('label', null, 'Base URL'));
   const baseUrl = document.createElement('input');
-  baseUrl.value = location.origin;
+  baseUrl.value =
+    serverOnly && ep.protocol_opts && ep.protocol_opts.target
+      ? ep.protocol_opts.target
+      : location.origin;
   baseRow.appendChild(baseUrl);
   form.appendChild(baseRow);
   // 参数输入区：route_params / querys / params 三类
@@ -156,6 +163,25 @@ function debugForm(ep) {
     box.appendChild(inner);
     form.appendChild(box);
   }
+  // 服务端专有协议：连接参数与凭据。凭据只存在本次页面内存，不写 localStorage。
+  let optsEditor = null;
+  if (serverOnly) {
+    const det = el('details', 'debug-script');
+    det.appendChild(el('summary', null, '协议选项（JSON，凭据只保存在本次页面内存）'));
+    const ta = document.createElement('textarea');
+    ta.rows = 4;
+    ta.placeholder = '{"service":"…","method":"…"}';
+    const opts = Object.assign({}, ep.protocol_opts || {});
+    delete opts.target;
+    ta.value = Object.keys(opts).length ? JSON.stringify(opts, null, 2) : '{}';
+    det.appendChild(ta);
+    form.appendChild(det);
+    optsEditor = ta;
+    if (!(dbgCfg && dbgCfg.enable_server_side)) {
+      form.appendChild(el('p', 'empty',
+        '该协议需要服务端调试：请配置 DebugConfig { enable_server_side: true } 并启用对应 debug-* feature。'));
+    }
+  }
   // HTTP 族协议预设：GraphQL / SOAP / JSON-RPC / XML-RPC / OData / MCP / A2A / Webhook。
   // 预设只提供额外输入与 body/header/query 构造；原始 Body 仍然优先。
   const preset = protocolExtras(ep);
@@ -179,9 +205,10 @@ function debugForm(ep) {
   form.appendChild(rawBox);
   // 服务端代发：仅在 config.debug.enable_server_side 时出现。可强制 HTTP/2、
   // 绕过 CORS 与内网限制；实际可达性由服务端 DebugConfig 白名单决定。
-  const dbgCfg = DOC && DOC.config && DOC.config.debug;
   const viaServer = document.createElement('input');
   viaServer.type = 'checkbox';
+  viaServer.checked = serverOnly;
+  viaServer.disabled = serverOnly;
   if (dbgCfg && dbgCfg.enable_server_side) {
     const row = el('div', 'debug-row');
     const label = el('label', null, '经服务端发送');
@@ -234,7 +261,7 @@ function debugForm(ep) {
   sendBtn.onclick = async () => {
     const val = r => (r.input.value.trim() ? encodeURIComponent(r.input.value.trim()) : null);
     // route_params：替换 url 中 {name} / :name 占位符（空值保留原占位符）
-    let fullUrl = (baseUrl.value || location.origin) + ep.url;
+    let fullUrl = serverOnly ? baseUrl.value || '' : (baseUrl.value || location.origin) + ep.url;
     fullUrl = fullUrl.replace(/\{([^}]+)\}|:([A-Za-z0-9_]+)/g, (m, braced, coloned) => {
       const key = braced || coloned;
       const row = routeRows.find(r => r.name === key);
@@ -323,12 +350,23 @@ function debugForm(ep) {
         // 服务端代发：body 用 encoding + data 表达，二进制不会被字符串化
         const payload = body === undefined ? null : { encoding: rawEncoding, data: body };
         const opts = ep.protocol === 'http2' ? { version: '2' } : {};
+        if (optsEditor) {
+          try {
+            Object.assign(opts, JSON.parse(optsEditor.value || '{}'));
+          } catch (e) {
+            out.appendChild(warnBox('协议选项 JSON 非法：' + (e.message || e)));
+            resultBox.textContent = '';
+            resultBox.appendChild(out);
+            return;
+          }
+        }
         const res = await fetch(base + 'debug' + (authQuery() ? '?' + authQuery() : ''), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             kind: ep.protocol || 'http',
             target: fullUrl,
+            endpoint: { url: ep.url, method: ep.method },
             method: preRun.ctx.method || ep.method,
             headers,
             body: payload,

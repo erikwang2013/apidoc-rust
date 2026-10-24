@@ -270,7 +270,14 @@ impl Core {
                     )
                 }
             };
-            match crate::debug::execute(cfg, &req).await {
+            // schema 只从服务端已收集的端点取；客户端只提供 (url, method) 引用。
+            let ep = req.endpoint.as_ref().and_then(|r| {
+                self.doc
+                    .endpoints
+                    .iter()
+                    .find(|e| e.url == r.url && e.method == r.method)
+            });
+            match crate::debug::execute(cfg, &req, ep).await {
                 Ok(out) => R::new(
                     200,
                     "application/json",
@@ -292,6 +299,25 @@ impl Core {
                 r#"{"error":"server-side debug is not compiled in (enable feature `debug-http`)"}"#,
             )
         }
+    }
+
+    /// 长连接会话入口的配置：守卫 + 服务端调试开关。失败时直接返回响应。
+    #[cfg(feature = "debug-session")]
+    pub fn stream_config(&self, q: &HashMap<String, String>) -> Result<DebugConfig, R> {
+        if !self.guard(q) {
+            return Err(Self::denied());
+        }
+        self.debug_cfg
+            .as_ref()
+            .filter(|c| c.enable_server_side)
+            .cloned()
+            .ok_or_else(|| {
+                R::new(
+                    403,
+                    "application/json",
+                    r#"{"error":"server-side debug is disabled"}"#,
+                )
+            })
     }
 
     /// GET /apidoc/share?app=&url=&method=&base= → {"url":"..."}

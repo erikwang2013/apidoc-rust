@@ -6,8 +6,12 @@
 
 mod guard;
 mod http;
+#[cfg(feature = "debug-session")]
+pub(crate) mod session;
+#[cfg(feature = "debug-session")]
+mod ws_client;
 
-use crate::DebugConfig;
+use crate::{DebugConfig, DocEndpoint};
 use base64::Engine;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -24,9 +28,18 @@ pub struct DebugRequest {
     pub body: Option<Payload>,
     #[serde(default)]
     pub opts: BTreeMap<String, String>,
+    /// 服务端已收集的端点引用；schema（字段号/类型）只能从它取，不信任客户端上传。
+    #[serde(default)]
+    pub endpoint: Option<EndpointRef>,
     /// 单次请求超时；超过 DebugConfig.timeout_ms 时按配置封顶。
     #[serde(default)]
     pub timeout_ms: Option<u64>,
+}
+
+#[derive(Deserialize)]
+pub struct EndpointRef {
+    pub url: String,
+    pub method: String,
 }
 
 /// 二进制安全的载荷：encoding = utf8 / hex / base64。
@@ -80,12 +93,33 @@ pub struct DebugResponse {
 }
 
 /// 分发到具体协议执行器。P0 只有 HTTP 族；其余协议在后续阶段按 feature 接入。
-pub async fn execute(cfg: &DebugConfig, req: &DebugRequest) -> Result<DebugResponse, String> {
+/// `ep` 是服务端从 `req.endpoint` 解析出的已收集端点，schema 只能从它取。
+pub async fn execute(
+    cfg: &DebugConfig,
+    req: &DebugRequest,
+    ep: Option<&DocEndpoint>,
+) -> Result<DebugResponse, String> {
+    let _ = ep;
     match req.kind.as_str() {
         "http" | "http2" | "http-binary" | "soap" | "graphql" | "jsonrpc" | "xmlrpc"
         | "odata" | "mcp" | "a2a" | "webhook" => http::execute(cfg, req).await,
         // HTTP/3 需要 QUIC 执行器，P0 只保留文档/UI 标识；服务端代发在后续阶段接入。
         "http3" => Err("HTTP/3 server executor is not available in this build yet".into()),
         other => Err(format!("protocol `{other}` has no server executor in this build")),
+    }
+}
+
+/// 长连接协议分发：由 `session::run` 的 connect 帧调用。
+#[cfg(feature = "debug-session")]
+pub(crate) async fn stream_dispatch(
+    cfg: &DebugConfig,
+    req: &DebugRequest,
+    ep: Option<&DocEndpoint>,
+    frames: tokio::sync::mpsc::Sender<String>,
+) -> Result<Box<dyn session::StreamSession>, String> {
+    let _ = ep;
+    match req.kind.as_str() {
+        "websocket" | "ws-binary" => ws_client::connect_stream(cfg, req, frames).await,
+        other => Err(format!("protocol `{other}` has no streaming executor in this build")),
     }
 }

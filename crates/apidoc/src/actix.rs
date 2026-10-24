@@ -37,7 +37,7 @@ pub fn cors_layer(config: CorsConfig) -> Cors {
 pub fn apidoc_routes(config: ApidocConfig) -> Scope {
     // 构建期一次性物化全部文档产物（api.json/export/mock），请求期零重算。
     let core = web::Data::new(Arc::new(Core::build(config)));
-    web::scope("/apidoc")
+    let scope = web::scope("/apidoc")
         .app_data(core)
         // UI 页与宠物图标不设守卫（见 route_core::UI/PET）。
         .route("", web::get().to(|| async { response(route_core::UI) }))
@@ -51,7 +51,10 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
         .route("/share", web::get().to(share))
         .route("/generate", web::get().to(generate))
         // P0 服务端调试：POST body 为 DebugRequest；未启用时 route_core 返回 403
-        .route("/debug", web::post().to(debug))
+        .route("/debug", web::post().to(debug));
+    #[cfg(feature = "debug-session")]
+    let scope = scope.route("/debug/stream", web::get().to(debug_stream));
+    scope
 }
 
 // 各 handler 一行转发 core：判定与渲染在 route_core（两框架共享同一实现）。
@@ -85,6 +88,57 @@ async fn debug(
     body: web::Bytes,
 ) -> HttpResponse {
     response(core.debug(&q, &body).await)
+}
+
+#[cfg(feature = "debug-session")]
+async fn debug_stream(
+    req: actix_web::HttpRequest,
+    body: web::Payload,
+    core: web::Data<Arc<Core>>,
+    q: web::Query<HashMap<String, String>>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let cfg = match core.stream_config(&q) {
+        Ok(c) => c,
+        Err(r) => return Ok(response(r)),
+    };
+    let (response, session, stream) = actix_ws::handle(&req, body)?;
+    actix_web::rt::spawn(async move {
+        crate::debug::session::run(&cfg, None, ActixSocket { tx: session, rx: stream }).await;
+    });
+    Ok(response)
+}
+
+#[cfg(feature = "debug-session")]
+struct ActixSocket {
+    tx: actix_ws::Session,
+    rx: actix_ws::MessageStream,
+}
+
+#[cfg(feature = "debug-session")]
+impl crate::debug::session::DebugSocket for ActixSocket {
+    async fn send_text(&mut self, text: String) -> Result<(), String> {
+        self.tx.text(text).await.map_err(|e| e.to_string())
+    }
+
+    async fn recv_text(&mut self) -> Option<Result<String, String>> {
+        loop {
+            match self.rx.recv().await {
+                Some(Ok(actix_ws::Message::Text(t))) => return Some(Ok(t.to_string())),
+                Some(Ok(actix_ws::Message::Binary(_))) => {
+                    return Some(Err("binary control frame".into()))
+                }
+                Some(Ok(actix_ws::Message::Close(_))) | None => return None,
+                Some(Ok(_)) => continue,
+                Some(Err(e)) => return Some(Err(e.to_string())),
+            }
+        }
+    }
+
+    async fn close(&mut self) {
+        // actix_ws::Session::close 消费 self；Session 是 Clone，用副本关闭。
+        let tx = self.tx.clone();
+        let _ = tx.close(None).await;
+    }
 }
 
 /// route_core::R → HttpResponse：Content-Type 为 None 时不设头（对齐现状空响应）。

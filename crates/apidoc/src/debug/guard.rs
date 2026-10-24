@@ -1,7 +1,7 @@
 //! SSRF 守卫：协议代理的安全边界。
 //!
 //! 规则（与 DebugConfig 的默认值一起构成 fail-closed）：
-//! - 只允许 http/https；
+//! - 只允许 http/https/ws/wss（ws/wss 供 P2 会话桥复用同一套主机/IP 校验）；
 //! - allow_hosts 非空时，host 必须精确命中或命中 `*.suffix`；
 //! - 默认拒绝回环/私网/链路本地/ULA/CGNAT/保留段；
 //! - 云元数据地址即使 allow_private_networks=true 也永久拒绝；
@@ -20,8 +20,12 @@ pub struct CheckedTarget {
 pub async fn check(cfg: &DebugConfig, target: &str) -> Result<CheckedTarget, String> {
     let url = reqwest::Url::parse(target).map_err(|e| format!("invalid target URL: {e}"))?;
     match url.scheme() {
-        "http" | "https" => {}
-        other => return Err(format!("unsupported target scheme `{other}`; only http/https")),
+        "http" | "https" | "ws" | "wss" => {}
+        other => {
+            return Err(format!(
+                "unsupported target scheme `{other}`; only http/https/ws/wss"
+            ))
+        }
     }
     let host = url.host_str().ok_or("target URL requires a host")?.to_string();
     if !host_allowed(cfg, &host) {

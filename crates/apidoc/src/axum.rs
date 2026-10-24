@@ -50,7 +50,7 @@ pub fn cors_layer(config: CorsConfig) -> CorsLayer {
 pub fn apidoc_routes(config: ApidocConfig) -> Router {
     // 构建期一次性物化全部文档产物（api.json/export/mock），请求期零重算。
     let core = Arc::new(Core::build(config));
-    Router::new()
+    let router = Router::new()
         // UI 页与宠物图标不设守卫（见 route_core::UI/PET）。
         .route("/apidoc", get(|| async { response(route_core::UI) }))
         .route("/apidoc/pet.svg", get(|| async { response(route_core::PET) }))
@@ -63,8 +63,11 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
         .route("/apidoc/share", get(share))
         .route("/apidoc/generate", get(generate))
         // P0 服务端调试：POST body 为 DebugRequest；未启用时 route_core 返回 403
-        .route("/apidoc/debug", post(debug))
-        .with_state(core)
+        .route("/apidoc/debug", post(debug));
+    // P2 长连接会话桥：仅在 feature 开启时注册。
+    #[cfg(feature = "debug-session")]
+    let router = router.route("/apidoc/debug/stream", get(debug_stream));
+    router.with_state(core)
 }
 
 // 各 handler 一行转发 core：判定与渲染在 route_core（两框架共享同一实现）。
@@ -98,6 +101,54 @@ async fn debug(
     body: Bytes,
 ) -> Response {
     response(core.debug(&q, &body).await)
+}
+
+#[cfg(feature = "debug-session")]
+async fn debug_stream(
+    State(core): State<Arc<Core>>,
+    Query(q): Query<HashMap<String, String>>,
+    ws: axum::extract::ws::WebSocketUpgrade,
+) -> Response {
+    match core.stream_config(&q) {
+        Ok(cfg) => ws.on_upgrade(move |socket| async move {
+            crate::debug::session::run(&cfg, None, AxumSocket { ws: socket }).await;
+        }),
+        Err(r) => response(r),
+    }
+}
+
+#[cfg(feature = "debug-session")]
+struct AxumSocket {
+    ws: axum::extract::ws::WebSocket,
+}
+
+#[cfg(feature = "debug-session")]
+impl crate::debug::session::DebugSocket for AxumSocket {
+    async fn send_text(&mut self, text: String) -> Result<(), String> {
+        use axum::extract::ws::Message;
+        self.ws
+            .send(Message::Text(text.into()))
+            .await
+            .map_err(|e| e.to_string())
+    }
+
+    async fn recv_text(&mut self) -> Option<Result<String, String>> {
+        use axum::extract::ws::Message;
+        loop {
+            match self.ws.recv().await {
+                Some(Ok(Message::Text(t))) => return Some(Ok(t.to_string())),
+                Some(Ok(Message::Binary(_))) => return Some(Err("binary control frame".into())),
+                Some(Ok(Message::Close(_))) | None => return None,
+                Some(Ok(_)) => continue,
+                Some(Err(e)) => return Some(Err(e.to_string())),
+            }
+        }
+    }
+
+    async fn close(&mut self) {
+        use axum::extract::ws::Message;
+        let _ = self.ws.send(Message::Close(None)).await;
+    }
 }
 
 /// route_core::R → axum Response：Content-Type 为 None 时不设头（对齐现状空响应）。

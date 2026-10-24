@@ -114,4 +114,7 @@ fn ui_has_protocol_and_server_debug_hooks() {
     assert!(ui.contains("base + 'debug'"), "缺少 /apidoc/debug 调用点");
     assert!(ui.contains("decodeBytes"), "缺少 hex/base64 body 解码");
     assert!(ui.contains("原始 Body"), "缺少原始 Body 编辑器");
+    assert!(ui.contains("协议选项"), "缺少服务端协议的 opts 编辑器");
+    assert!(ui.contains("protocol_opts.target"), "缺少 target 预填");
+    assert!(ui.contains("endpoint: { url: ep.url"), "缺少 endpoint 引用");
 }

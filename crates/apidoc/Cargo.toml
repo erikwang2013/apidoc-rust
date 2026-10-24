@@ -21,6 +21,8 @@ axum = ["dep:axum", "dep:tower-http", "dep:bytes", "mock"]
 actix = ["dep:actix-web", "dep:actix-cors", "dep:bytes", "mock"]
 # P0 服务端调试：默认不启用（安全红线）。axum/actix 不隐含开启，用户显式选择。
 debug-http = ["dep:reqwest", "dep:tokio"]
+# P2 长连接会话桥：服务端 WebSocket 执行器 + 适配器升级路由。
+debug-session = ["debug-http", "dep:async-trait", "dep:tokio-tungstenite", "dep:futures-util", "dep:actix-ws", "axum?/ws"]
 
 [dependencies]
 linkme = "0.3"
@@ -43,7 +45,12 @@ actix-web = { version = "4", features = ["macros"], optional = true }
 actix-cors = { version = "0.7", optional = true }
 # 服务端调试执行器（feature "debug-http"）：纯 rustls，不拉 OpenSSL
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2"], optional = true }
-tokio = { version = "1", features = ["rt", "net", "time"], optional = true }
+tokio = { version = "1", features = ["rt", "net", "time", "sync", "macros"], optional = true }
+# P2 长连接：服务端 WS 客户端 + 适配器升级所需
+async-trait = { version = "0.1", optional = true }
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-native-roots"], optional = true }
+futures-util = { version = "0.3", optional = true }
+actix-ws = { version = "0.3", optional = true }
 
 [dev-dependencies]
 apidoc-test-fixtures = { path = "../apidoc-test-fixtures" }
