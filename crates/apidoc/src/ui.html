@@ -59,6 +59,9 @@ button:hover { background:#f0f3f8; }
 .stream-row.out .dir { color:#16a34a; }
 .stream-row .ts, .stream-row .enc { flex:none; color:var(--muted); }
 .stream-row .data { flex:1; min-width:0; }
+/* P1 媒体面板：HLS 预览与 manifest 原文 */
+.media-video { width:100%; max-height:360px; background:#000; border-radius:6px; }
+.media-manifest { max-height:200px; overflow:auto; background:#f8f9fb; border:1px solid var(--border); border-radius:6px; padding:8px; font-size:12px; white-space:pre-wrap; }
 /* M6a 密码遮罩：全屏覆盖层，非受控状态 display:none */
 #mask { display:none; position:fixed; inset:0; background:var(--bg); z-index:10; align-items:center; justify-content:center; }
 #mask-box { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:28px 32px; width:320px; text-align:center; }

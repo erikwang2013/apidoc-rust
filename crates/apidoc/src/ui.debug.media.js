@@ -171,3 +171,53 @@ function webrtcPanel(ep) {
 
   return box;
 }
+
+// ---------- P1 HLS 预览 ----------
+// 浏览器原生 <video> 播放 HLS；manifest 只做原文展示，不解析分片。
+function hlsPanel(ep) {
+  const o = ep.protocol_opts || {};
+  const box = el('div');
+  const target = protocolField('HLS URL', 'input', 'https://example.com/live.m3u8', o.target || ep.url || '');
+  box.appendChild(target.row);
+  box.appendChild(el('p', 'empty', '浏览器原生 HLS 播放（Safari/Android 支持；Chrome/Firefox 桌面版可能不支持）；非 HLS 或跨域未放行时会在下方提示。'));
+
+  const status = el('p', 'empty', '');
+  box.appendChild(status);
+  const video = document.createElement('video');
+  video.controls = true;
+  video.preload = 'metadata';
+  video.className = 'media-video';
+  video.onerror = () => {
+    status.textContent = '视频加载失败：URL 不是浏览器可播放的 HLS，或跨域/CORS 未放行。';
+  };
+  box.appendChild(video);
+
+  const actions = el('div', 'debug-actions');
+  const loadBtn = el('button', null, '加载');
+  const manifestBtn = el('button', null, '查看 manifest');
+  actions.appendChild(loadBtn);
+  actions.appendChild(manifestBtn);
+  box.appendChild(actions);
+
+  const pre = document.createElement('pre');
+  pre.className = 'media-manifest';
+  box.appendChild(pre);
+
+  const load = () => {
+    status.textContent = '';
+    pre.textContent = '';
+    video.src = target.input.value.trim();
+  };
+  loadBtn.onclick = load;
+  manifestBtn.onclick = async () => {
+    try {
+      const res = await fetch(target.input.value.trim());
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      pre.textContent = await res.text();
+    } catch (e) {
+      pre.textContent = 'manifest 获取失败：' + (e.message || e);
+    }
+  };
+  if (target.input.value.trim()) load();
+  return box;
+}

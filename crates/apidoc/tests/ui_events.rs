@@ -43,6 +43,16 @@ fn ui_has_stream_panel_and_ws_adapter() {
     assert!(!ui.contains("innerHTML"));
 }
 
+/// P1：HLS 预览面板与分发。
+#[test]
+fn ui_has_hls_panel() {
+    let ui = include_str!("../src/ui.debug.media.js");
+    assert!(ui.contains("function hlsPanel"));
+    assert!(ui.contains("createElement('video')"));
+    let debug = include_str!("../src/ui.debug.js");
+    assert!(debug.contains("hlsPanel(ep)"));
+}
+
 /// P1：WebRTC / DataChannel 面板。
 #[test]
 fn ui_has_webrtc_panel() {
