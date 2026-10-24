@@ -86,7 +86,8 @@ apidoc-rust 的实现取向：
 
 ### 已实现（多协议调试 P1）
 
-- **协议注解**：`#[apidoc::protocol("websocket", target = "wss://…")]` 声明协议与连接参数，`#[apidoc::event(direction = "in", name = "message")]` 声明流式消息；协议字段号用 `#[apidoc::param(..., field = "1")]`
+- **协议注解**：每个协议一个独立注解，如 `#[apidoc::websocket("wss://…")]`、`#[apidoc::grpc(target = "http://…", service = "x.Y", method = "Z")]`、`#[apidoc::mqtt("mqtt://broker:1883", topic = "sensors/#")]`；位置参数等价于 `target = "…"`。底层与通用形式 `#[apidoc::protocol("kind", ...)]` 完全等价，新协议仍可用通用形式
+- **事件与字段**：`#[apidoc::event(direction = "in", name = "message")]` 声明流式消息，`#[apidoc::param(..., field = "1")]` 声明协议字段号
 - **浏览器直连调试**：SOAP、GraphQL（含订阅）、JSON-RPC、XML-RPC、OData、MCP、A2A、Webhooks、WebSocket（文本/二进制帧）、SSE、Socket.IO、STOMP（含二进制）、WebRTC/DataChannel、HLS
 - **服务端代发**（feature `debug-http`，默认关闭）：`POST /apidoc/debug`，可强制 HTTP/2、绕过 CORS/内网；开启需 `DebugConfig { enable_server_side: true }` + 全局鉴权，默认拒绝内网/回环/云元数据地址
 - **P2+**：gRPC、Thrift、Dubbo、ISO 8583、TCP/UDP/Unix、MQTT/AMQP/Kafka、CoAP/LwM2M/工业协议、RTSP/RTMP/RTP/SIP/HTTP3 按 `docs/superpowers/plans/` 分批接入

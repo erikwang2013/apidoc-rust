@@ -136,7 +136,22 @@ pub async fn execute(
 {"type":"error","error":"..."}
 ```
 
-### 2.3 UI 面板契约（P1）
+### 2.3 每协议别名注解
+
+用户选定：每个规范 kind 一个独立属性宏，底层与 `protocol("kind", ...)` 等价：
+
+```rust
+#[apidoc::websocket("wss://example.com/chat", room = "lobby")]
+#[apidoc::grpc(target = "http://127.0.0.1:50051", service = "helloworld.Greeter", method = "SayHello")]
+#[apidoc::mqtt("mqtt://broker:1883", topic = "sensors/#")]
+#[apidoc::tcp("tcp://host:9000")]
+```
+
+- 第一个位置参数等价于 `target = "..."`；后续任意 `key = "value"` 存入 `protocol_opts`。
+- 45 个规范 kind 均有别名；带连字符的 kind 用下划线作宏名：`http_binary`、`ws_binary`、`stomp_binary`。
+- 通用 `#[apidoc::protocol("kind", ...)]` 保留，作为未知/未来协议的扩展点。
+
+### 2.4 UI 面板契约（P1）
 
 ```js
 // 纯函数编解码放在 ui.codecs.js，Node 可直接 require 做单元测试。

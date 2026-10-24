@@ -29,6 +29,34 @@ fn rest_alias() {}
 #[apidoc::param(name = "q", ty = "string")]
 fn plain_http() {}
 
+// 每协议独立注解：位置参数等价于 target = "..."。
+#[allow(dead_code)]
+#[apidoc::title("WS 别名")]
+#[apidoc::websocket("wss://example.com/alias", room = "lobby")]
+#[apidoc::event(direction = "in", name = "alias_msg", ty = "json")]
+fn ws_alias() {}
+
+#[allow(dead_code)]
+#[apidoc::title("gRPC 别名")]
+#[apidoc::grpc(target = "http://127.0.0.1:50051", service = "helloworld.Greeter", method = "SayHello")]
+#[apidoc::param(name = "name", ty = "string", field = "1", required)]
+fn grpc_alias() {}
+
+#[allow(dead_code)]
+#[apidoc::title("TCP 别名")]
+#[apidoc::tcp("tcp://127.0.0.1:9000")]
+fn tcp_alias() {}
+
+#[allow(dead_code)]
+#[apidoc::title("HTTP Binary 别名")]
+#[apidoc::http_binary("https://example.com/raw")]
+fn binary_alias() {}
+
+#[allow(dead_code)]
+#[apidoc::title("ISO 别名")]
+#[apidoc::iso8583("tcp://127.0.0.1:8583", mti = "0200")]
+fn iso_alias() {}
+
 fn ep<'a>(doc: &'a ApiDoc, title: &str) -> &'a apidoc::DocEndpoint {
     doc.endpoints.iter().find(|e| e.title == title).expect("endpoint not found")
 }
@@ -78,6 +106,26 @@ fn default_http_output_omits_protocol_fields() {
     assert_eq!(chat["protocol"], "websocket");
     assert_eq!(chat["protocol_opts"]["target"], "wss://example.com/chat");
     assert_eq!(chat["events"][1]["name"], "message");
+}
+
+#[test]
+fn per_protocol_aliases_expand_to_protocol_fragment() {
+    let doc = DocRegistry::collect_doc(ApidocConfig::default());
+    let ws = ep(&doc, "WS 别名");
+    assert_eq!(ws.protocol, "websocket");
+    assert_eq!(ws.protocol_opts.get("target").map(String::as_str), Some("wss://example.com/alias"));
+    assert_eq!(ws.protocol_opts.get("room").map(String::as_str), Some("lobby"));
+    assert_eq!(ws.events.len(), 1);
+
+    let grpc = ep(&doc, "gRPC 别名");
+    assert_eq!(grpc.protocol, "grpc");
+    assert_eq!(grpc.params[0].field, Some("1"));
+
+    assert_eq!(ep(&doc, "TCP 别名").protocol, "tcp");
+    assert_eq!(ep(&doc, "HTTP Binary 别名").protocol, "http-binary");
+    let iso = ep(&doc, "ISO 别名");
+    assert_eq!(iso.protocol, "iso8583");
+    assert_eq!(iso.protocol_opts.get("mti").map(String::as_str), Some("0200"));
 }
 
 #[test]

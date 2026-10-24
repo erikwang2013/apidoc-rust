@@ -73,6 +73,29 @@ impl Parse for ProtocolArgs {
     }
 }
 
+/// 每协议别名注解的参数：可选的第一个位置参数作为 target，后续任意 key = "value"。
+pub struct ProtocolOptsArgs {
+    pub opts: Vec<(Ident, LitStr)>,
+}
+
+impl Parse for ProtocolOptsArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut opts = Vec::new();
+        if input.peek(LitStr) {
+            let lit: LitStr = input.parse()?;
+            opts.push((Ident::new("target", lit.span()), lit));
+            if !input.is_empty() {
+                input.parse::<Token![,]>()?;
+            }
+        }
+        kv_loop(input, |key, value| {
+            opts.push((key, value));
+            Ok(())
+        })?;
+        Ok(ProtocolOptsArgs { opts })
+    }
+}
+
 /// Parsed keyword arguments of `event` (direction / name / ty / desc / mock).
 pub struct EventArgs {
     pub direction: Option<LitStr>,

@@ -10,7 +10,7 @@
 mod args;
 mod protocols;
 
-use args::{EventArgs, HeaderArgs, ParamArgs, ProtocolArgs, SuccessArgs};
+use args::{EventArgs, HeaderArgs, ParamArgs, ProtocolArgs, ProtocolOptsArgs, SuccessArgs};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{format_ident, quote, quote_spanned};
@@ -218,6 +218,94 @@ pub fn protocol(args: TokenStream, item: TokenStream) -> TokenStream {
     };
     emit_many("protocol", item_fn, vec![frag])
 }
+
+/// 每协议别名的共享实现：`#[apidoc::websocket(...)]` 展开为
+/// `DocFragment::Protocol { kind: "websocket", opts }`。
+fn protocol_alias_impl(
+    kind: &'static str,
+    macro_name: &str,
+    args: TokenStream,
+    item: TokenStream,
+) -> TokenStream {
+    let args = parse_macro_input!(args as ProtocolOptsArgs);
+    let item_fn = match parse_item_fn(macro_name, item) {
+        Ok(f) => f,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let kind_lit = LitStr::new(kind, Span::call_site());
+    let opts = args.opts.iter().map(|(key, value)| {
+        let key_lit = LitStr::new(&key.to_string(), key.span());
+        quote! { (#key_lit, #value) }
+    });
+    let frag = quote! {
+        apidoc::DocFragment::Protocol(apidoc::DocProtocol {
+            kind: #kind_lit,
+            opts: &[#(#opts),*],
+        })
+    };
+    emit_many(&format!("protocol_{macro_name}"), item_fn, vec![frag])
+}
+
+macro_rules! protocol_aliases {
+    ($(($fn_name:ident, $kind:literal)),* $(,)?) => {
+        $(
+            #[proc_macro_attribute]
+            pub fn $fn_name(args: TokenStream, item: TokenStream) -> TokenStream {
+                protocol_alias_impl($kind, stringify!($fn_name), args, item)
+            }
+        )*
+    };
+}
+
+// 45 个规范协议的独立注解别名；底层与 protocol("kind", ...) 完全等价。
+// 三个带连字符的 kind 用下划线作为宏名（Rust 标识符不能含 `-`）。
+protocol_aliases!(
+    (http, "http"),
+    (http2, "http2"),
+    (http3, "http3"),
+    (soap, "soap"),
+    (graphql, "graphql"),
+    (websocket, "websocket"),
+    (sse, "sse"),
+    (socketio, "socketio"),
+    (webrtc, "webrtc"),
+    (grpc, "grpc"),
+    (dubbo, "dubbo"),
+    (thrift, "thrift"),
+    (jsonrpc, "jsonrpc"),
+    (xmlrpc, "xmlrpc"),
+    (hessian, "hessian"),
+    (amqp, "amqp"),
+    (mqtt, "mqtt"),
+    (stomp, "stomp"),
+    (kafka, "kafka"),
+    (webhook, "webhook"),
+    (tcp, "tcp"),
+    (udp, "udp"),
+    (coap, "coap"),
+    (lwm2m, "lwm2m"),
+    (xmpp, "xmpp"),
+    (sip, "sip"),
+    (rtsp, "rtsp"),
+    (rtmp, "rtmp"),
+    (hls, "hls"),
+    (mcp, "mcp"),
+    (a2a, "a2a"),
+    (iso8583, "iso8583"),
+    (odata, "odata"),
+    (raw, "raw"),
+    (unix, "unix"),
+    (http_binary, "http-binary"),
+    (ws_binary, "ws-binary"),
+    (stomp_binary, "stomp-binary"),
+    (opcua, "opcua"),
+    (modbus, "modbus"),
+    (dnp3, "dnp3"),
+    (iec104, "iec104"),
+    (bacnet, "bacnet"),
+    (rtp, "rtp"),
+    (rtcp, "rtcp"),
+);
 
 /// P0: 声明长连接/流式协议的一条消息，例如
 /// `#[apidoc::event(direction = "in", name = "message", ty = "json", desc = "收到消息")]`。
