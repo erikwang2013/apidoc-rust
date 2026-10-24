@@ -32,6 +32,17 @@ fn ui_events_no_innerhtml() {
     assert!(ui.contains("debug-script"), "缺少调试事件样式/节点标记");
 }
 
+/// P1：流式面板框架与 WebSocket 适配器。
+#[test]
+fn ui_has_stream_panel_and_ws_adapter() {
+    let ui = include_str!("../src/ui.debug.stream.js");
+    assert!(ui.contains("function streamPanel"));
+    assert!(ui.contains("MAX_FRAMES = 1000"));
+    assert!(ui.contains("registerStreamAdapter"));
+    assert!(ui.contains("'websocket'"));
+    assert!(!ui.contains("innerHTML"));
+}
+
 /// P0：协议徽标、HTTP 族表单分发、服务端代发开关与原始 Body 编码入口。
 #[test]
 fn ui_has_protocol_and_server_debug_hooks() {

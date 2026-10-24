@@ -51,6 +51,14 @@ button:hover { background:#f0f3f8; }
 .debug-script { margin:6px 0; }
 .debug-script summary { cursor:pointer; font-size:13px; color:var(--muted); }
 .debug-script textarea { width:100%; margin-top:6px; padding:6px 8px; border:1px solid var(--border); border-radius:4px; font-family:ui-monospace,Menlo,monospace; font-size:13px; resize:vertical; }
+/* P1 流式调试：帧日志与方向标识 */
+.stream-log { max-height:320px; overflow:auto; border:1px solid var(--border); border-radius:6px; padding:8px; background:#f8f9fb; font-family:ui-monospace,Menlo,monospace; font-size:12px; }
+.stream-row { display:flex; gap:8px; padding:2px 0; border-bottom:1px solid var(--border); white-space:pre-wrap; word-break:break-all; }
+.stream-row .dir { flex:none; width:34px; font-weight:700; }
+.stream-row.in .dir { color:#2563eb; }
+.stream-row.out .dir { color:#16a34a; }
+.stream-row .ts, .stream-row .enc { flex:none; color:var(--muted); }
+.stream-row .data { flex:1; min-width:0; }
 /* M6a 密码遮罩：全屏覆盖层，非受控状态 display:none */
 #mask { display:none; position:fixed; inset:0; background:var(--bg); z-index:10; align-items:center; justify-content:center; }
 #mask-box { background:var(--panel); border:1px solid var(--border); border-radius:8px; padding:28px 32px; width:320px; text-align:center; }

@@ -42,7 +42,8 @@ pub const UI_HTML: &str = concat!(
     include_str!("ui.html"),
     include_str!("ui.js"),
     include_str!("ui.codecs.js"),
-    include_str!("ui.debug.js")
+    include_str!("ui.debug.js"),
+    include_str!("ui.debug.stream.js")
 );
 
 /// 文档 UI 的宠物图标（favicon + 页头 logo），适配器挂在 `/apidoc/pet.svg`。
