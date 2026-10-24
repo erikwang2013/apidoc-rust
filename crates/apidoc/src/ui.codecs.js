@@ -175,6 +175,20 @@ function socketIoDecode(text) {
   return { type, payload };
 }
 
+// graphql-transport-ws：connection_init / connection_ack / subscribe / next /
+// complete / error / ping / pong。id 为字符串。
+function graphqlWsEncode(type, id, payload) {
+  const msg = { type };
+  if (id !== undefined && id !== null) msg.id = String(id);
+  if (payload !== undefined) msg.payload = payload;
+  return JSON.stringify(msg);
+}
+
+function graphqlWsDecode(text) {
+  const msg = JSON.parse(text);
+  return { type: msg.type, id: msg.id, payload: msg.payload };
+}
+
 // SSE 增量解析：空行分派，data: 多行拼 \n，支持注释与 CRLF。
 function sseDecode(buffer) {
   const normalized = buffer.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -207,6 +221,6 @@ function sseDecode(buffer) {
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     decodeBytes, encodeBytes, stompEncode, stompDecode, sseDecode,
-    socketIoEncode, socketIoDecode,
+    socketIoEncode, socketIoDecode, graphqlWsEncode, graphqlWsDecode,
   };
 }

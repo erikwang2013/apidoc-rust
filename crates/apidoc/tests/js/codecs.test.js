@@ -36,6 +36,11 @@ test('socketIo encode/decode event', () => {
   assert.deepEqual(c.socketIoDecode('40'), { type: 'connect', payload: null });
 });
 
+test('graphqlWs encode/decode', () => {
+  assert.equal(c.graphqlWsEncode('subscribe', '1', { query: '{x}' }), '{"type":"subscribe","id":"1","payload":{"query":"{x}"}}');
+  assert.deepEqual(c.graphqlWsDecode('{"type":"next","id":"1","payload":{"data":{}}}'), { type: 'next', id: '1', payload: { data: {} } });
+});
+
 test('sseDecode splits across chunks and joins multiline data', () => {
   const a = c.sseDecode('event: message\ndata: one\ndata: two\n\n');
   assert.deepEqual(a.events, [{ event: 'message', data: 'one\ntwo', id: undefined, retry: undefined }]);

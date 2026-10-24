@@ -293,3 +293,175 @@ registerStreamAdapter('socketio', {
     });
   },
 });
+
+// ---------- STOMP over WebSocket ----------
+// 帧编解码在 ui.codecs.js；文本 body 走 text frame，二进制 body 走 binary frame。
+function arrayBufferToBinaryString(buf) {
+  const bytes = new Uint8Array(buf);
+  let out = '';
+  for (let i = 0; i < bytes.length; i++) out += String.fromCharCode(bytes[i]);
+  return out;
+}
+
+function utf8StringToBinaryString(text) {
+  const bytes = new TextEncoder().encode(text);
+  let out = '';
+  for (let i = 0; i < bytes.length; i++) out += String.fromCharCode(bytes[i]);
+  return out;
+}
+
+function binaryStringToText(text) {
+  const bytes = new Uint8Array(text.length);
+  for (let i = 0; i < text.length; i++) bytes[i] = text.charCodeAt(i) & 0xff;
+  return new TextDecoder('utf-8').decode(bytes);
+}
+
+function sendStompFrame(ws, command, headers, body) {
+  const frame = stompEncode(command, headers, body);
+  if (body === undefined || typeof body === 'string') {
+    ws.send(frame);
+  } else {
+    const bytes = new Uint8Array(frame.length);
+    for (let i = 0; i < frame.length; i++) bytes[i] = frame.charCodeAt(i) & 0xff;
+    ws.send(bytes);
+  }
+}
+
+registerStreamAdapter('stomp', {
+  hint: 'STOMP over WebSocket；destination / login / passcode 来自 protocol_opts，认证也可放 URL query。',
+  connect(targetUrl, opts, handlers) {
+    const o = opts.opts || {};
+    const ws = new WebSocket(targetUrl);
+    ws.binaryType = 'arraybuffer';
+    let buffer = '';
+    let closed = false;
+
+    const handleFrame = frame => {
+      if (frame.command === 'CONNECTED') {
+        handlers.onOpen();
+        if (o.destination) {
+          sendStompFrame(ws, 'SUBSCRIBE', { id: '0', destination: o.destination, ack: 'auto' });
+        }
+      } else if (frame.command === 'MESSAGE') {
+        const ct = frame.headers['content-type'] || '';
+        const isText = ct === '' || ct.startsWith('text/') || ct.includes('json') || ct.includes('xml');
+        handlers.onFrame({
+          dir: 'in',
+          encoding: isText ? 'utf8' : 'base64',
+          data: isText ? binaryStringToText(frame.body) : encodeBytes(frame.body, 'base64'),
+        });
+      } else if (frame.command === 'ERROR') {
+        handlers.onError(frame.headers.message || binaryStringToText(frame.body) || 'STOMP ERROR');
+      } else if (frame.command === 'RECEIPT') {
+        handlers.onFrame({
+          dir: 'in',
+          encoding: 'utf8',
+          data: 'RECEIPT ' + (frame.headers['receipt-id'] || ''),
+        });
+      }
+    };
+
+    ws.onopen = () => {
+      const headers = {
+        'accept-version': '1.2',
+        host: o.host || new URL(targetUrl).host,
+      };
+      if (o.login) headers.login = o.login;
+      if (o.passcode) headers.passcode = o.passcode;
+      sendStompFrame(ws, 'CONNECT', headers);
+    };
+    ws.onmessage = ev => {
+      if (closed) return;
+      buffer += typeof ev.data === 'string' ? utf8StringToBinaryString(ev.data) : arrayBufferToBinaryString(ev.data);
+      const decoded = stompDecode(buffer);
+      buffer = decoded.rest;
+      for (const frame of decoded.frames) handleFrame(frame);
+    };
+    ws.onclose = ev => {
+      closed = true;
+      handlers.onClose(ev.code, ev.reason);
+    };
+    ws.onerror = () => { if (!closed) handlers.onError('STOMP WebSocket 连接失败'); };
+
+    return {
+      send(payload) {
+        const headers = {
+          destination: o.destination || '',
+          'content-type': o.content_type || (payload.encoding === 'utf8' ? 'text/plain' : 'application/octet-stream'),
+        };
+        const body = payload.encoding === 'utf8' ? payload.data : decodeBytes(payload.encoding, payload.data);
+        sendStompFrame(ws, 'SEND', headers, body);
+      },
+      close() {
+        closed = true;
+        if (ws.readyState === WebSocket.OPEN) {
+          try { sendStompFrame(ws, 'DISCONNECT', {}); } catch (e) {}
+        }
+        try { ws.close(); } catch (e) {}
+      },
+    };
+  },
+});
+
+// ---------- GraphQL over WebSocket（graphql-transport-ws） ----------
+registerStreamAdapter('graphql-ws', {
+  hint: 'GraphQL 订阅：连接后自动 connection_init；发送框内容作为新的 subscription query。',
+  connect(targetUrl, opts, handlers) {
+    const o = opts.opts || {};
+    const ws = new WebSocket(targetUrl, 'graphql-transport-ws');
+    let closed = false;
+    let nextId = 2;
+    let variables;
+    let initPayload = {};
+    try { variables = o.variables ? JSON.parse(o.variables) : undefined; } catch (e) { variables = undefined; }
+    try { initPayload = o.init_payload ? JSON.parse(o.init_payload) : {}; } catch (e) { initPayload = {}; }
+
+    ws.onopen = () => {
+      ws.send(graphqlWsEncode('connection_init', undefined, initPayload));
+    };
+    ws.onmessage = ev => {
+      if (closed || typeof ev.data !== 'string') return;
+      let msg;
+      try {
+        msg = graphqlWsDecode(ev.data);
+      } catch (e) {
+        handlers.onError('GraphQL-WS 非法 JSON');
+        return;
+      }
+      if (msg.type === 'connection_ack') {
+        handlers.onOpen();
+        ws.send(graphqlWsEncode('subscribe', '1', {
+          query: o.query || '{ __typename }',
+          variables,
+          operationName: o.operation_name || undefined,
+        }));
+      } else if (msg.type === 'next') {
+        handlers.onFrame({ dir: 'in', encoding: 'utf8', data: JSON.stringify(msg.payload) });
+      } else if (msg.type === 'complete') {
+        handlers.onClose(1000, 'complete');
+      } else if (msg.type === 'error' || msg.type === 'connection_error') {
+        handlers.onError(JSON.stringify(msg.payload));
+      } else if (msg.type === 'ping') {
+        ws.send(graphqlWsEncode('pong'));
+      }
+    };
+    ws.onclose = ev => {
+      closed = true;
+      handlers.onClose(ev.code, ev.reason);
+    };
+    ws.onerror = () => { if (!closed) handlers.onError('GraphQL-WS 连接失败'); };
+
+    return {
+      send(payload) {
+        if (ws.readyState !== WebSocket.OPEN) throw new Error('GraphQL-WS 未连接');
+        if (payload.encoding !== 'utf8') throw new Error('GraphQL-WS 仅支持 utf8 query');
+        ws.send(graphqlWsEncode('subscribe', String(nextId++), { query: payload.data }));
+      },
+      close() {
+        closed = true;
+        try { ws.send(graphqlWsEncode('complete', '1')); } catch (e) {}
+        try { ws.close(); } catch (e) {}
+      },
+    };
+  },
+});
