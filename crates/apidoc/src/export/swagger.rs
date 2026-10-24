@@ -10,6 +10,11 @@ use serde_json::{json, Map, Value};
 pub fn render(doc: &ApiDoc, version: &str) -> Value {
     let mut paths = Map::new();
     for ep in doc.endpoints.iter().filter(|e| !e.not_debug) {
+        // 非 HTTP 语义的协议（WS/gRPC/TCP…）没有 OpenAPI 位置，直接跳过；
+        // HTTP 族（SOAP/GraphQL/JSON-RPC…）照常进 paths，并带 x-apidoc-protocol。
+        if !crate::protocol::is_http_compatible(&ep.protocol) {
+            continue;
+        }
         let path = convert_path(&ep.url);
         let op = render_operation(ep);
         let method = ep.method.to_lowercase();
@@ -107,6 +112,10 @@ fn render_operation(ep: &DocEndpoint) -> Value {
         responses.insert("200".into(), json!({ "description": "OK" }));
     }
     op.insert("responses".into(), Value::Object(responses));
+    // 非默认协议用 vendor extension 保留信息（OpenAPI 无对应字段）。
+    if ep.protocol != "http" {
+        op.insert("x-apidoc-protocol".into(), Value::String(ep.protocol.clone()));
+    }
     Value::Object(op)
 }
 

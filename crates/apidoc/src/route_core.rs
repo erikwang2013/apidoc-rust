@@ -6,7 +6,7 @@
 use crate::auth::{self, AuthConfig};
 use crate::mock::{generate_mock, mock_specs, MockEndpointSpec};
 use crate::{cache, codegen, export, share};
-use crate::{ApiDoc, ApidocConfig, AppConfig, CacheConfig, DocRegistry};
+use crate::{ApiDoc, ApidocConfig, AppConfig, CacheConfig, DebugConfig, DocRegistry};
 use bytes::Bytes;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -67,6 +67,8 @@ pub struct Core {
     /// 已渲染模板（内置 + config.codegen 同名覆盖），请求期只查表。
     generated: HashMap<String, Bytes>,
     auth_cfg: Option<AuthConfig>,
+    /// P0 服务端调试配置：已归一化零值并做过 fail-closed 校验。
+    debug_cfg: Option<DebugConfig>,
     apps: Vec<AppConfig>,
     cache_cfg: Option<CacheConfig>,
     /// 进程内唯一序号：mock 缓存是全局的，键里带上它以隔离同一进程里的多个 Core
@@ -105,6 +107,25 @@ impl Core {
         } else if apps.iter().any(|a| a.password.as_deref().is_some_and(|p| !p.is_empty())) {
             auth::warm_secret_key(&AuthConfig::default());
         }
+        // P0 服务端调试：零值归一 + fail-closed 校验。开启代理必须已有全局鉴权，
+        // 否则 /apidoc/debug 就是一个无需凭据的 SSRF 入口（应用独立密码不够：
+        // 不带 appKey 的请求会落到全局分支）。
+        let debug_cfg = doc.config.debug.clone().map(|mut d| {
+            if d.timeout_ms == 0 {
+                d.timeout_ms = 10_000;
+            }
+            if d.max_bytes == 0 {
+                d.max_bytes = 1_048_576;
+            }
+            d
+        });
+        if debug_cfg.as_ref().is_some_and(|d| d.enable_server_side) {
+            let global_auth = auth_cfg.as_ref().is_some_and(|a| a.enable && !a.password.is_empty());
+            assert!(
+                global_auth,
+                "apidoc: DebugConfig.enable_server_side requires AuthConfig {{ enable: true, password: non-empty }}"
+            );
+        }
         // v2 文档缓存：仅 mock 每请求有实际计算（api.json/export 构建期已物化一次，
         // 恒等重建无意义）——开启后按 (url,method) 记忆化 mock 输出。
         let cache_cfg = doc.config.cache.clone();
@@ -122,7 +143,20 @@ impl Core {
             }
         }
         let id = CORE_SEQ.fetch_add(1, Ordering::Relaxed);
-        Core { doc, api_json, md, ts, sw, mocks, generated, auth_cfg, apps, cache_cfg, id }
+        Core {
+            doc,
+            api_json,
+            md,
+            ts,
+            sw,
+            mocks,
+            generated,
+            auth_cfg,
+            debug_cfg,
+            apps,
+            cache_cfg,
+            id,
+        }
     }
 
     /// 数据路由守卫，auth 未启用恒放行。
@@ -199,6 +233,64 @@ impl Core {
                 R::new(200, "application/json", body)
             }
             None => R::new(404, "application/json", r#"{"error":"endpoint not found"}"#),
+        }
+    }
+
+    /// POST /apidoc/debug：服务端协议执行器（P0 仅 HTTP 族）。
+    /// 未启用/未编译 403，body 非法 400，上游失败 502。
+    pub async fn debug(&self, q: &HashMap<String, String>, body: &[u8]) -> R {
+        if !self.guard(q) {
+            return Self::denied();
+        }
+        let Some(cfg) = self.debug_cfg.as_ref().filter(|c| c.enable_server_side) else {
+            return R::new(
+                403,
+                "application/json",
+                r#"{"error":"server-side debug is disabled"}"#,
+            );
+        };
+        // 请求 JSON 本身也限流：base64 相对原 body 膨胀 4/3，留 2x 余量。
+        if body.len() > cfg.max_bytes.saturating_mul(2) {
+            return R::new(
+                413,
+                "application/json",
+                r#"{"error":"debug request body too large"}"#,
+            );
+        }
+        #[cfg(feature = "debug-http")]
+        {
+            let req: crate::debug::DebugRequest = match serde_json::from_slice(body) {
+                Ok(r) => r,
+                Err(e) => {
+                    return R::new(
+                        400,
+                        "application/json",
+                        serde_json::json!({ "error": format!("invalid debug request: {e}") })
+                            .to_string(),
+                    )
+                }
+            };
+            match crate::debug::execute(cfg, &req).await {
+                Ok(out) => R::new(
+                    200,
+                    "application/json",
+                    serde_json::to_string(&out).expect("debug response must serialize"),
+                ),
+                Err(e) => R::new(
+                    502,
+                    "application/json",
+                    serde_json::json!({ "error": e }).to_string(),
+                ),
+            }
+        }
+        #[cfg(not(feature = "debug-http"))]
+        {
+            let _ = body;
+            R::new(
+                403,
+                "application/json",
+                r#"{"error":"server-side debug is not compiled in (enable feature `debug-http`)"}"#,
+            )
         }
     }
 

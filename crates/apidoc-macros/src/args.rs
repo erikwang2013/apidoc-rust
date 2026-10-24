@@ -49,6 +49,64 @@ impl Parse for SuccessArgs {
     }
 }
 
+/// Parsed first literal + arbitrary `key = "value"` options of `protocol`.
+/// The kind is validated against the canonical list by the caller; options are
+/// kept as written so each protocol family can read its own keys without the
+/// macro knowing them all.
+pub struct ProtocolArgs {
+    pub kind: LitStr,
+    pub opts: Vec<(Ident, LitStr)>,
+}
+
+impl Parse for ProtocolArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let kind: LitStr = input.parse()?;
+        let mut opts = Vec::new();
+        if !input.is_empty() {
+            input.parse::<Token![,]>()?;
+        }
+        kv_loop(input, |key, value| {
+            opts.push((key, value));
+            Ok(())
+        })?;
+        Ok(ProtocolArgs { kind, opts })
+    }
+}
+
+/// Parsed keyword arguments of `event` (direction / name / ty / desc / mock).
+pub struct EventArgs {
+    pub direction: Option<LitStr>,
+    pub name: Option<LitStr>,
+    pub ty: Option<LitStr>,
+    pub desc: Option<LitStr>,
+    pub mock: Option<LitStr>,
+}
+
+impl Parse for EventArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut out = EventArgs { direction: None, name: None, ty: None, desc: None, mock: None };
+        kv_loop(input, |key, value| {
+            match key.to_string().as_str() {
+                "direction" => out.direction = Some(value),
+                "name" => out.name = Some(value),
+                "ty" | "type" => out.ty = Some(value),
+                "desc" => out.desc = Some(value),
+                "mock" => out.mock = Some(value),
+                other => {
+                    return Err(syn::Error::new(
+                        key.span(),
+                        format!(
+                            "unknown argument `{other}`; expected direction, name, ty, desc or mock"
+                        ),
+                    ));
+                }
+            }
+            Ok(())
+        })?;
+        Ok(out)
+    }
+}
+
 /// Parsed `name` / `desc` keyword arguments of header. Dedicated parser so
 /// unknown keys (ty / required / mock / children) fail loudly instead of
 /// being silently dropped. Literals are kept raw so errors can point at the
@@ -87,6 +145,8 @@ pub struct ParamArgs {
     pub default: Option<LitStr>,
     pub desc: Option<LitStr>,
     pub mock: Option<LitStr>,
+    /// 协议字段号（protobuf tag / Thrift field id / ISO 8583 域号）。
+    pub field: Option<LitStr>,
     pub children: Vec<ParamArgs>,
 }
 
@@ -99,6 +159,7 @@ impl Parse for ParamArgs {
             default: None,
             desc: None,
             mock: None,
+            field: None,
             children: Vec::new(),
         };
         while !input.is_empty() {
@@ -127,11 +188,12 @@ impl Parse for ParamArgs {
                     "default" => out.default = Some(value),
                     "desc" => out.desc = Some(value),
                     "mock" => out.mock = Some(value),
+                    "field" => out.field = Some(value),
                     other => {
                         return Err(syn::Error::new(
                             key.span(),
                             format!(
-                                "unknown argument `{}`; expected name, ty, required, default, desc, mock or children",
+                                "unknown argument `{}`; expected name, ty, required, default, desc, mock, field or children",
                                 other
                             ),
                         ));

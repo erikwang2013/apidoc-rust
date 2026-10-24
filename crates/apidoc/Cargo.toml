@@ -19,6 +19,8 @@ mock = ["dep:fake"]
 # bytes：适配器响应用的引用计数缓冲（Ui/导出产物 O(1) 克隆，不再逐请求复制全文）
 axum = ["dep:axum", "dep:tower-http", "dep:bytes", "mock"]
 actix = ["dep:actix-web", "dep:actix-cors", "dep:bytes", "mock"]
+# P0 服务端调试：默认不启用（安全红线）。axum/actix 不隐含开启，用户显式选择。
+debug-http = ["dep:reqwest", "dep:tokio"]
 
 [dependencies]
 linkme = "0.3"
@@ -39,6 +41,9 @@ axum = { version = "0.8", optional = true }
 tower-http = { version = "0.7", features = ["cors"], optional = true }
 actix-web = { version = "4", features = ["macros"], optional = true }
 actix-cors = { version = "0.7", optional = true }
+# 服务端调试执行器（feature "debug-http"）：纯 rustls，不拉 OpenSSL
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "http2"], optional = true }
+tokio = { version = "1", features = ["rt", "net", "time"], optional = true }
 
 [dev-dependencies]
 apidoc-test-fixtures = { path = "../apidoc-test-fixtures" }

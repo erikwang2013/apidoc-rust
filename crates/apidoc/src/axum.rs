@@ -1,7 +1,7 @@
 //! 薄 axum 适配器（feature "axum"）：只做路由注册 + 状态注入（State<Arc<Core>>），
 //! 守卫/分支/响应渲染全部在 crate::route_core（与 actix 同一份实现，行为 1:1
 //! 由结构性共享保证，不再靠两份复制维护）。
-//! 不做 UI 内嵌三方文档工具、不做服务端代理（规划已定）。
+//! 服务端调试路由默认关闭；开启需 DebugConfig + 全局鉴权 + feature `debug-http`。
 
 use crate::route_core::{self, Core, R};
 use crate::ApidocConfig;
@@ -62,6 +62,8 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
         .route("/apidoc/mock", get(mock))
         .route("/apidoc/share", get(share))
         .route("/apidoc/generate", get(generate))
+        // P0 服务端调试：POST body 为 DebugRequest；未启用时 route_core 返回 403
+        .route("/apidoc/debug", post(debug))
         .with_state(core)
 }
 
@@ -88,6 +90,14 @@ async fn share(State(core): State<Arc<Core>>, Query(q): Query<HashMap<String, St
 
 async fn generate(State(core): State<Arc<Core>>, Query(q): Query<HashMap<String, String>>) -> Response {
     response(core.generate(&q))
+}
+
+async fn debug(
+    State(core): State<Arc<Core>>,
+    Query(q): Query<HashMap<String, String>>,
+    body: Bytes,
+) -> Response {
+    response(core.debug(&q, &body).await)
 }
 
 /// route_core::R → axum Response：Content-Type 为 None 时不设头（对齐现状空响应）。

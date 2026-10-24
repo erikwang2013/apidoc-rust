@@ -1,5 +1,29 @@
 // ---------- 在线调试 ----------
 
+// P0：有 HTTP method + path 语义的协议复用通用调试表单；其余协议后续阶段接入。
+const HTTP_FAMILY = new Set([
+  'http', 'http2', 'http3', 'http-binary', 'soap', 'graphql', 'jsonrpc',
+  'xmlrpc', 'odata', 'mcp', 'a2a', 'webhook',
+]);
+
+// 原始 Body 编码：utf8 原样，hex/base64 解成字节供 fetch 直发。
+function decodeBytes(encoding, text) {
+  if (encoding === 'base64') {
+    const bin = atob(text.trim());
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+    return out;
+  }
+  if (encoding === 'hex') {
+    const clean = text.replace(/\s+/g, '');
+    if (clean.length % 2 || /[^0-9a-fA-F]/.test(clean)) throw new Error('hex 格式不合法');
+    const out = new Uint8Array(clean.length / 2);
+    for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.substr(i * 2, 2), 16);
+    return out;
+  }
+  return text;
+}
+
 function debugRow(name, placeholder) {
   const row = el('div', 'debug-row');
   row.appendChild(el('label', null, name));
@@ -148,6 +172,36 @@ function debugForm(ep) {
     box.appendChild(inner);
     form.appendChild(box);
   }
+  // 原始 Body：非 JSON 协议（HTTP binary / SOAP / GraphQL…）直接用原文或 hex/base64；
+  // 留空时沿用上方参数自动组装的 JSON body。
+  const rawBox = el('details', 'debug-script');
+  rawBox.appendChild(el('summary', null, '原始 Body（设置后覆盖参数组装）'));
+  const rawFmt = document.createElement('select');
+  for (const f of ['utf8', 'hex', 'base64']) {
+    const o = document.createElement('option');
+    o.value = f;
+    o.textContent = f;
+    rawFmt.appendChild(o);
+  }
+  const rawTa = document.createElement('textarea');
+  rawTa.rows = 4;
+  rawTa.placeholder = '留空 = 按上方参数自动组装 JSON';
+  rawBox.appendChild(rawFmt);
+  rawBox.appendChild(rawTa);
+  form.appendChild(rawBox);
+  // 服务端代发：仅在 config.debug.enable_server_side 时出现。可强制 HTTP/2、
+  // 绕过 CORS 与内网限制；实际可达性由服务端 DebugConfig 白名单决定。
+  const dbgCfg = DOC && DOC.config && DOC.config.debug;
+  const viaServer = document.createElement('input');
+  viaServer.type = 'checkbox';
+  if (dbgCfg && dbgCfg.enable_server_side) {
+    const row = el('div', 'debug-row');
+    const label = el('label', null, '经服务端发送');
+    label.prepend(viaServer);
+    row.appendChild(label);
+    row.appendChild(el('span', 'empty', '可强制 HTTP/2、绕过 CORS/内网限制'));
+    form.appendChild(row);
+  }
   // 前置/后置调试事件：可折叠文本域，值持久化到 localStorage（键名同 apidoc_token 风格）
   const scriptBox = (label, key, hint) => {
     const det = el('details', 'debug-script');
@@ -227,13 +281,16 @@ function debugForm(ep) {
       }
       if (Object.keys(obj).length) body = JSON.stringify(obj);
     }
-    // headers：非空值才发送；JSON body 自动补 Content-Type
+    // headers：非空值才发送；自动组装的 JSON body 补 Content-Type（原始 Body 由用户自填）
     let headers = {};
     for (const h of headerRows) {
       const v = h.input.value.trim();
       if (v) headers[h.name] = v;
     }
-    if (body) headers['Content-Type'] = 'application/json';
+    const rawText = rawTa.value;
+    const rawEncoding = rawText.trim() ? rawFmt.value : 'utf8';
+    if (body && !rawText.trim()) headers['Content-Type'] = 'application/json';
+    if (rawText.trim()) body = rawText;
     const out = el('div');
     // 前置调试事件：脚本抛错只提示，仍按原值发请求
     const preRun = runScript(preTa.value, { url: fullUrl, method: ep.method, headers, body, ep });
@@ -241,16 +298,63 @@ function debugForm(ep) {
     fullUrl = preRun.ctx.url;
     headers = preRun.ctx.headers;
     body = preRun.ctx.body;
+    const sendViaServer = viaServer.checked && dbgCfg && dbgCfg.enable_server_side;
     const t0 = performance.now();
     try {
-      const res = await fetch(fullUrl, { method: preRun.ctx.method || ep.method, headers, body });
-      const text = await res.text();
-      const ms = Math.round(performance.now() - t0);
+      let status, ms, text;
+      if (sendViaServer) {
+        // 服务端代发：body 用 encoding + data 表达，二进制不会被字符串化
+        const payload = body === undefined ? null : { encoding: rawEncoding, data: body };
+        const opts = ep.protocol === 'http2' ? { version: '2' } : {};
+        const res = await fetch(base + 'debug' + (authQuery() ? '?' + authQuery() : ''), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            kind: ep.protocol || 'http',
+            target: fullUrl,
+            method: preRun.ctx.method || ep.method,
+            headers,
+            body: payload,
+            opts,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          out.appendChild(warnBox('服务端调试失败：' + (data.error || res.status)));
+          resultBox.textContent = '';
+          resultBox.appendChild(out);
+          return;
+        }
+        status = data.status;
+        ms = data.ms;
+        text = data.body ? (data.body.encoding === 'base64' ? '[base64] ' + data.body.data : data.body.data) : '';
+        out.appendChild(el('p', null, '服务端代发 ' + status + '（' + ms + 'ms）'));
+      } else {
+        let directBody;
+        try {
+          directBody = body === undefined ? undefined : decodeBytes(rawEncoding, body);
+        } catch (err) {
+          out.appendChild(warnBox('Body 解码失败：' + err.message));
+          resultBox.textContent = '';
+          resultBox.appendChild(out);
+          return;
+        }
+        if (isGet && directBody !== undefined) {
+          out.appendChild(warnBox('GET/HEAD 不能带 Body：请勾选「经服务端发送」或改用 POST。'));
+          resultBox.textContent = '';
+          resultBox.appendChild(out);
+          return;
+        }
+        const res = await fetch(fullUrl, { method: preRun.ctx.method || ep.method, headers, body: directBody });
+        text = await res.text();
+        status = res.status;
+        ms = Math.round(performance.now() - t0);
+        out.appendChild(el('p', null, res.status + ' ' + res.statusText + '（' + ms + 'ms）'));
+      }
       // 后置调试事件：ctx 只读；脚本抛错只提示，仍展示原始响应
-      const postRun = runScript(postTa.value, { status: res.status, ms, text, url: fullUrl, method: ep.method, ep });
+      const postRun = runScript(postTa.value, { status, ms, text, url: fullUrl, method: ep.method, ep });
       if (postRun.error) out.appendChild(warnBox('后置脚本执行失败：' + postRun.error));
       const shown = typeof postRun.ret === 'string' ? postRun.ret : text;
-      out.appendChild(el('p', null, res.status + ' ' + res.statusText + '（' + ms + 'ms）'));
       const pre = document.createElement('pre');
       try {
         pre.textContent = JSON.stringify(JSON.parse(shown), null, 2);
@@ -261,7 +365,8 @@ function debugForm(ep) {
     } catch (e) {
       // CORS 与网络失败无法区分，一条提示覆盖两种
       console.error(e);
-      out.appendChild(warnBox('请求失败：目标服务未开启 CORS、或网络不可达。请确认目标接口所在服务调用了 apidoc_axum::cors_layer 且对当前 Origin 放行（含预检 OPTIONS），并检查 Base URL 是否正确。浏览器控制台有详细错误。'));
+      const hint = dbgCfg && dbgCfg.enable_server_side ? '也可勾选「经服务端发送」重试。' : '';
+      out.appendChild(warnBox('请求失败：目标服务未开启 CORS、或网络不可达。请确认目标接口所在服务调用了 apidoc_axum::cors_layer 且对当前 Origin 放行（含预检 OPTIONS），并检查 Base URL 是否正确。浏览器控制台有详细错误。' + hint));
     }
     resultBox.textContent = '';
     resultBox.appendChild(out);
@@ -283,6 +388,9 @@ function debugPanel(ep) {
     section.appendChild(titleRow);
     if (ep.not_debug && !show.checked) {
       section.appendChild(el('p', 'empty', '该接口标记为 not_debug，默认不展示调试表单；勾选上方复选框可强制显示。'));
+    } else if (ep.protocol && !HTTP_FAMILY.has(ep.protocol)) {
+      // 非 HTTP 族的专用面板（WS / gRPC / MQTT / TCP…）在后续阶段接入。
+      section.appendChild(el('p', 'empty', '该协议（' + ep.protocol + '）的调试面板将在后续阶段提供。'));
     } else {
       section.appendChild(debugForm(ep));
     }

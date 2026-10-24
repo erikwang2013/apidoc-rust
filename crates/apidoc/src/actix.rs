@@ -1,7 +1,7 @@
 //! 薄 actix-web 适配器（feature "actix"）：只做路由注册 + 状态注入（web::Data<Arc<Core>>），
 //! 守卫/分支/响应渲染全部在 crate::route_core（与 axum 同一份实现，行为 1:1
 //! 由结构性共享保证：404/400 语义、Content-Type、mock 匹配逻辑）。
-//! 不做 UI 内嵌三方文档工具、不做服务端代理（规划已定）。
+//! 服务端调试路由默认关闭；开启需 DebugConfig + 全局鉴权 + feature `debug-http`。
 
 use actix_cors::Cors;
 use actix_web::{web, HttpResponse, Scope};
@@ -50,6 +50,8 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
         .route("/mock", web::get().to(mock))
         .route("/share", web::get().to(share))
         .route("/generate", web::get().to(generate))
+        // P0 服务端调试：POST body 为 DebugRequest；未启用时 route_core 返回 403
+        .route("/debug", web::post().to(debug))
 }
 
 // 各 handler 一行转发 core：判定与渲染在 route_core（两框架共享同一实现）。
@@ -75,6 +77,14 @@ async fn share(core: web::Data<Arc<Core>>, q: web::Query<HashMap<String, String>
 
 async fn generate(core: web::Data<Arc<Core>>, q: web::Query<HashMap<String, String>>) -> HttpResponse {
     response(core.generate(&q))
+}
+
+async fn debug(
+    core: web::Data<Arc<Core>>,
+    q: web::Query<HashMap<String, String>>,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(core.debug(&q, &body).await)
 }
 
 /// route_core::R → HttpResponse：Content-Type 为 None 时不设头（对齐现状空响应）。

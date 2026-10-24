@@ -148,7 +148,7 @@ mod tests {
     use super::*;
 
     fn param(name: &'static str, ty: &'static str, mock: Option<&'static str>) -> DocParam {
-        DocParam { name, ty, required: false, default: None, desc: None, mock, children: &[] }
+        DocParam { name, ty, required: false, default: None, desc: None, mock, field: None, children: &[] }
     }
 
     fn spec(url: &str, method: &str, params: Vec<DocParam>, querys: Vec<DocParam>) -> MockEndpointSpec {
@@ -215,15 +215,15 @@ mod tests {
     fn explicit_mock_beats_children() {
         const CHILD: DocParam = DocParam {
             name: "id", ty: "int", required: false,
-            default: None, desc: None, mock: None, children: &[],
+            default: None, desc: None, mock: None, field: None, children: &[],
         };
         static LITERAL: DocParam = DocParam {
             name: "user", ty: "object", required: false,
-            default: None, desc: None, mock: Some("override"), children: &[CHILD],
+            default: None, desc: None, mock: Some("override"), field: None, children: &[CHILD],
         };
         static FAKED: DocParam = DocParam {
             name: "org", ty: "object", required: false,
-            default: None, desc: None, mock: Some("fake:name"), children: &[CHILD],
+            default: None, desc: None, mock: Some("fake:name"), field: None, children: &[CHILD],
         };
         let v = generate_mock(&spec("/x", "GET", vec![LITERAL.clone(), FAKED.clone()], vec![]));
         let params = mock_of(&v, "params");
@@ -237,19 +237,19 @@ mod tests {
     fn children_recurse_into_nested_object_and_array_makes_two() {
         const CHILD_ID: DocParam = DocParam {
             name: "id", ty: "int", required: false,
-            default: None, desc: None, mock: None, children: &[],
+            default: None, desc: None, mock: None, field: None, children: &[],
         };
         const CHILD_NAME: DocParam = DocParam {
             name: "name", ty: "string", required: false,
-            default: None, desc: None, mock: Some("fake:name"), children: &[],
+            default: None, desc: None, mock: Some("fake:name"), field: None, children: &[],
         };
         static USER: DocParam = DocParam {
             name: "user", ty: "object", required: false,
-            default: None, desc: None, mock: None, children: &[CHILD_ID, CHILD_NAME],
+            default: None, desc: None, mock: None, field: None, children: &[CHILD_ID, CHILD_NAME],
         };
         static ITEMS: DocParam = DocParam {
             name: "items", ty: "array", required: false,
-            default: None, desc: None, mock: None, children: &[CHILD_ID],
+            default: None, desc: None, mock: None, field: None, children: &[CHILD_ID],
         };
         let v = generate_mock(&spec("/x", "GET", vec![USER.clone(), ITEMS.clone()], vec![]));
         let params = mock_of(&v, "params");
@@ -267,15 +267,15 @@ mod tests {
     fn nested_array_recurses_two_items_per_level() {
         const C: DocParam = DocParam {
             name: "c", ty: "int", required: false,
-            default: None, desc: None, mock: None, children: &[],
+            default: None, desc: None, mock: None, field: None, children: &[],
         };
         const B: DocParam = DocParam {
             name: "b", ty: "array", required: false,
-            default: None, desc: None, mock: None, children: &[C],
+            default: None, desc: None, mock: None, field: None, children: &[C],
         };
         static A: DocParam = DocParam {
             name: "a", ty: "array", required: false,
-            default: None, desc: None, mock: None, children: &[B],
+            default: None, desc: None, mock: None, field: None, children: &[B],
         };
         let v = generate_mock(&spec("/x", "GET", vec![A.clone()], vec![]));
         let a = mock_of(&v, "params")["a"].as_array().unwrap();

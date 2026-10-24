@@ -31,3 +31,19 @@ fn ui_events_no_innerhtml() {
     assert!(!ui.contains("innerHTML"), "禁用 innerHTML");
     assert!(ui.contains("debug-script"), "缺少调试事件样式/节点标记");
 }
+
+/// P0：协议徽标、HTTP 族表单分发、服务端代发开关与原始 Body 编码入口。
+#[test]
+fn ui_has_protocol_and_server_debug_hooks() {
+    let ui = concat!(
+        include_str!("../src/ui.html"),
+        include_str!("../src/ui.js"),
+        include_str!("../src/ui.debug.js")
+    );
+    assert!(ui.contains("protocolBadge"), "缺少协议徽标");
+    assert!(ui.contains("HTTP_FAMILY"), "缺少 HTTP 族表单分发");
+    assert!(ui.contains("enable_server_side"), "缺少服务端代发开关判定");
+    assert!(ui.contains("base + 'debug'"), "缺少 /apidoc/debug 调用点");
+    assert!(ui.contains("decodeBytes"), "缺少 hex/base64 body 解码");
+    assert!(ui.contains("原始 Body"), "缺少原始 Body 编辑器");
+}

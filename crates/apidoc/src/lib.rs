@@ -57,8 +57,13 @@ pub mod codegen;
 pub mod share;
 
 use serde::Serialize;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::sync::{Mutex, OnceLock};
+
+pub mod protocol;
+
+#[cfg(feature = "debug-http")]
+mod debug;
 
 /// Collects every `#[apidoc::*]` annotation from all linked crates.
 #[distributed_slice]
@@ -104,6 +109,31 @@ pub enum DocFragment {
     App(&'static str),
     // v2: 数据表字段引用，key 须在 ApidocConfig.tables 中配置。
     Table(&'static str),
+    // P0: 非 HTTP 协议及其连接/操作参数（target / service / method / topic …）。
+    Protocol(DocProtocol),
+    // P0: 长连接/流式协议的消息定义（WebSocket 帧、MQTT 消息、SSE 事件…）。
+    Event(DocEvent),
+}
+
+/// `#[apidoc::protocol("grpc", target = "...", service = "...")]` 的原始载荷。
+/// `opts` 走有序数组：宏产出静态切片，collect 时按声明顺序合并进 BTreeMap。
+pub struct DocProtocol {
+    pub kind: &'static str,
+    pub opts: &'static [(&'static str, &'static str)],
+}
+
+/// 长连接/流式协议的一条消息定义。
+#[derive(Clone, Serialize)]
+pub struct DocEvent {
+    /// "in"（服务端 → 客户端）或 "out"（客户端 → 服务端）。
+    pub direction: &'static str,
+    pub name: &'static str,
+    #[serde(rename = "type")]
+    pub ty: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub desc: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mock: Option<&'static str>,
 }
 
 /// A documented example response body (shared by success / error).
@@ -129,6 +159,10 @@ pub struct DocParam {
     pub desc: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mock: Option<&'static str>,
+    /// 协议字段号：protobuf tag / Thrift field id / ISO 8583 域号。
+    /// 仅非 HTTP 协议使用；未设置时省略，老文档输出不变。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field: Option<&'static str>,
     #[serde(skip_serializing_if = "slice_is_empty")]
     pub children: &'static [DocParam],
 }
@@ -177,9 +211,20 @@ pub struct DocEndpoint {
     // v2: `#[apidoc::table("key")]` 引用的数据表 key（未使用时省略，输出与 v1 字节级一致）。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub table: Option<String>,
+    // P0: 协议类型与连接参数。protocol 默认 "http" 时整体省略，老文档输出字节级不变。
+    #[serde(skip_serializing_if = "protocol_is_http")]
+    pub protocol: String,
+    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
+    pub protocol_opts: BTreeMap<String, String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub events: Vec<DocEvent>,
     // 多应用归属（#[apidoc::app] 注解），仅 collect 用，不进任何序列化输出。
     #[serde(skip)]
     pub app_key: String,
+}
+
+fn protocol_is_http(p: &str) -> bool {
+    p.is_empty() || p == "http"
 }
 
 fn is_zero(n: &i32) -> bool {
@@ -209,6 +254,9 @@ impl Default for DocEndpoint {
             sort: 0,
             r#ref: None,
             table: None,
+            protocol: "http".to_string(),
+            protocol_opts: BTreeMap::new(),
+            events: Vec::new(),
             app_key: String::new(),
         }
     }
@@ -281,6 +329,35 @@ pub struct CodegenTemplate {
     pub template: String,
 }
 
+/// P0：服务端调试（协议代理）配置。默认关闭；开启后必须已配置鉴权，
+/// 且默认只允许公网地址（内网/回环需显式 allow_private_networks）。
+/// 敏感项 `#[serde(skip)]`，永不进 api.json。
+#[derive(Clone, Serialize)]
+pub struct DebugConfig {
+    pub enable_server_side: bool,
+    #[serde(skip)]
+    pub allow_private_networks: bool,
+    #[serde(skip)]
+    pub allow_hosts: Vec<String>,
+    #[serde(skip)]
+    pub allow_unix_sockets: bool,
+    pub timeout_ms: u64,
+    pub max_bytes: usize,
+}
+
+impl Default for DebugConfig {
+    fn default() -> Self {
+        DebugConfig {
+            enable_server_side: false,
+            allow_private_networks: false,
+            allow_hosts: Vec::new(),
+            allow_unix_sockets: false,
+            timeout_ms: 10_000,
+            max_bytes: 1_048_576,
+        }
+    }
+}
+
 /// Project-level configuration, combined with endpoints into the final output.
 #[derive(Serialize, Default)]
 pub struct ApidocConfig {
@@ -290,6 +367,10 @@ pub struct ApidocConfig {
     // 密码鉴权。None 时 api.json 输出与 M5 字节级一致（红线）。
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auth: Option<auth::AuthConfig>,
+    // P0 服务端调试配置。None 时输出与之前字节级一致；Some 时只序列化安全子集
+    // （白名单/内网开关等敏感项 #[serde(skip)]），供 UI 决定是否显示「经服务端发送」。
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub debug: Option<DebugConfig>,
     // 应用/版本配置树。仅服务端使用（校验注解 key、应用密码），不进任何输出。
     #[serde(skip)]
     pub apps: Vec<AppConfig>,
@@ -411,6 +492,19 @@ impl DocRegistry {
                 DocFragment::Ref(r) => ep.r#ref = Some(r.to_string()),
                 DocFragment::Table(t) => ep.table = Some(t.to_string()),
                 DocFragment::App(a) => ep.app_key = a.to_string(),
+                DocFragment::Protocol(p) => {
+                    if protocol::spec(p.kind).is_none() {
+                        eprintln!(
+                            "apidoc: protocol `{}` is not in the runtime registry (macro/registry drift)",
+                            p.kind
+                        );
+                    }
+                    ep.protocol = p.kind.to_string();
+                    for (k, v) in p.opts {
+                        ep.protocol_opts.insert((*k).to_string(), (*v).to_string());
+                    }
+                }
+                DocFragment::Event(e) => ep.events.push(e.clone()),
             }
         }
         (ids, endpoints)
@@ -465,6 +559,7 @@ fn append_table_fields(ep: &mut DocEndpoint, tables: &[TableDef]) {
             default: f.default.as_deref().map(intern),
             desc: f.desc.as_deref().map(intern),
             mock: f.mock.as_deref().map(intern),
+            field: None,
             // 表字段是标量列，不支持 children。
             children: &[],
         });

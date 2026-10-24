@@ -3,6 +3,20 @@
 const base = location.pathname.endsWith('/') ? location.pathname : location.pathname + '/';
 
 const COLORS = { GET:'#16a34a', POST:'#2563eb', PUT:'#d97706', DELETE:'#dc2626', PATCH:'#7c3aed', HEAD:'#64748b', OPTIONS:'#64748b' };
+// P0 协议徽标配色：按协议族分组，未知协议落灰色。
+const PROTOCOL_COLORS = {
+  websocket:'#0ea5e9', 'ws-binary':'#0ea5e9', socketio:'#0ea5e9', stomp:'#0284c7', 'stomp-binary':'#0284c7',
+  sse:'#8b5cf6', graphql:'#e10098', grpc:'#0891b2', thrift:'#0891b2', dubbo:'#0891b2', hessian:'#0891b2',
+  jsonrpc:'#2563eb', xmlrpc:'#2563eb', soap:'#d97706', odata:'#d97706', mcp:'#7c3aed', a2a:'#7c3aed',
+  mqtt:'#f59e0b', amqp:'#f59e0b', kafka:'#111827', xmpp:'#0f766e', sip:'#0f766e',
+  tcp:'#64748b', udp:'#64748b', raw:'#64748b', unix:'#64748b', coap:'#059669', lwm2m:'#059669',
+  modbus:'#b45309', dnp3:'#b45309', iec104:'#b45309', bacnet:'#b45309', opcua:'#b45309',
+  rtp:'#be123c', rtcp:'#be123c', rtsp:'#be123c', rtmp:'#be123c', hls:'#be123c', webrtc:'#7c3aed',
+  webhook:'#d97706', iso8583:'#334155', 'http-binary':'#2563eb', http2:'#2563eb', http3:'#2563eb',
+};
+
+// 最近一次加载的 api.json：调试面板读取 config.debug 决定是否显示服务端发送开关。
+let DOC = null;
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -15,6 +29,17 @@ function badge(method) {
   const b = el('span', 'badge', method);
   b.style.background = COLORS[method] || '#64748b';
   return b;
+}
+
+function protocolBadge(protocol) {
+  const b = el('span', 'badge', protocol.toUpperCase());
+  b.style.background = PROTOCOL_COLORS[protocol] || '#64748b';
+  return b;
+}
+
+// HTTP 族沿用 method 徽标；非 HTTP 协议显示协议名。
+function epBadge(ep) {
+  return !ep.protocol || ep.protocol === 'http' ? badge(ep.method) : protocolBadge(ep.protocol);
 }
 
 function firstSeg(ep) {
@@ -94,11 +119,19 @@ function render(ep) {
   if (ep.author) detail.appendChild(el('p', 'desc', '作者：' + ep.author));
   if (ep.ref) detail.appendChild(el('p', 'desc', '参考接口：' + ep.ref));
   const line = el('div', 'endpoint-line');
-  line.appendChild(badge(ep.method));
+  line.appendChild(epBadge(ep));
   if (ep.response_status) for (const s of ep.response_status) line.appendChild(statusBadge(s));
   line.appendChild(el('code', null, ep.url));
   line.appendChild(shareButton(ep));
   detail.appendChild(line);
+  // 非 HTTP 协议的连接/操作参数：target 由 protocol_opts 提供，其余作为标签展示
+  if (ep.protocol && ep.protocol !== 'http' && ep.protocol_opts) {
+    const optline = el('div', 'endpoint-line');
+    for (const key of ['target', 'service', 'method', 'topic', 'version']) {
+      if (ep.protocol_opts[key]) optline.appendChild(el('code', null, key + '=' + ep.protocol_opts[key]));
+    }
+    if (optline.childNodes.length) detail.appendChild(optline);
+  }
   if (ep.desc) detail.appendChild(el('p', 'desc', ep.desc));
   if (ep.tags && ep.tags.length) {
     const tagline = el('div', 'endpoint-line');
@@ -283,6 +316,7 @@ async function load() {
   const res = await fetch(base + 'api.json' + (authQuery() ? '?' + authQuery() : ''));
   if (res.status === 401) { showMask(''); return; }
   const doc = await res.json();
+  DOC = doc;
   document.getElementById('title').textContent = doc.config.title || 'API Documentation';
   document.getElementById('subtitle').textContent = doc.config.description || '';
   if (!appsList.length) buildSelector(doc);
@@ -329,7 +363,7 @@ function renderEps(eps) {
     groupAnchors.push(anchors);
     groups[name].forEach((ep, ei) => {
       const a = el('a');
-      a.appendChild(badge(ep.method));
+      a.appendChild(epBadge(ep));
       a.appendChild(el('span', null, ep.title));
       a.onclick = () => {
         location.hash = '#g' + gi + '/e' + ei;

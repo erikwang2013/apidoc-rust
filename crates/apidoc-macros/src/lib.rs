@@ -8,8 +8,9 @@
 //! so documentation fragments are collected at zero runtime cost.
 
 mod args;
+mod protocols;
 
-use args::{HeaderArgs, ParamArgs, SuccessArgs};
+use args::{EventArgs, HeaderArgs, ParamArgs, ProtocolArgs, SuccessArgs};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{format_ident, quote, quote_spanned};
@@ -182,6 +183,92 @@ pub fn table(args: TokenStream, item: TokenStream) -> TokenStream {
     simple_fragment("table", args, item)
 }
 
+/// P0: 声明接口协议，例如
+/// `#[apidoc::protocol("grpc", target = "http://127.0.0.1:50051", service = "x.Y", method = "Z")]`。
+/// kind 在编译期归一（REST→http、ws→websocket…），未知 kind 直接编译报错。
+#[proc_macro_attribute]
+pub fn protocol(args: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as ProtocolArgs);
+    let item_fn = match parse_item_fn("protocol", item) {
+        Ok(f) => f,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let Some(kind) = protocols::normalize(&args.kind.value()) else {
+        return syn::Error::new(
+            args.kind.span(),
+            format!(
+                "unknown apidoc::protocol kind `{}`; expected one of {:?}",
+                args.kind.value(),
+                protocols::CANONICAL
+            ),
+        )
+        .to_compile_error()
+        .into();
+    };
+    let kind_lit = LitStr::new(kind, args.kind.span());
+    let opts = args.opts.iter().map(|(key, value)| {
+        let key_lit = LitStr::new(&key.to_string(), key.span());
+        quote! { (#key_lit, #value) }
+    });
+    let frag = quote! {
+        apidoc::DocFragment::Protocol(apidoc::DocProtocol {
+            kind: #kind_lit,
+            opts: &[#(#opts),*],
+        })
+    };
+    emit_many("protocol", item_fn, vec![frag])
+}
+
+/// P0: 声明长连接/流式协议的一条消息，例如
+/// `#[apidoc::event(direction = "in", name = "message", ty = "json", desc = "收到消息")]`。
+/// 同一函数可重复使用；direction 只接受 in / out。
+#[proc_macro_attribute]
+pub fn event(args: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as EventArgs);
+    let item_fn = match parse_item_fn("event", item) {
+        Ok(f) => f,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let Some(direction) = args.direction.as_ref() else {
+        return syn::Error::new(Span::call_site(), "apidoc::event requires `direction`")
+            .to_compile_error()
+            .into();
+    };
+    let dir = direction.value().trim().to_ascii_lowercase();
+    if dir != "in" && dir != "out" {
+        return syn::Error::new(
+            direction.span(),
+            format!("apidoc::event direction must be `in` or `out`, got `{}`", direction.value()),
+        )
+        .to_compile_error()
+        .into();
+    }
+    let dir_lit = LitStr::new(&dir, direction.span());
+    let Some(name) = args.name.as_ref() else {
+        return syn::Error::new(Span::call_site(), "apidoc::event requires a non-empty `name`")
+            .to_compile_error()
+            .into();
+    };
+    if name.value().trim().is_empty() {
+        return syn::Error::new(name.span(), "apidoc::event requires a non-empty `name`")
+            .to_compile_error()
+            .into();
+    }
+    let ty = args.ty.as_ref().cloned().unwrap_or_else(|| LitStr::new("json", name.span()));
+    let desc = opt_lit(&args.desc);
+    let mock = opt_lit(&args.mock);
+    let frag = quote! {
+        apidoc::DocFragment::Event(apidoc::DocEvent {
+            direction: #dir_lit,
+            name: #name,
+            ty: #ty,
+            desc: #desc,
+            mock: #mock,
+        })
+    };
+    emit_many("event", item_fn, vec![frag])
+}
+
 /// title / desc / method / url / group / author / md / ref / app / table:
 /// a single string literal plus validation.
 fn simple_fragment(kind: &str, args: TokenStream, item: TokenStream) -> TokenStream {
@@ -274,6 +361,7 @@ fn doc_param_expr(args: &ParamArgs) -> proc_macro2::TokenStream {
     let default = opt_lit(&args.default);
     let desc = opt_lit(&args.desc);
     let mock = opt_lit(&args.mock);
+    let field = opt_lit(&args.field);
     let children = args.children.iter().map(doc_param_expr);
     quote! {
         apidoc::DocParam {
@@ -283,6 +371,7 @@ fn doc_param_expr(args: &ParamArgs) -> proc_macro2::TokenStream {
             default: #default,
             desc: #desc,
             mock: #mock,
+            field: #field,
             children: &[#(#children),*],
         }
     }

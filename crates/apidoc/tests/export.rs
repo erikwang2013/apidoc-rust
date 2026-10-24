@@ -166,7 +166,7 @@ fn swagger_paths_params_body_responses_and_not_debug_exclusion() {
 // —— tester 补充：M5 边界 ——
 
 fn doc_param(name: &'static str, ty: &'static str, required: bool, desc: Option<&'static str>) -> apidoc::DocParam {
-    apidoc::DocParam { name, ty, required, default: None, desc, mock: None, children: &[] }
+    apidoc::DocParam { name, ty, required, default: None, desc, mock: None, field: None, children: &[] }
 }
 
 #[test]
@@ -236,8 +236,8 @@ fn typescript_escapes_url_quotes_and_odd_member_names() {
         url: "/api/it's\nx".into(),
         method: "GET".into(),
         querys: vec![
-            apidoc::DocParam { name: "ok_name", ty: "string", required: false, default: None, desc: None, mock: None, children: &[] },
-            apidoc::DocParam { name: "user-name", ty: "string", required: false, default: None, desc: None, mock: None, children: &[] },
+            apidoc::DocParam { name: "ok_name", ty: "string", required: false, default: None, desc: None, mock: None, field: None, children: &[] },
+            apidoc::DocParam { name: "user-name", ty: "string", required: false, default: None, desc: None, mock: None, field: None, children: &[] },
         ],
         ..Default::default()
     };
@@ -280,7 +280,7 @@ fn markdown_table_cells_collapse_newlines_and_escape_pipes() {
             default: None,
             desc: Some("第一行\n第二行|带竖线"),
             mock: None,
-            children: &[],
+            field: None, children: &[],
         }],
         ..Default::default()
     };
@@ -312,7 +312,7 @@ fn swagger_path_params_come_from_url_not_from_annotations() {
     };
     // 注解名与占位符不一致：按 URL 出参，别名只告警不落进 spec
     ep.route_params.push(apidoc::DocParam {
-        name: "user_id", ty: "int", required: true, default: None, desc: None, mock: None, children: &[],
+        name: "user_id", ty: "int", required: true, default: None, desc: None, mock: None, field: None, children: &[],
     });
     let v = apidoc::export::swagger::render(&one_endpoint(ep), "1.0.0");
     let params = &v["paths"]["/api/user/{id}/orders"]["get"]["parameters"];

@@ -19,7 +19,30 @@ pub fn render(doc: &ApiDoc) -> String {
 
 fn render_endpoint(ep: &DocEndpoint, out: &mut String) {
     out.push_str(&format!("### {}\n\n", ep.title));
-    out.push_str(&format!("```\n{} {}\n```\n\n", ep.method, ep.url));
+    if ep.protocol == "http" {
+        out.push_str(&format!("```\n{} {}\n```\n\n", ep.method, ep.url));
+    } else {
+        let target = ep.protocol_opts.get("target").map_or("", String::as_str);
+        out.push_str(&format!(
+            "```\n{} {}{}\n```\n\n",
+            ep.protocol,
+            ep.url,
+            if target.is_empty() { String::new() } else { format!(" → {target}") }
+        ));
+    }
+    if !ep.events.is_empty() {
+        out.push_str("| 方向 | 消息 | 类型 | 描述 |\n|---|---|---|---|\n");
+        for ev in &ep.events {
+            out.push_str(&format!(
+                "| {} | {} | {} | {} |\n",
+                cell(ev.direction),
+                cell(ev.name),
+                cell(ev.ty),
+                cell(ev.desc.unwrap_or("-")),
+            ));
+        }
+        out.push('\n');
+    }
     if !ep.desc.is_empty() {
         out.push_str(&format!("{}\n\n", ep.desc));
     }
