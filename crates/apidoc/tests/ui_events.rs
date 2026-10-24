@@ -43,6 +43,16 @@ fn ui_has_stream_panel_and_ws_adapter() {
     assert!(!ui.contains("innerHTML"));
 }
 
+/// P1：WebRTC / DataChannel 面板。
+#[test]
+fn ui_has_webrtc_panel() {
+    let ui = include_str!("../src/ui.debug.media.js");
+    assert!(ui.contains("function webrtcPanel"));
+    assert!(ui.contains("RTCPeerConnection"));
+    assert!(ui.contains("createDataChannel"));
+    assert!(!ui.contains("innerHTML"));
+}
+
 /// P1：SSE 适配器与断开能力。
 #[test]
 fn ui_has_sse_adapter_and_abort() {
