@@ -384,6 +384,18 @@ function debugForm(ep) {
         ms = data.ms;
         text = data.body ? (data.body.encoding === 'base64' ? '[base64] ' + data.body.data : data.body.data) : '';
         out.appendChild(el('p', null, '服务端代发 ' + status + '（' + ms + 'ms）'));
+        // gRPC server-streaming 等多帧响应：body 之外再渲染帧列表。
+        if (data.frames && data.frames.length) {
+          const frameLog = el('div', 'stream-log');
+          for (const f of data.frames.slice(0, MAX_FRAMES)) {
+            frameLog.appendChild(streamFrameRow({
+              dir: f.dir || 'in',
+              encoding: f.encoding || 'utf8',
+              data: f.data,
+            }));
+          }
+          out.appendChild(frameLog);
+        }
       } else {
         let directBody;
         try {

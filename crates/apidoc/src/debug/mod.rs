@@ -12,6 +12,8 @@ pub(crate) mod session;
 mod ws_client;
 #[cfg(feature = "debug-sockets")]
 mod sockets;
+#[cfg(feature = "debug-grpc")]
+mod grpc;
 
 use crate::{DebugConfig, DocEndpoint};
 use base64::Engine;
@@ -86,12 +88,23 @@ fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
         .collect()
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct Frame {
+    pub dir: String,
+    pub encoding: String,
+    pub data: String,
+    pub ts: u64,
+}
+
 #[derive(Debug, Serialize)]
 pub struct DebugResponse {
     pub status: u16,
     pub ms: u64,
     pub headers: BTreeMap<String, String>,
     pub body: Payload,
+    /// gRPC server-streaming 等多帧一元响应；空时省略。
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub frames: Vec<Frame>,
 }
 
 /// 分发到具体协议执行器。P0 只有 HTTP 族；其余协议在后续阶段按 feature 接入。
@@ -109,6 +122,8 @@ pub async fn execute(
         "http3" => Err("HTTP/3 server executor is not available in this build yet".into()),
         #[cfg(feature = "debug-sockets")]
         "tcp" | "udp" | "raw" | "unix" => sockets::execute(cfg, req).await,
+        #[cfg(feature = "debug-grpc")]
+        "grpc" => grpc::execute(cfg, req, ep).await,
         other => Err(format!("protocol `{other}` has no server executor in this build")),
     }
 }

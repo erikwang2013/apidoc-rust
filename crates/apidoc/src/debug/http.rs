@@ -76,5 +76,6 @@ pub async fn execute(cfg: &DebugConfig, req: &DebugRequest) -> Result<DebugRespo
         ms: started.elapsed().as_millis() as u64,
         headers,
         body: Payload::from_bytes(&bytes),
+        frames: Vec::new(),
     })
 }

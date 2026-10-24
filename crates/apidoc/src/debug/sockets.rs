@@ -235,6 +235,7 @@ fn response(
         ms: started.elapsed().as_millis() as u64,
         headers,
         body: Payload::from_bytes(&body),
+        frames: Vec::new(),
     }
 }
 

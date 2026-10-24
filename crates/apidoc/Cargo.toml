@@ -25,6 +25,8 @@ debug-http = ["dep:reqwest", "dep:tokio"]
 debug-session = ["debug-http", "dep:async-trait", "dep:tokio-tungstenite", "dep:futures-util", "dep:actix-ws", "axum?/ws"]
 # P2 原始 socket：TCP/UDP/Raw/Unix（复用 debug-http 的 tokio/guard）
 debug-sockets = ["debug-http"]
+# P2 gRPC：tonic 客户端 + 反射/描述符动态消息
+debug-grpc = ["debug-http", "dep:tonic", "dep:prost", "dep:prost-reflect", "dep:tonic-reflection", "dep:tokio-stream"]
 
 [dependencies]
 linkme = "0.3"
@@ -53,6 +55,12 @@ async-trait = { version = "0.1", optional = true }
 tokio-tungstenite = { version = "0.24", features = ["rustls-tls-native-roots"], optional = true }
 futures-util = { version = "0.3", optional = true }
 actix-ws = { version = "0.3", optional = true }
+# P2 gRPC（纯 Rust）
+tonic = { version = "0.12", default-features = false, features = ["transport", "codegen", "prost", "tls-roots"], optional = true }
+prost = { version = "0.13", optional = true }
+prost-reflect = { version = "0.14", features = ["serde"], optional = true }
+tonic-reflection = { version = "0.12", optional = true }
+tokio-stream = { version = "0.1", features = ["net", "sync"], optional = true }
 
 [dev-dependencies]
 apidoc-test-fixtures = { path = "../apidoc-test-fixtures" }
