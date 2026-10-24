@@ -2,6 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const c = require('../../src/ui.codecs.js');
+const p = require('../../src/ui.protocols.js');
 
 test('base64/hex roundtrip preserves binary bytes', () => {
   const bytes = new Uint8Array([0, 1, 255, 65]);
@@ -39,6 +40,20 @@ test('socketIo encode/decode event', () => {
 test('graphqlWs encode/decode', () => {
   assert.equal(c.graphqlWsEncode('subscribe', '1', { query: '{x}' }), '{"type":"subscribe","id":"1","payload":{"query":"{x}"}}');
   assert.deepEqual(c.graphqlWsDecode('{"type":"next","id":"1","payload":{"data":{}}}'), { type: 'next', id: '1', payload: { data: {} } });
+});
+
+test('http-family protocol body builders', () => {
+  assert.equal(p.buildGraphqlBody('{ me }', '{"x":1}', 'Q'), '{"query":"{ me }","variables":{"x":1},"operationName":"Q"}');
+  assert.equal(p.buildJsonRpcBody('tools/list', '{}', '1'), '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":"1"}');
+  assert.deepEqual(p.buildODataQuery({ filter: 'a eq 1', top: '5', select: 'id' }), [
+    { name: '$filter', value: 'a eq 1' },
+    { name: '$top', value: '5' },
+    { name: '$select', value: 'id' },
+  ]);
+  assert.deepEqual(p.buildSoapHeaders('urn:Op'), {
+    'Content-Type': 'text/xml; charset=utf-8',
+    SOAPAction: 'urn:Op',
+  });
 });
 
 test('sseDecode splits across chunks and joins multiline data', () => {

@@ -156,6 +156,10 @@ function debugForm(ep) {
     box.appendChild(inner);
     form.appendChild(box);
   }
+  // HTTP 族协议预设：GraphQL / SOAP / JSON-RPC / XML-RPC / OData / MCP / A2A / Webhook。
+  // 预设只提供额外输入与 body/header/query 构造；原始 Body 仍然优先。
+  const preset = protocolExtras(ep);
+  if (preset && preset.extras) form.appendChild(preset.extras);
   // 原始 Body：非 JSON 协议（HTTP binary / SOAP / GraphQL…）直接用原文或 hex/base64；
   // 留空时沿用上方参数自动组装的 JSON body。
   const rawBox = el('details', 'debug-script');
@@ -244,6 +248,11 @@ function debugForm(ep) {
     if (isGet) {
       for (const r of leafParamRows) { const v = val(r); if (v) qs.push(encodeURIComponent(r.name) + '=' + v); }
     }
+    if (preset && preset.buildQuerys) {
+      for (const q of preset.buildQuerys()) {
+        if (q && q.value) qs.push(encodeURIComponent(q.name) + '=' + encodeURIComponent(q.value));
+      }
+    }
     if (qs.length) fullUrl += (fullUrl.includes('?') ? '&' : '?') + qs.join('&');
     // 其余 method：params 按点分路径组装嵌套 JSON body。
     // array 段（含嵌套）生成 [{}] 承载子行，其余段仍为 {}
@@ -273,9 +282,33 @@ function debugForm(ep) {
     }
     const rawText = rawTa.value;
     const rawEncoding = rawText.trim() ? rawFmt.value : 'utf8';
-    if (body && !rawText.trim()) headers['Content-Type'] = 'application/json';
-    if (rawText.trim()) body = rawText;
+    if (preset && preset.buildHeaders) {
+      const presetHeaders = preset.buildHeaders();
+      for (const k of Object.keys(presetHeaders)) {
+        if (headers[k] === undefined) headers[k] = presetHeaders[k];
+      }
+    }
+    let presetError = null;
+    if (rawText.trim()) {
+      body = rawText;
+    } else if (preset && preset.buildBody) {
+      try {
+        const presetBody = preset.buildBody();
+        if (presetBody !== null && presetBody !== undefined && presetBody !== '') body = presetBody;
+      } catch (e) {
+        presetError = e;
+      }
+    }
     const out = el('div');
+    if (presetError) {
+      out.appendChild(warnBox('协议参数错误：' + (presetError.message || presetError)));
+      resultBox.textContent = '';
+      resultBox.appendChild(out);
+      return;
+    }
+    if (body && !rawText.trim() && headers['Content-Type'] === undefined && headers['content-type'] === undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
     // 前置调试事件：脚本抛错只提示，仍按原值发请求
     const preRun = runScript(preTa.value, { url: fullUrl, method: ep.method, headers, body, ep });
     if (preRun.error) out.appendChild(warnBox('前置脚本执行失败：' + preRun.error));

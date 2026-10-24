@@ -42,6 +42,7 @@ pub const UI_HTML: &str = concat!(
     include_str!("ui.html"),
     include_str!("ui.js"),
     include_str!("ui.codecs.js"),
+    include_str!("ui.protocols.js"),
     include_str!("ui.debug.js"),
     include_str!("ui.debug.stream.js")
 );

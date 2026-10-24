@@ -43,6 +43,17 @@ fn ui_has_stream_panel_and_ws_adapter() {
     assert!(!ui.contains("innerHTML"));
 }
 
+/// P1：HTTP 族协议预设入口。
+#[test]
+fn ui_has_http_protocol_presets() {
+    let ui = include_str!("../src/ui.protocols.js");
+    assert!(ui.contains("function protocolExtras"));
+    assert!(ui.contains("buildGraphqlBody"));
+    assert!(ui.contains("buildJsonRpcBody"));
+    assert!(ui.contains("buildODataQuery"));
+    assert!(!ui.contains("innerHTML"));
+}
+
 /// P0：协议徽标、HTTP 族表单分发、服务端代发开关与原始 Body 编码入口。
 #[test]
 fn ui_has_protocol_and_server_debug_hooks() {
