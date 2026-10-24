@@ -25,6 +25,8 @@ debug-http = ["dep:reqwest", "dep:tokio"]
 debug-session = ["debug-http", "dep:async-trait", "dep:tokio-tungstenite", "dep:futures-util", "dep:actix-ws", "axum?/ws"]
 # P2 原始 socket：TCP/UDP/Raw/Unix（复用 debug-http 的 tokio/guard）
 debug-sockets = ["debug-http"]
+# P2 Thrift：手写 TBinaryProtocol（复用 socket 传输）
+debug-thrift = ["debug-sockets"]
 # P2 gRPC：tonic 客户端 + 反射/描述符动态消息
 debug-grpc = ["debug-http", "dep:tonic", "dep:prost", "dep:prost-reflect", "dep:tonic-reflection", "dep:tokio-stream"]
 

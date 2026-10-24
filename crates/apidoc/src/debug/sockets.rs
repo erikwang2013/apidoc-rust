@@ -49,7 +49,7 @@ pub async fn execute(
     }
 }
 
-fn parse_host_port(target: &str, transport: &str) -> Result<(String, u16), String> {
+pub(crate) fn parse_host_port(target: &str, transport: &str) -> Result<(String, u16), String> {
     let with_scheme = if target.contains("://") {
         target.to_string()
     } else {

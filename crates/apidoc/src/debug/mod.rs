@@ -14,6 +14,8 @@ mod ws_client;
 mod sockets;
 #[cfg(feature = "debug-grpc")]
 mod grpc;
+#[cfg(feature = "debug-thrift")]
+pub mod thrift;
 
 use crate::{DebugConfig, DocEndpoint};
 use base64::Engine;
@@ -124,6 +126,8 @@ pub async fn execute(
         "tcp" | "udp" | "raw" | "unix" => sockets::execute(cfg, req).await,
         #[cfg(feature = "debug-grpc")]
         "grpc" => grpc::execute(cfg, req, ep).await,
+        #[cfg(feature = "debug-thrift")]
+        "thrift" => thrift::execute(cfg, req, ep).await,
         other => Err(format!("protocol `{other}` has no server executor in this build")),
     }
 }
