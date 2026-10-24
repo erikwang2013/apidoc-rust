@@ -141,6 +141,40 @@ function stompDecode(buffer) {
   return { frames, rest };
 }
 
+// Socket.IO 协议（Engine.IO message 前缀 4）：0 connect / 1 disconnect /
+// 2 event / 3 ack / 4 error / 5 binary_event / 6 binary_ack。
+const SOCKETIO_CODES = {
+  connect: '0', disconnect: '1', event: '2', ack: '3', error: '4',
+  connect_error: '4', binary_event: '5', binary_ack: '6',
+};
+const SOCKETIO_NAMES = {
+  '0': 'connect', '1': 'disconnect', '2': 'event', '3': 'ack',
+  '4': 'error', '5': 'binary_event', '6': 'binary_ack',
+};
+
+function socketIoEncode(type, payload) {
+  const code = SOCKETIO_CODES[type];
+  if (code === undefined) throw new Error('unknown socket.io packet type: ' + type);
+  return '4' + code + (payload === undefined || payload === null ? '' : JSON.stringify(payload));
+}
+
+function socketIoDecode(text) {
+  if (!text || text[0] !== '4') return { type: 'unknown', payload: text };
+  const type = SOCKETIO_NAMES[text[1]] || 'unknown';
+  const rest = text.slice(2);
+  let payload = null;
+  if (rest) {
+    const start = rest.search(/[\[{]/);
+    if (start >= 0) {
+      const json = rest.slice(start);
+      try { payload = JSON.parse(json); } catch (e) { payload = json; }
+    } else {
+      payload = rest;
+    }
+  }
+  return { type, payload };
+}
+
 // SSE 增量解析：空行分派，data: 多行拼 \n，支持注释与 CRLF。
 function sseDecode(buffer) {
   const normalized = buffer.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -171,5 +205,8 @@ function sseDecode(buffer) {
 }
 
 if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { decodeBytes, encodeBytes, stompEncode, stompDecode, sseDecode };
+  module.exports = {
+    decodeBytes, encodeBytes, stompEncode, stompDecode, sseDecode,
+    socketIoEncode, socketIoDecode,
+  };
 }

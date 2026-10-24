@@ -96,22 +96,32 @@ function streamPanel(ep, adapterName) {
     stopped = false;
     log.textContent = '';
     setStatus('连接中…');
+    const handlers = {
+      onOpen: () => {
+        setStatus('已连接');
+        closeBtn.disabled = false;
+        sendBtn.disabled = false;
+      },
+      onFrame: f => append({ dir: f.dir || 'in', encoding: f.encoding || 'utf8', data: f.data }),
+      onClose: (code, reason) => {
+        setStatus('已断开' + (code !== undefined ? ' (' + code + (reason ? ' ' + reason : '') + ')' : ''));
+        session = null;
+        closeBtn.disabled = true;
+        sendBtn.disabled = true;
+      },
+      onError: msg => setStatus('错误：' + msg),
+    };
     try {
-      session = adapter.connect(target.value.trim(), { protocol: ep.protocol, opts }, {
-        onOpen: () => {
-          setStatus('已连接');
-          closeBtn.disabled = false;
-          sendBtn.disabled = false;
-        },
-        onFrame: f => append({ dir: f.dir || 'in', encoding: f.encoding || 'utf8', data: f.data }),
-        onClose: (code, reason) => {
-          setStatus('已断开' + (code !== undefined ? ' (' + code + (reason ? ' ' + reason : '') + ')' : ''));
+      const result = adapter.connect(target.value.trim(), { protocol: ep.protocol, opts }, handlers);
+      // 适配器可同步返回 session，也可返回 Promise（Socket.IO 需要先做 Engine.IO 握手）
+      if (result && typeof result.then === 'function') {
+        result.then(s => { session = s; }).catch(e => {
           session = null;
-          closeBtn.disabled = true;
-          sendBtn.disabled = true;
-        },
-        onError: msg => setStatus('错误：' + msg),
-      });
+          setStatus('连接失败：' + (e && e.message ? e.message : e));
+        });
+      } else {
+        session = result;
+      }
     } catch (e) {
       session = null;
       setStatus('连接失败：' + (e && e.message ? e.message : e));
@@ -168,5 +178,118 @@ registerStreamAdapter('websocket', {
         try { ws.close(); } catch (e) {}
       },
     };
+  },
+});
+
+// Socket.IO v5 / Engine.IO v4：polling 握手拿 sid，再升级 WebSocket。
+// P1 只支持默认/自定义 namespace 的文本事件；二进制事件需占位符协议，留到后续阶段。
+registerStreamAdapter('socketio', {
+  hint: 'Socket.IO 先做 Engine.IO polling 握手再升级 WebSocket；认证请放入 URL query。P1 仅支持文本事件。',
+  connect(targetUrl, opts, handlers) {
+    const u = new URL(targetUrl);
+    const secure = u.protocol === 'wss:' || u.protocol === 'https:';
+    const httpBase = (secure ? 'https:' : 'http:') + '//' + u.host;
+    const wsBase = (secure ? 'wss:' : 'ws:') + '//' + u.host;
+    let path = u.pathname && u.pathname !== '/' ? u.pathname.replace(/\/$/, '') : '/socket.io';
+    if (!path.endsWith('/socket.io')) path += '/socket.io';
+    const extraQuery = u.search ? '&' + u.search.slice(1) : '';
+    const namespace = (opts.opts && opts.opts.namespace) || '/';
+    const eventName = (opts.opts && opts.opts.event) || 'message';
+    const timeoutMs = Number((opts.opts && opts.opts.timeout_ms) || 5000);
+
+    let ws = null;
+    let closed = false;
+    let opened = false;
+    let timer = null;
+    const close = () => {
+      closed = true;
+      if (timer) { clearTimeout(timer); timer = null; }
+      if (ws) {
+        if (ws.readyState === WebSocket.OPEN) {
+          try { ws.send('41'); } catch (e) {}
+        }
+        try { ws.close(); } catch (e) {}
+      }
+    };
+    const send = payload => {
+      if (!ws || ws.readyState !== WebSocket.OPEN) throw new Error('Socket.IO 未连接');
+      if (payload.encoding !== 'utf8') {
+        throw new Error('Socket.IO 适配器 P1 仅支持 utf8 文本事件');
+      }
+      ws.send(socketIoEncode('event', [eventName, payload.data]));
+    };
+
+    return new Promise((resolve, reject) => {
+      const handshake = httpBase + path + '/?EIO=4&transport=polling' + extraQuery;
+      fetch(handshake)
+        .then(r => {
+          if (!r.ok) throw new Error('socket.io handshake HTTP ' + r.status);
+          return r.text();
+        })
+        .then(text => {
+          const packet = text.split('\x1e').find(p => p.startsWith('0'));
+          if (!packet) throw new Error('socket.io handshake missing open packet');
+          const info = JSON.parse(packet.slice(1));
+          const wsUrl =
+            wsBase + path + '/?EIO=4&transport=websocket&sid=' + encodeURIComponent(info.sid) + extraQuery;
+          ws = new WebSocket(wsUrl);
+          timer = setTimeout(() => {
+            if (!opened) {
+              handlers.onError('Socket.IO 连接超时');
+              close();
+              reject(new Error('socket.io connect timeout'));
+            }
+          }, timeoutMs);
+          ws.onopen = () => {
+            ws.send('40' + (namespace === '/' ? '' : namespace + ','));
+          };
+          ws.onmessage = ev => {
+            if (closed || typeof ev.data !== 'string') return;
+            const m = ev.data;
+            if (m === '2') { ws.send('3'); return; }
+            if (m.startsWith('40')) {
+              if (!opened) {
+                opened = true;
+                if (timer) { clearTimeout(timer); timer = null; }
+                handlers.onOpen();
+                resolve({ send, close });
+              }
+              return;
+            }
+            if (m === '41') {
+              close();
+              handlers.onClose(1000, 'server disconnect');
+              return;
+            }
+            if (m.startsWith('44')) {
+              handlers.onError('socket.io connect_error: ' + m.slice(2));
+              if (!opened) { close(); reject(new Error('socket.io connect_error')); }
+              return;
+            }
+            if (m.startsWith('42') || m.startsWith('43') || m.startsWith('45')) {
+              const decoded = socketIoDecode(m);
+              handlers.onFrame({
+                dir: 'in',
+                encoding: 'utf8',
+                data: JSON.stringify(decoded.payload),
+              });
+            }
+          };
+          ws.onclose = ev => {
+            if (timer) { clearTimeout(timer); timer = null; }
+            closed = true;
+            if (!opened) reject(new Error('socket.io socket closed before connect'));
+            else handlers.onClose(ev.code, ev.reason);
+          };
+          ws.onerror = () => {
+            if (!closed) handlers.onError('Socket.IO WebSocket 连接失败');
+          };
+        })
+        .catch(e => {
+          closed = true;
+          if (timer) { clearTimeout(timer); timer = null; }
+          reject(e);
+        });
+    });
   },
 });

@@ -30,6 +30,12 @@ test('stomp header escaping roundtrips', () => {
   assert.equal(frames[0].headers['x-note'], 'a\nb:c');
 });
 
+test('socketIo encode/decode event', () => {
+  assert.equal(c.socketIoEncode('event', ['chat', { text: 'hi' }]), '42["chat",{"text":"hi"}]');
+  assert.deepEqual(c.socketIoDecode('42["chat",{"text":"hi"}]'), { type: 'event', payload: ['chat', { text: 'hi' }] });
+  assert.deepEqual(c.socketIoDecode('40'), { type: 'connect', payload: null });
+});
+
 test('sseDecode splits across chunks and joins multiline data', () => {
   const a = c.sseDecode('event: message\ndata: one\ndata: two\n\n');
   assert.deepEqual(a.events, [{ event: 'message', data: 'one\ntwo', id: undefined, retry: undefined }]);
