@@ -6,23 +6,7 @@ const HTTP_FAMILY = new Set([
   'xmlrpc', 'odata', 'mcp', 'a2a', 'webhook',
 ]);
 
-// 原始 Body 编码：utf8 原样，hex/base64 解成字节供 fetch 直发。
-function decodeBytes(encoding, text) {
-  if (encoding === 'base64') {
-    const bin = atob(text.trim());
-    const out = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-    return out;
-  }
-  if (encoding === 'hex') {
-    const clean = text.replace(/\s+/g, '');
-    if (clean.length % 2 || /[^0-9a-fA-F]/.test(clean)) throw new Error('hex 格式不合法');
-    const out = new Uint8Array(clean.length / 2);
-    for (let i = 0; i < out.length; i++) out[i] = parseInt(clean.substr(i * 2, 2), 16);
-    return out;
-  }
-  return text;
-}
+// 原始 Body 编码 decodeBytes/encodeBytes 在 ui.codecs.js（浏览器全局）。
 
 function debugRow(name, placeholder) {
   const row = el('div', 'debug-row');
