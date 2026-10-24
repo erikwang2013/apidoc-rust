@@ -407,11 +407,23 @@ function debugPanel(ep) {
       section.appendChild(el('p', 'empty', '该接口标记为 not_debug，默认不展示调试表单；勾选上方复选框可强制显示。'));
     } else if (ep.protocol === 'websocket' || ep.protocol === 'ws-binary') {
       section.appendChild(streamPanel(ep, 'websocket'));
+    } else if (ep.protocol === 'sse') {
+      section.appendChild(streamPanel(ep, 'sse'));
+    } else if (ep.protocol === 'socketio') {
+      section.appendChild(streamPanel(ep, 'socketio'));
+    } else if (ep.protocol === 'stomp' || ep.protocol === 'stomp-binary') {
+      section.appendChild(streamPanel(ep, 'stomp'));
+    } else if (ep.protocol === 'graphql' && ep.protocol_opts && ep.protocol_opts.operation === 'subscription') {
+      section.appendChild(streamPanel(ep, 'graphql-ws'));
+    } else if ((ep.protocol === 'mcp' || ep.protocol === 'a2a') && ep.protocol_opts && ep.protocol_opts.transport === 'sse') {
+      section.appendChild(streamPanel(ep, 'sse'));
+    } else if (ep.protocol === 'webrtc') {
+      section.appendChild(webrtcPanel(ep));
     } else if (ep.protocol === 'hls') {
       section.appendChild(hlsPanel(ep));
     } else if (ep.protocol && !HTTP_FAMILY.has(ep.protocol)) {
-      // 非 HTTP 族的专用面板（gRPC / MQTT / TCP…）在后续阶段接入。
-      section.appendChild(el('p', 'empty', '该协议（' + ep.protocol + '）的调试面板将在后续阶段提供。'));
+      // 非 HTTP 族的专用面板（gRPC / MQTT / TCP…）在后续阶段（P2+）接入。
+      section.appendChild(el('p', 'empty', '该协议（' + ep.protocol + '）的调试面板将在 P2+ 提供。'));
     } else {
       section.appendChild(debugForm(ep));
     }

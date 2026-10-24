@@ -43,6 +43,23 @@ fn ui_has_stream_panel_and_ws_adapter() {
     assert!(!ui.contains("innerHTML"));
 }
 
+/// P1：所有浏览器原生协议都有分发入口。
+#[test]
+fn ui_dispatches_all_browser_protocol_panels() {
+    let ui = include_str!("../src/ui.debug.js");
+    for marker in [
+        "streamPanel(ep, 'sse')",
+        "streamPanel(ep, 'socketio')",
+        "streamPanel(ep, 'stomp')",
+        "'graphql-ws'",
+        "webrtcPanel(ep)",
+        "hlsPanel(ep)",
+        "P2+",
+    ] {
+        assert!(ui.contains(marker), "missing dispatch marker: {marker}");
+    }
+}
+
 /// P1：HLS 预览面板与分发。
 #[test]
 fn ui_has_hls_panel() {

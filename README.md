@@ -84,6 +84,13 @@ apidoc-rust 的实现取向：
 - **代码生成器**：`GET /apidoc/generate?template=<name>` → 渲染后的文本（未知模板 404）；内置 `api.ts`（前端 Api 文件）、`handler.rs`（Rust 接口骨架）、`schema.sql`（按 `tables` 生成建表语句）；`ApidocConfig.codegen` 里的同名模板覆盖内置。模板语法只有两种：`{{变量}}`（未定义则原样保留）与 `{{#each 列表}}…{{/each}}`（可嵌套，如 `tables` × `fields`）；变量值里的换行统一折叠成空格（三份产物都是行式结构）
 - **调试事件**：在线调试面板新增可折叠的「前置脚本 / 后置脚本」（持久化到 localStorage）——前置以 `new Function('ctx', code)` 在请求前执行，可改 `ctx.url/method/headers/body` 或返回对象浅合并；后置在响应后执行，可读 `status/ms/text/url/method/ep`，返回字符串则替换展示的响应文本；脚本报错只在结果区提示，不中断请求
 
+### 已实现（多协议调试 P1）
+
+- **协议注解**：`#[apidoc::protocol("websocket", target = "wss://…")]` 声明协议与连接参数，`#[apidoc::event(direction = "in", name = "message")]` 声明流式消息；协议字段号用 `#[apidoc::param(..., field = "1")]`
+- **浏览器直连调试**：SOAP、GraphQL（含订阅）、JSON-RPC、XML-RPC、OData、MCP、A2A、Webhooks、WebSocket（文本/二进制帧）、SSE、Socket.IO、STOMP（含二进制）、WebRTC/DataChannel、HLS
+- **服务端代发**（feature `debug-http`，默认关闭）：`POST /apidoc/debug`，可强制 HTTP/2、绕过 CORS/内网；开启需 `DebugConfig { enable_server_side: true }` + 全局鉴权，默认拒绝内网/回环/云元数据地址
+- **P2+**：gRPC、Thrift、Dubbo、ISO 8583、TCP/UDP/Unix、MQTT/AMQP/Kafka、CoAP/LwM2M/工业协议、RTSP/RTMP/RTP/SIP/HTTP3 按 `docs/superpowers/plans/` 分批接入
+
 ## 架构
 
 ![apidoc-rust 总体架构](https://github.com/erikwang2013/apidoc-rust/raw/HEAD/docs/images/architecture.svg)
