@@ -180,11 +180,13 @@ impl WebhookRegistry {
             return (413, r#"{"error":"body too large"}"#.to_string());
         }
         if let Some(secret) = hook.cfg.secret.as_deref() {
-            let Some(given) = signature.and_then(decode_hex) else {
+            // HMAC-SHA256 hex is exactly 64 chars; reject longer input before allocating.
+            let Some(given) = signature.filter(|s| s.trim().len() == 64).and_then(decode_hex)
+            else {
                 return (401, r#"{"error":"invalid signature"}"#.to_string());
             };
-            let mut mac =
-                Hmac::<Sha256>::new_from_slice(secret.as_bytes()).expect("HMAC accepts any key length");
+            let mut mac = Hmac::<Sha256>::new_from_slice(secret.as_bytes())
+                .expect("HMAC accepts any key length");
             mac.update(body);
             if !ct_eq(&given, &mac.finalize().into_bytes()) {
                 return (401, r#"{"error":"invalid signature"}"#.to_string());
@@ -225,10 +227,9 @@ impl WebhookRegistry {
 fn stored_body(body: &[u8]) -> StoredBody {
     match std::str::from_utf8(body) {
         Ok(text) => StoredBody { encoding: "utf8", data: text.to_string() },
-        Err(_) => StoredBody {
-            encoding: "hex",
-            data: body.iter().map(|b| format!("{b:02x}")).collect(),
-        },
+        Err(_) => {
+            StoredBody { encoding: "hex", data: body.iter().map(|b| format!("{b:02x}")).collect() }
+        }
     }
 }
 
@@ -280,10 +281,7 @@ fn ct_eq(a: &[u8], b: &[u8]) -> bool {
 }
 
 fn now_ms() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_millis() as u64)
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_millis() as u64).unwrap_or(0)
 }
 
 #[cfg(test)]
@@ -303,7 +301,12 @@ mod tests {
             WebhookConfig { id: "a".into(), ..Default::default() },
             WebhookConfig { id: "a".into(), ..Default::default() },
             WebhookConfig { id: String::new(), ..Default::default() },
-            WebhookConfig { id: "b".into(), max_body: 10 * MAX_BODY, capacity: 10_000, ..Default::default() },
+            WebhookConfig {
+                id: "b".into(),
+                max_body: 10 * MAX_BODY,
+                capacity: 10_000,
+                ..Default::default()
+            },
         ]);
         assert_eq!(r.hooks.len(), 2, "duplicate and empty ids are dropped");
         assert_eq!(r.hooks[0].cfg.max_body, DEFAULT_MAX_BODY);
