@@ -58,11 +58,11 @@
   <!-- 卡片 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M5</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">三格式导出（M5）</text>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M5 + P6</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">四种导出（M5 + P6）</text>
   <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger（OpenAPI 3.0）</text>
-  <text x="500" y="450" font-size="13" fill="#333">info.version 取自 Cargo 包版本（构建期预序列化）</text>
-  <text x="500" y="470" font-size="13" fill="#333">UI / api.json / 导出共用同一数据模型</text>
+  <text x="500" y="450" font-size="13" fill="#333">AsyncAPI 2.6：事件 / 流式协议</text>
+  <text x="500" y="470" font-size="13" fill="#333">info.version 取 Cargo 包版本 · UI / api.json 共用模型</text>
 
   <!-- 卡片 7：M6a 密码鉴权 -->
   <rect x="40" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>

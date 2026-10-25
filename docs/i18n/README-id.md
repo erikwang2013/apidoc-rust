@@ -263,7 +263,7 @@ Adaptor memiliki antarmuka ekspor empat format bawaan, langsung bisa dipakai set
 GET /apidoc/export?format=md        # direktori berkelompok + tabel parameter + blok respons (text/markdown)
 GET /apidoc/export?format=ts        # menghasilkan tipe {Name}Params / {Name}Result per namespace group (application/typescript)
 GET /apidoc/export?format=swagger   # file deskripsi OpenAPI 3.0.0 (application/json)
-GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
+GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: cocok ditempel ke Wiki proyek / catatan rilis, mengeluarkan direktori per grup, setiap antarmuka dengan tabel parameter dan blok respons;

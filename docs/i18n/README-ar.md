@@ -263,7 +263,7 @@ fn create_user() -> String {
 GET /apidoc/export?format=md        # فهرس مجمّع + جدول معاملات + كتلة استجابة (text/markdown)
 GET /apidoc/export?format=ts        # توليد أنواع {Name}Params / {Name}Result ضمن نطاق group (application/typescript)
 GET /apidoc/export?format=swagger   # ملف وصف OpenAPI 3.0.0 (application/json)
-GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
+GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: مناسب للصقه في Wiki المشروع / ملاحظات الإصدار، يخرج فهرسًا مجمّعًا حسب المجموعة، وكل واجهة مع جدول معاملات وكتلة استجابة؛

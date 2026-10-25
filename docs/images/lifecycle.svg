@@ -47,7 +47,7 @@
   <text x="430" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">4</text>
   <text x="430" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">collect() 聚合</text>
   <text x="430" y="235" text-anchor="middle" font-size="12" fill="#555">按 id 合并片段</text>
-  <text x="430" y="252" text-anchor="middle" font-size="12" fill="#555">按 seq 恢复声明序</text>
+  <text x="430" y="252" text-anchor="middle" font-size="12" fill="#555">按 seq 排序</text>
   <text x="430" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1</text>
 
   <line x1="470" y1="150" x2="505" y2="150" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
@@ -56,8 +56,8 @@
   <circle cx="545" cy="150" r="34" fill="#27ae60"/>
   <text x="545" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
   <text x="545" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
-  <text x="545" y="235" text-anchor="middle" font-size="12" fill="#555">统一文档数据模型</text>
-  <text x="545" y="252" text-anchor="middle" font-size="12" fill="#555" font-family="monospace">config + endpoints + apps</text>
+  <text x="545" y="235" text-anchor="middle" font-size="12" fill="#555">统一文档模型 + apps</text>
+  <text x="545" y="252" text-anchor="middle" font-size="11" fill="#555" font-family="monospace">config · endpoints</text>
   <text x="545" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1·M6</text>
 
   <!-- 转折箭头 5 → 6 -->
@@ -66,10 +66,10 @@
   <!-- 步骤 6：M6a 鉴权换 token -->
   <circle cx="890" cy="310" r="34" fill="#c0392b"/>
   <text x="890" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">6</text>
-  <text x="880" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">鉴权换 token</text>
-  <text x="880" y="395" text-anchor="middle" font-size="12" fill="#555">前端 POST 提交</text>
-  <text x="880" y="412" text-anchor="middle" font-size="12" fill="#555">需带 ?token=</text>
-  <text x="880" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M6a · 401</text>
+  <text x="875" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">鉴权换 token</text>
+  <text x="870" y="395" text-anchor="middle" font-size="12" fill="#555">前端 POST 提交</text>
+  <text x="870" y="412" text-anchor="middle" font-size="12" fill="#555">需带 ?token=</text>
+  <text x="870" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M6a · 401</text>
 
   <line x1="850" y1="310" x2="815" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -87,8 +87,8 @@
   <circle cx="660" cy="310" r="34" fill="#16a085"/>
   <text x="660" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">8</text>
   <text x="660" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI 调试面板</text>
-  <text x="660" y="395" text-anchor="middle" font-size="12" fill="#555">目录浏览 / 在线调试</text>
-  <text x="660" y="412" text-anchor="middle" font-size="12" fill="#555">Mock 预填 / CORS 直连</text>
+  <text x="660" y="395" text-anchor="middle" font-size="12" fill="#555">目录 + 调试</text>
+  <text x="660" y="412" text-anchor="middle" font-size="12" fill="#555">Mock / CORS</text>
   <text x="660" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
 
   <line x1="620" y1="310" x2="585" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
@@ -97,8 +97,8 @@
   <circle cx="545" cy="310" r="34" fill="#e67e22"/>
   <text x="545" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">9</text>
   <text x="545" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">调试数据流</text>
-  <text x="545" y="395" text-anchor="middle" font-size="12" fill="#555">CORS 直连目标接口</text>
-  <text x="545" y="412" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock → mock</text>
+  <text x="545" y="395" text-anchor="middle" font-size="12" fill="#555">CORS 直连</text>
+  <text x="545" y="412" text-anchor="middle" font-size="12" fill="#555">/apidoc/mock</text>
   <text x="545" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M4</text>
 
   <line x1="505" y1="310" x2="470" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
@@ -108,7 +108,7 @@
   <text x="430" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">10</text>
   <text x="430" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">四种导出</text>
   <text x="430" y="395" text-anchor="middle" font-size="12" fill="#555">md / ts / swagger</text>
-  <text x="430" y="412" text-anchor="middle" font-size="12" fill="#555">asyncapi · OpenAPI 3.0</text>
+  <text x="430" y="412" text-anchor="middle" font-size="12" fill="#555">asyncapi · OpenAPI</text>
   <text x="430" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M5 · P6</text>
 
   <!-- 图例 -->

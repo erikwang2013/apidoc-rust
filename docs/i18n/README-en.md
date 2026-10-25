@@ -263,7 +263,7 @@ The adapter ships four built-in export endpoints, usable immediately after mount
 GET /apidoc/export?format=md        # grouped catalog + parameter tables + response blocks (text/markdown)
 GET /apidoc/export?format=ts        # generates {Name}Params / {Name}Result types in per-group namespaces (application/typescript)
 GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 description file (application/json)
-GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
+GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: great for pasting into a project Wiki / release notes; outputs a catalog by group, each endpoint with parameter tables and response blocks;

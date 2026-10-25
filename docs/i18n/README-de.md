@@ -263,7 +263,7 @@ Der Adapter bietet vier integrierte Export-Endpunkte — nach dem Einhängen sof
 GET /apidoc/export?format=md        # gruppiertes Verzeichnis + Parametertabellen + Antwortblöcke (text/markdown)
 GET /apidoc/export?format=ts        # erzeugt {Name}Params / {Name}Result-Typen je group-Namensraum (application/typescript)
 GET /apidoc/export?format=swagger   # OpenAPI-3.0.0-Beschreibungsdatei (application/json)
-GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
+GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: geeignet zum Einfügen in Projekt-Wiki / Release-Notizen, Ausgabe eines Verzeichnisses nach Gruppen, jede Schnittstelle mit Parametertabelle und Antwortblock;

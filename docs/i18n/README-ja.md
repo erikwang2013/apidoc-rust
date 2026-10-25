@@ -263,7 +263,7 @@ fn create_user() -> String {
 GET /apidoc/export?format=md        # グループ別ディレクトリ + パラメータ表 + レスポンスブロック（text/markdown）
 GET /apidoc/export?format=ts        # group ごとに名前空間で {Name}Params / {Name}Result 型を生成（application/typescript）
 GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 記述ファイル（application/json）
-GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
+GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**：プロジェクト Wiki / リリースノートに貼り付けるのに適しており、グループごとにディレクトリを出力し、各インターフェースにパラメータ表とレスポンスブロック付き；

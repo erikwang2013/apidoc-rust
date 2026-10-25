@@ -263,7 +263,7 @@ Los adaptadores integran rutas de exportación en cuatro formatos, listas al con
 GET /apidoc/export?format=md        # índice por grupos + tabla de parámetros + bloques de respuesta (text/markdown)
 GET /apidoc/export?format=ts        # genera los tipos {Name}Params / {Name}Result por namespace de grupo (application/typescript)
 GET /apidoc/export?format=swagger   # archivo descriptivo OpenAPI 3.0.0 (application/json)
-GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
+GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: ideal para pegar en el Wiki del proyecto / notas de versión, índice por grupos, cada interfaz con tabla de parámetros y bloque de respuesta;

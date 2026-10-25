@@ -263,7 +263,7 @@ fn create_user() -> String {
 GET /apidoc/export?format=md        # समूहित कैटलॉग + पैरामीटर तालिका + रिस्पॉन्स ब्लॉक (text/markdown)
 GET /apidoc/export?format=ts        # group namespace के अनुसार {Name}Params / {Name}Result टाइप जनरेट (application/typescript)
 GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 विवरण फ़ाइल (application/json)
-GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
+GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: प्रोजेक्ट Wiki / रिलीज़ नोट्स में चिपकाने के लिए उपयुक्त, समूह के अनुसार कैटलॉग, प्रत्येक इंटरफ़ेस में पैरामीटर तालिका और रिस्पॉन्स ब्लॉक;

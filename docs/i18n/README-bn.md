@@ -263,7 +263,7 @@ fn create_user() -> String {
 GET /apidoc/export?format=md        # গ্রুপড ডিরেক্টরি + প্যারামিটার টেবিল + রেসপন্স ব্লক (text/markdown)
 GET /apidoc/export?format=ts        # group নেমস্পেস অনুযায়ী {Name}Params / {Name}Result টাইপ (application/typescript)
 GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 বর্ণনা ফাইল (application/json)
-GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
+GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: প্রজেক্ট Wiki / রিলিজ নোটে পেস্ট করার উপযুক্ত, গ্রুপ অনুযায়ী ডিরেক্টরি আউটপুট, প্রতিটি ইন্টারফেসে প্যারামিটার টেবিল ও রেসপন্স ব্লক;
