@@ -4,13 +4,12 @@
 //! 两个框架行为 1:1 由单一实现结构性保证，不再靠两份复制维护。
 
 use crate::auth::{self, AuthConfig};
-use crate::mock::{generate_mock, mock_specs, MockEndpointSpec};
+use crate::mock::{generate_mock, mock_specs};
 use crate::webhook::WebhookRegistry;
-use crate::{cache, codegen, export, share};
-use crate::{ApiDoc, ApidocConfig, AppConfig, CacheConfig, DebugConfig, DocRegistry};
+use crate::{codegen, export, share};
+use crate::{ApiDoc, ApidocConfig, AppConfig, DebugConfig, DocRegistry};
 use bytes::Bytes;
 use std::collections::{BTreeMap, HashMap};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 /// 统一响应形状：状态码 + Content-Type + body，两个适配器各自映射为框架响应。
 /// `ct: None` = 不设 Content-Type（对齐现状：share/generate 的 400 与 generate 的
@@ -66,23 +65,17 @@ pub struct Core {
     sw: Bytes,
     /// P6 AsyncAPI 2.6（只含流式/事件协议），同样构建期物化。
     asyncapi: Bytes,
-    mocks: Vec<MockEndpointSpec>,
+    /// 构建期物化的 mock 响应：url → method → JSON。请求期只做两次查表 + Bytes 克隆。
+    mock_bodies: HashMap<String, HashMap<String, Bytes>>,
     /// 已渲染模板（内置 + config.codegen 同名覆盖），请求期只查表。
     generated: HashMap<String, Bytes>,
     auth_cfg: Option<AuthConfig>,
     /// P0 服务端调试配置：已归一化零值并做过 fail-closed 校验。
     debug_cfg: Option<DebugConfig>,
     apps: Vec<AppConfig>,
-    cache_cfg: Option<CacheConfig>,
     /// P6 webhook 入站捕获：有界存储 + 未认证写入限流。
     webhooks: WebhookRegistry,
-    /// 进程内唯一序号：mock 缓存是全局的，键里带上它以隔离同一进程里的多个 Core
-    /// （同一进程挂多套 /apidoc 时，两边同 url+method 的 mock 会互相顶掉）。
-    id: u64,
 }
-
-/// Core 的进程内序号源（见 `Core::id`）。
-static CORE_SEQ: AtomicU64 = AtomicU64::new(0);
 
 impl Core {
     pub fn build(config: ApidocConfig) -> Core {
@@ -90,8 +83,17 @@ impl Core {
         // 构建期序列化一次：ApiDoc 无 Clone（核心约束），且请求期不能借出捕获的
         // 自身引用 —— api.json / 三份导出全部预物化为 Bytes 是唯一干净解。
         let api_json = Bytes::from(serde_json::to_string(&doc).expect("ApiDoc must serialize"));
-        // M4 mock：只需可 Clone 的子集，不碰 ApiDoc/DocEndpoint，api.json 输出零变化。
-        let mocks = mock_specs(&doc.endpoints);
+        // M4 mock：构建期物化全部响应，请求期零计算（p99 <10ms 的关键路径）。
+        let mut mock_bodies: HashMap<String, HashMap<String, Bytes>> = HashMap::new();
+        for spec in mock_specs(&doc.endpoints) {
+            let body = Bytes::from(
+                serde_json::to_string(&generate_mock(&spec)).expect("mock must serialize"),
+            );
+            mock_bodies
+                .entry(spec.url.clone())
+                .or_default()
+                .insert(spec.method.clone(), body);
+        }
         let md = Bytes::from(export::markdown::render(&doc));
         let ts = Bytes::from(export::typescript::render(&doc));
         // info.version：显式配了 ApidocConfig.version 就用它（被文档化的 API 版本），
@@ -135,9 +137,8 @@ impl Core {
                 "apidoc: DebugConfig.enable_server_side requires AuthConfig {{ enable: true, password: non-empty }}"
             );
         }
-        // v2 文档缓存：仅 mock 每请求有实际计算（api.json/export 构建期已物化一次，
-        // 恒等重建无意义）——开启后按 (url,method) 记忆化 mock 输出。
-        let cache_cfg = doc.config.cache.clone();
+        // 说明：v2 的 cache 配置保留在公共 API 中，但 mock 已改为构建期物化，
+        // 请求期不再需要按 (url, method) 记忆化；cache 模块本身仍可独立使用。
         // /apidoc/generate：全部模板（内置 + config.codegen 同名覆盖）构建期渲染一次，
         // 请求期只查表——"请求期零重算" 由此对 7 条路由全部成立，模板渲染的深递归/
         // 展开预算也只在构建期需要。
@@ -153,7 +154,6 @@ impl Core {
         }
         // P6 webhook：配置在构建期归一（上限/重复 id/空 secret 告警），请求期只读写缓冲。
         let webhooks = WebhookRegistry::new(doc.config.webhooks.clone());
-        let id = CORE_SEQ.fetch_add(1, Ordering::Relaxed);
         Core {
             doc,
             api_json,
@@ -161,14 +161,12 @@ impl Core {
             ts,
             sw,
             asyncapi,
-            mocks,
+            mock_bodies,
             generated,
             auth_cfg,
             debug_cfg,
             apps,
-            cache_cfg,
             webhooks,
-            id,
         }
     }
 
@@ -232,20 +230,8 @@ impl Core {
         }
         let url = q.get("url").map(String::as_str).unwrap_or("");
         let method = q.get("method").map(String::as_str).unwrap_or("");
-        match self.mocks.iter().find(|s| s.url == url && s.method == method) {
-            Some(spec) => {
-                let build = || {
-                    serde_json::to_string(&generate_mock(spec)).expect("mock must serialize")
-                };
-                // v2 文档缓存：开启时按 (Core, url, method) 记忆化；未开启走原路径（字节级一致）
-                let body = match &self.cache_cfg {
-                    Some(c) if c.enable => {
-                        cache::memo(&format!("mock:{}:{url}:{method}", self.id), c.ttl, build)
-                    }
-                    _ => build(),
-                };
-                R::new(200, "application/json", body)
-            }
+        match self.mock_bodies.get(url).and_then(|by_method| by_method.get(method)) {
+            Some(body) => R::new(200, "application/json", body.clone()),
             None => R::new(404, "application/json", r#"{"error":"endpoint not found"}"#),
         }
     }

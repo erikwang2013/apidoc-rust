@@ -22,6 +22,9 @@ pub const MAX_BODY: usize = 1_048_576;
 const MAX_CAPACITY: usize = 200;
 /// Total stored bytes per webhook (oldest events are evicted first).
 const MAX_STORE_BYTES: usize = 8 * 1024 * 1024;
+/// 单次 GET 响应上限：保证序列化 + 传输本地耗时远低于 10ms。
+const MAX_EVENTS_PER_RESPONSE: usize = 100;
+const MAX_RESPONSE_BYTES: usize = 256 * 1024;
 
 // Fixed-window throttles for unauthenticated writes: per webhook id and a
 // registry-wide total so a burst across many ids cannot exhaust memory/CPU.
@@ -220,8 +223,22 @@ impl WebhookRegistry {
             return (404, r#"{"error":"unknown webhook"}"#.to_string());
         };
         let store = hook.store.lock().unwrap_or_else(|e| e.into_inner());
-        let events: Vec<&StoredEvent> = store.events.iter().filter(|e| e.seq > since).collect();
-        (200, serde_json::json!({ "events": events }).to_string())
+        let mut events: Vec<&StoredEvent> = Vec::new();
+        let mut bytes = 0usize;
+        let mut truncated = false;
+        for event in store.events.iter().filter(|e| e.seq > since) {
+            let size = event_size(event);
+            if events.len() >= MAX_EVENTS_PER_RESPONSE || bytes + size > MAX_RESPONSE_BYTES {
+                truncated = true;
+                break;
+            }
+            bytes += size;
+            events.push(event);
+        }
+        (
+            200,
+            serde_json::json!({ "events": events, "truncated": truncated }).to_string(),
+        )
     }
 
     /// Guarded configuration list — id/title only, never the secret.

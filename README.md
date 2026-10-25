@@ -42,7 +42,7 @@ apidoc-rust 的实现取向：
 - **Json/TypeScript 生成**：每个接口自动生成 Json 请求/响应示例与 TypeScript 类型定义，直接用于前端。
 - **代码生成器**：配置 + 模板即可生成业务代码与前端 Api 文件。
 - **接口分享**：可生成指定应用/接口的分享链接、导出 `swagger.json`。
-- **安全访问**：支持全局密码与应用/版本独立密码授权，可开启文档缓存。
+- **安全访问**：支持全局密码与应用/版本独立密码授权；文档数据构建期物化，本地响应 p99 < 10ms。
 
 ## 特性
 
@@ -79,7 +79,7 @@ apidoc-rust 的实现取向：
 ### 已实现（v2）
 
 - **数据表字段引用（`table`）**：`#[apidoc::table("user")]` 按 `ApidocConfig.tables` 配置的表 key 把字段**平铺**并入 `returned`（与 `ref` 同语义，区别是数据源为配置表而非其他端点）；字段支持 `required` / `default` / `desc` / `mock`；未配置的 key 只在 stderr 警告；未使用该注解时输出与 v1 字节级一致
-- **文档缓存**：`ApidocConfig.cache = Some(CacheConfig { enable, ttl })`——`/apidoc/mock` 输出按 `(url, method)` 进程内记忆化，`ttl` 秒后失效重建，`ttl = 0` 表示永久；未配置或未启用时完全不走缓存路径（输出零变化）。api.json / export 在挂载路由时已构建一次，等价于永久缓存
+- **构建期物化 / 本地延迟**：api.json、markdown/typescript/swagger/AsyncAPI、代码生成模板与 `/apidoc/mock` 响应全部在 `Core::build` 时生成，请求期只做查表 + `Bytes` 克隆；`tests/latency.rs` 用 in-process 请求验证所有 apidoc 路由 p99 < 10ms（不含服务端调试目标自身的网络耗时）。`ApidocConfig.cache` 保留兼容，但 mock 已不再需要请求期记忆化。
 - **分享链接**：`GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` 深链（`?app=<key>&ep=<接口 url>&method=<方法>[&token=…]`）；文档页每个接口旁有「分享」按钮（写剪贴板，失败降级为可复制的输入框），打开深链即定位到该应用/接口；鉴权开启时链接附带服务端签发的 token（应用独立密码优先于全局密码），打开即免密
 - **代码生成器**：`GET /apidoc/generate?template=<name>` → 渲染后的文本（未知模板 404）；内置 `api.ts`（前端 Api 文件）、`handler.rs`（Rust 接口骨架）、`schema.sql`（按 `tables` 生成建表语句）；`ApidocConfig.codegen` 里的同名模板覆盖内置。模板语法只有两种：`{{变量}}`（未定义则原样保留）与 `{{#each 列表}}…{{/each}}`（可嵌套，如 `tables` × `fields`）；变量值里的换行统一折叠成空格（三份产物都是行式结构）
 - **调试事件**：在线调试面板新增可折叠的「前置脚本 / 后置脚本」（持久化到 localStorage）——前置以 `new Function('ctx', code)` 在请求前执行，可改 `ctx.url/method/headers/body` 或返回对象浅合并；后置在响应后执行，可读 `status/ms/text/url/method/ep`，返回字符串则替换展示的响应文本；脚本报错只在结果区提示，不中断请求
@@ -446,7 +446,7 @@ ApidocConfig {
             TableField { name: "name".into(), ty: "string".into(), mock: Some("erik".into()), ..Default::default() },
         ],
     }],
-    // 文档缓存：/apidoc/mock 输出按 (url, method) 记忆化，ttl 秒后重建（0 = 永久）
+    // 兼容配置；mock/导出已在构建期物化，无需请求期缓存
     cache: Some(CacheConfig { enable: true, ttl: 60 }),
     ..Default::default()   // title / description / auth / apps / codegen 照常配
 }
