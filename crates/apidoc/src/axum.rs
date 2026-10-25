@@ -6,12 +6,12 @@
 use crate::route_core::{self, Core, R};
 use crate::ApidocConfig;
 use axum::body::{Body, Bytes};
-use axum::extract::{Query, State};
-use axum::http::{header, HeaderValue, StatusCode};
+use axum::extract::{DefaultBodyLimit, Path, Query, State};
+use axum::http::{header, HeaderMap, HeaderValue, StatusCode};
 use axum::response::Response;
 use axum::routing::{get, post};
 use axum::Router;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use tower_http::cors::{AllowOrigin, Any, CorsLayer};
 
@@ -63,7 +63,16 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
         .route("/apidoc/share", get(share))
         .route("/apidoc/generate", get(generate))
         // P0 服务端调试：POST body 为 DebugRequest；未启用时 route_core 返回 403
-        .route("/apidoc/debug", post(debug));
+        .route("/apidoc/debug", post(debug))
+        // P6 webhook 入站捕获：POST 公开（HMAC 可选），GET 走守卫。
+        .route("/apidoc/webhook", get(webhook_list))
+        .route(
+            "/apidoc/webhook/{id}",
+            get(webhook_events)
+                .post(webhook_capture)
+                // 未认证写入口：缓冲上限是 DebugConfig 之外的绝对硬顶。
+                .layer(DefaultBodyLimit::max(crate::webhook::MAX_BODY)),
+        );
     // P2 长连接会话桥：仅在 feature 开启时注册。
     #[cfg(feature = "debug-session")]
     let router = router.route("/apidoc/debug/stream", get(debug_stream));
@@ -101,6 +110,40 @@ async fn debug(
     body: Bytes,
 ) -> Response {
     response(core.debug(&q, &body).await)
+}
+
+async fn webhook_list(
+    State(core): State<Arc<Core>>,
+    Query(q): Query<HashMap<String, String>>,
+) -> Response {
+    response(core.webhook_list(&q))
+}
+
+async fn webhook_events(
+    State(core): State<Arc<Core>>,
+    Path(id): Path<String>,
+    Query(q): Query<HashMap<String, String>>,
+) -> Response {
+    response(core.webhook_events(&q, &id))
+}
+
+async fn webhook_capture(
+    State(core): State<Arc<Core>>,
+    Path(id): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    response(core.webhook_capture(&id, &header_map(&headers), &body))
+}
+
+/// 捕获展示用头快照；非 UTF-8 值跳过，键统一小写（与 actix 侧一致）。
+fn header_map(headers: &HeaderMap) -> BTreeMap<String, String> {
+    headers
+        .iter()
+        .filter_map(|(k, v)| {
+            Some((k.as_str().to_ascii_lowercase(), v.to_str().ok()?.to_string()))
+        })
+        .collect()
 }
 
 #[cfg(feature = "debug-session")]

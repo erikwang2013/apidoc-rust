@@ -17,10 +17,16 @@ pub mod export;
 
 /// M6a: 密码鉴权（HMAC-SHA256 签名令牌 + 恒定时间比对 + 失败退避）。
 pub mod auth;
+/// `ApidocConfig.auth` 的类型；从根导出，配置构造无需再写模块路径。
+pub use auth::AuthConfig;
 
 /// M4 mock 引擎（feature "mock"；axum/actix feature 隐含启用）。
 #[cfg(feature = "mock")]
 pub mod mock;
+
+/// P6 webhook 入站捕获：有界环形缓冲 + 可选 HMAC（路由见 axum/actix 适配器）。
+/// 与 mock 一样不带 feature：`ApidocConfig.webhooks` 始终可配置，未配置时零开销。
+pub mod webhook;
 
 /// axum 适配器（feature "axum"）。
 #[cfg(feature = "axum")]
@@ -389,6 +395,9 @@ pub struct ApidocConfig {
     pub cache: Option<CacheConfig>,
     #[serde(skip)]
     pub codegen: Vec<CodegenTemplate>,
+    /// P6 webhook 入站捕获配置。仅服务端使用（含 secret），不进 api.json。
+    #[serde(skip)]
+    pub webhooks: Vec<webhook::WebhookConfig>,
 }
 
 /// 一个应用/版本节点：注解挂载的 endpoints + 递归子版本。

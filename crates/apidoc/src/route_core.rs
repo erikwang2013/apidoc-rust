@@ -5,10 +5,11 @@
 
 use crate::auth::{self, AuthConfig};
 use crate::mock::{generate_mock, mock_specs, MockEndpointSpec};
+use crate::webhook::WebhookRegistry;
 use crate::{cache, codegen, export, share};
 use crate::{ApiDoc, ApidocConfig, AppConfig, CacheConfig, DebugConfig, DocRegistry};
 use bytes::Bytes;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicU64, Ordering};
 
 /// 统一响应形状：状态码 + Content-Type + body，两个适配器各自映射为框架响应。
@@ -71,6 +72,8 @@ pub struct Core {
     debug_cfg: Option<DebugConfig>,
     apps: Vec<AppConfig>,
     cache_cfg: Option<CacheConfig>,
+    /// P6 webhook 入站捕获：有界存储 + 未认证写入限流。
+    webhooks: WebhookRegistry,
     /// 进程内唯一序号：mock 缓存是全局的，键里带上它以隔离同一进程里的多个 Core
     /// （同一进程挂多套 /apidoc 时，两边同 url+method 的 mock 会互相顶掉）。
     id: u64,
@@ -142,6 +145,8 @@ impl Core {
                 generated.entry(name.to_string()).or_insert_with(|| Bytes::from(codegen::render(tpl, &doc)));
             }
         }
+        // P6 webhook：配置在构建期归一（上限/重复 id/空 secret 告警），请求期只读写缓冲。
+        let webhooks = WebhookRegistry::new(doc.config.webhooks.clone());
         let id = CORE_SEQ.fetch_add(1, Ordering::Relaxed);
         Core {
             doc,
@@ -155,6 +160,7 @@ impl Core {
             debug_cfg,
             apps,
             cache_cfg,
+            webhooks,
             id,
         }
     }
@@ -318,6 +324,36 @@ impl Core {
                     r#"{"error":"server-side debug is disabled"}"#,
                 )
             })
+    }
+
+    /// POST /apidoc/webhook/{id}：公开写入端点，HMAC/大小/限流由 WebhookRegistry 判定。
+    pub fn webhook_capture(
+        &self,
+        id: &str,
+        headers: &BTreeMap<String, String>,
+        body: &[u8],
+    ) -> R {
+        let signature = headers.get("x-apidoc-signature").map(String::as_str);
+        let (status, body) = self.webhooks.post(id, signature, headers, body);
+        R::new(status, "application/json", body)
+    }
+
+    /// GET /apidoc/webhook/{id}?since=<seq> → {"events":[...]}（守卫）。
+    pub fn webhook_events(&self, q: &HashMap<String, String>, id: &str) -> R {
+        if !self.guard(q) {
+            return Self::denied();
+        }
+        let since = q.get("since").and_then(|s| s.parse().ok()).unwrap_or(0);
+        let (status, body) = self.webhooks.events(id, since);
+        R::new(status, "application/json", body)
+    }
+
+    /// GET /apidoc/webhook → {"webhooks":[{id,title}]}（守卫，永不返回 secret）。
+    pub fn webhook_list(&self, q: &HashMap<String, String>) -> R {
+        if !self.guard(q) {
+            return Self::denied();
+        }
+        R::new(200, "application/json", self.webhooks.list())
     }
 
     /// GET /apidoc/share?app=&url=&method=&base= → {"url":"..."}

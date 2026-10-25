@@ -7,7 +7,7 @@ use actix_cors::Cors;
 use actix_web::{web, HttpResponse, Scope};
 use crate::route_core::{self, Core, R};
 use crate::ApidocConfig;
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 
 pub use crate::route_core::CorsConfig;
@@ -51,7 +51,16 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
         .route("/share", web::get().to(share))
         .route("/generate", web::get().to(generate))
         // P0 服务端调试：POST body 为 DebugRequest；未启用时 route_core 返回 403
-        .route("/debug", web::post().to(debug));
+        .route("/debug", web::post().to(debug))
+        // P6 webhook 入站捕获：POST 公开（HMAC 可选），GET 走守卫。
+        .route("/webhook", web::get().to(webhook_list))
+        .service(
+            web::resource("/webhook/{id}")
+                // 未认证写入口：缓冲上限是绝对硬顶（默认 actix 256 KiB 会低于配置上限）。
+                .app_data(web::PayloadConfig::new(crate::webhook::MAX_BODY))
+                .route(web::get().to(webhook_events))
+                .route(web::post().to(webhook_capture)),
+        );
     #[cfg(feature = "debug-session")]
     let scope = scope.route("/debug/stream", web::get().to(debug_stream));
     scope
@@ -88,6 +97,40 @@ async fn debug(
     body: web::Bytes,
 ) -> HttpResponse {
     response(core.debug(&q, &body).await)
+}
+
+async fn webhook_list(
+    core: web::Data<Arc<Core>>,
+    q: web::Query<HashMap<String, String>>,
+) -> HttpResponse {
+    response(core.webhook_list(&q))
+}
+
+async fn webhook_events(
+    core: web::Data<Arc<Core>>,
+    path: web::Path<String>,
+    q: web::Query<HashMap<String, String>>,
+) -> HttpResponse {
+    response(core.webhook_events(&q, &path))
+}
+
+async fn webhook_capture(
+    core: web::Data<Arc<Core>>,
+    path: web::Path<String>,
+    req: actix_web::HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(core.webhook_capture(&path, &header_map(&req), &body))
+}
+
+/// 捕获展示用头快照；非 UTF-8 值跳过，键统一小写（与 axum 侧一致）。
+fn header_map(req: &actix_web::HttpRequest) -> BTreeMap<String, String> {
+    req.headers()
+        .iter()
+        .filter_map(|(k, v)| {
+            Some((k.as_str().to_ascii_lowercase(), v.to_str().ok()?.to_string()))
+        })
+        .collect()
 }
 
 #[cfg(feature = "debug-session")]
