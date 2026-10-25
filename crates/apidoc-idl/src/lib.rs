@@ -41,10 +41,38 @@ pub(crate) fn render_param(kind: &str, p: &Param, include_required: bool) -> Str
     format!("#[apidoc::{kind}({})]", param_args(p, include_required))
 }
 
+/// 生成 Rust 字符串字面量内容；IDL 是不可信输入，必须转义。
+fn rust_str(value: &str) -> String {
+    value
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('\n', "\\n")
+        .replace('\r', "\\r")
+}
+
+/// 生成合法的 Rust 函数名；非标识符字符折叠为 `_`。
+fn rust_ident(value: &str) -> String {
+    let mut out: String = value
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .collect();
+    if out.is_empty() {
+        out.push('_');
+    }
+    if out.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+        out.insert(0, '_');
+    }
+    out
+}
+
 fn param_args(p: &Param, include_required: bool) -> String {
-    let mut args = format!("name = \"{}\", ty = \"{}\"", p.name, p.ty);
+    let mut args = format!(
+        "name = \"{}\", ty = \"{}\"",
+        rust_str(&p.name),
+        rust_str(&p.ty)
+    );
     if let Some(field) = &p.field {
-        args.push_str(&format!(", field = \"{field}\""));
+        args.push_str(&format!(", field = \"{}\"", rust_str(field)));
     }
     if include_required && p.required {
         args.push_str(", required");
@@ -62,6 +90,7 @@ fn param_args(p: &Param, include_required: bool) -> String {
 
 /// Emit the generated function, with any TODO comments in its body.
 pub(crate) fn push_fn(out: &mut String, name: &str, comments: &[String]) {
+    let name = rust_ident(name);
     if comments.is_empty() {
         out.push_str(&format!("fn {name}() {{}}\n\n"));
         return;
