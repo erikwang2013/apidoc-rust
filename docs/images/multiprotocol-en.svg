@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 820" font-family="sans-serif">
+  <defs>
+    <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
+      <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
+    </pattern>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#555"/>
+    </marker>
+  </defs>
+  <rect width="940" height="820" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="820" fill="none" stroke="#333" stroke-width="2"/>
+
+  <text x="470" y="36" text-anchor="middle" font-size="25" font-weight="bold" fill="#222">apidoc-rust Multi-Protocol Debug Architecture (P0–P6)</text>
+  <text x="470" y="58" text-anchor="middle" font-size="13" fill="#555">Annotations generate docs and debug panels · browser-direct + server-side execution · zero heavy deps by default</text>
+
+  <!-- 1. Annotation layer -->
+  <rect x="40" y="78" width="860" height="92" rx="10" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <text x="58" y="104" font-size="16" font-weight="bold" fill="#5f4b00">1 · Annotation layer (compile time)</text>
+  <text x="58" y="126" font-size="12.5" font-family="monospace" fill="#333">#[apidoc::grpc(...)]  #[apidoc::websocket("wss://…")]  #[apidoc::mqtt(..., topic="sensors/#")]</text>
+  <text x="58" y="146" font-size="12.5" font-family="monospace" fill="#333">#[apidoc::event(direction="in", name="message")]  #[apidoc::param(..., field="1")]</text>
+  <text x="58" y="164" font-size="12" fill="#7a5b00">45 protocol aliases + generic protocol(kind) · kind / args / field numbers checked at compile time</text>
+
+  <!-- 2. Docs and UI -->
+  <rect x="40" y="186" width="860" height="98" rx="10" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
+  <text x="58" y="212" font-size="16" font-weight="bold" fill="#3d2f8f">2 · Document model and UI</text>
+  <text x="58" y="236" font-size="12.5" font-family="monospace" fill="#333">DocEndpoint { protocol, protocol_opts, events, params.field }</text>
+  <text x="58" y="256" font-size="12.5" fill="#333">api.json · protocol badges/options/events · protocol debug panels · md / ts / swagger / asyncapi export</text>
+  <text x="58" y="274" font-size="12" fill="#4a3d99">Materialized at build time: request path is a table lookup + Bytes clone, local p99 &lt; 10ms</text>
+
+  <!-- 3a. Browser direct -->
+  <rect x="40" y="300" width="420" height="218" rx="10" fill="#eaf7ef" stroke="#27ae60" stroke-width="2"/>
+  <text x="58" y="326" font-size="16" font-weight="bold" fill="#1e8449">3a · Browser-direct (no Rust deps)</text>
+  <text x="58" y="352" font-size="12" fill="#333">SOAP · GraphQL (incl. subscriptions) · JSON-RPC · XML-RPC</text>
+  <text x="58" y="372" font-size="12" fill="#333">OData · MCP · A2A · Webhooks</text>
+  <text x="58" y="398" font-size="12" fill="#333">WebSocket (text/binary frames) · SSE · Socket.IO</text>
+  <text x="58" y="418" font-size="12" fill="#333">STOMP (incl. binary) · GraphQL-WS</text>
+  <text x="58" y="444" font-size="12" fill="#333">WebRTC / DataChannel · HLS preview</text>
+  <text x="58" y="476" font-size="12" fill="#1e8449">Auth: URL query · debug scripts: pre/post</text>
+  <text x="58" y="496" font-size="12" fill="#1e8449">Direct target requests; CORS allowed by the adapter</text>
+
+  <!-- 3b. Server executors -->
+  <rect x="480" y="300" width="420" height="218" rx="10" fill="#eaf1fe" stroke="#2563eb" stroke-width="2"/>
+  <text x="498" y="326" font-size="16" font-weight="bold" fill="#1d4ed8">3b · Server-side executors (feature-gated)</text>
+  <text x="498" y="352" font-size="12" fill="#333">HTTP/2 · HTTP/3 · gRPC (unary/server stream)</text>
+  <text x="498" y="372" font-size="12" fill="#333">Thrift · Dubbo/Hessian · ISO 8583</text>
+  <text x="498" y="392" font-size="12" fill="#333">TCP / UDP / Raw / Unix Domain Socket</text>
+  <text x="498" y="412" font-size="12" fill="#333">MQTT · AMQP · Kafka · XMPP · STOMP/TCP</text>
+  <text x="498" y="432" font-size="12" fill="#333">CoAP · LwM2M · Modbus · DNP3 · IEC 104</text>
+  <text x="498" y="452" font-size="12" fill="#333">BACnet/IP · OPC UA · RTP/RTCP · RTSP · SIP · RTMP</text>
+  <text x="498" y="478" font-size="12" fill="#1d4ed8">POST /apidoc/debug (unary)</text>
+  <text x="498" y="498" font-size="12" fill="#1d4ed8">GET /apidoc/debug/stream (WS session bridge)</text>
+
+  <!-- 4. Security and boundaries -->
+  <rect x="40" y="538" width="860" height="150" rx="10" fill="#fdeeee" stroke="#dc2626" stroke-width="2"/>
+  <text x="58" y="564" font-size="16" font-weight="bold" fill="#991b1b">4 · Security and runtime boundaries</text>
+  <text x="58" y="590" font-size="12.5" fill="#333">DebugConfig is off by default; enabling requires global auth (AuthConfig enable + non-empty password), else build panics</text>
+  <text x="58" y="610" font-size="12.5" fill="#333">SSRF guard: allow_hosts; loopback/private/link-local/CGNAT denied by default; cloud metadata always denied</text>
+  <text x="58" y="630" font-size="12.5" fill="#333">Every resolved IP is validated and pinned; no redirects, system proxy or CONNECT; Unix sockets off by default</text>
+  <text x="58" y="650" font-size="12.5" fill="#333">max_bytes / max_frames / timeout capped end to end; credentials never reach api.json, logs or error text</text>
+  <text x="58" y="672" font-size="12.5" fill="#991b1b">Protocols without pinned TLS (wss / gRPC https / MQTT TLS / AMQP TLS) currently fail closed</text>
+
+  <!-- 5. Default build -->
+  <rect x="40" y="706" width="860" height="58" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
+  <text x="58" y="730" font-size="14" font-weight="bold" fill="#475569">5 · Dependency strategy</text>
+  <text x="58" y="752" font-size="12.5" fill="#333">Default builds pull no axum/actix/reqwest/tonic/broker deps; one feature per protocol family, debug-all only aggregates.</text>
+
+  <text x="470" y="795" text-anchor="middle" font-size="12" fill="#888">watermark: https://erik.xyz</text>
+</svg>

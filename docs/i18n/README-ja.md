@@ -42,7 +42,7 @@ apidoc-rust の実装方針：
 - **Json・TypeScript 生成**：各インターフェースの Json リクエスト/レスポンス例と TypeScript 型定義を自動生成し、フロントエンドでそのまま利用できます。
 - **コードジェネレータ**：設定 + テンプレートで業務コードとフロントエンドの Api ファイルを生成できます。
 - **インターフェース共有**：指定したアプリ/インターフェースの共有リンクを生成し、`swagger.json` をエクスポートできます。
-- **安全なアクセス**：グローバルパスワードとアプリ/バージョンごとの独立パスワード認可に対応し、ドキュメントキャッシュを有効にできます。
+- **安全なアクセス**：グローバルパスワードとアプリ/バージョンごとの独立パスワード認可に対応；ドキュメントはビルド時に生成され、ローカル応答は p99 10ms 未満です。
 
 ## 特徴
 
@@ -64,7 +64,7 @@ apidoc-rust の実装方針：
 
 ### 実装済み（M5）
 
-- **3 形式エクスポート**（`crates/apidoc/src/export/`）：markdown / typescript / swagger（OpenAPI 3.0.0）、コア crate が `export::markdown::render` / `export::typescript::render` / `export::swagger::render` を提供
+- **4 形式エクスポート**（`crates/apidoc/src/export/`）：markdown / typescript / swagger（OpenAPI 3.0.0）、コア crate が `export::markdown::render` / `export::typescript::render` / `export::swagger::render` を提供
 - **エクスポートルート**：アダプタに `GET /apidoc/export?format=md|ts|swagger` を追加、未知の format は 400 を返す；Content-Type はそれぞれ `text/markdown` / `application/typescript` / `application/json`
 - **markdown**：グループ別ディレクトリ + パラメータ表 + レスポンスブロック；**typescript**：group ごとに名前空間で `{Name}Params` / `{Name}Result` 型を生成、未グループのインターフェースは `defaultGroup` に入る（`default` は TS の予約語）；**swagger**：`info.version` は Cargo パッケージバージョンを取得
 - **actix-web アダプタ**（`crates/apidoc/src/actix.rs`）：axum アダプタと機能 1:1——`apidoc_routes(ApidocConfig) -> Scope` で /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export をマウント、`cors_layer(CorsConfig)` がクロスオリジンを許可
@@ -79,10 +79,21 @@ apidoc-rust の実装方針：
 ### 実装済み（v2）
 
 - **データテーブルフィールド参照（`table`）**：`#[apidoc::table("user")]` は `ApidocConfig.tables` にその key で設定したテーブルのフィールドを `returned` に**平坦化**してマージします（`ref` と同じ意味で、データソースが他のエンドポイントではなく設定テーブルである点だけが異なります）；フィールドは `required` / `default` / `desc` / `mock` に対応；未設定の key は stderr 警告のみ；この注釈を使わない場合の出力は v1 とバイトレベルで一致
-- **ドキュメントキャッシュ**：`ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — `/apidoc/mock` の出力を `(url, method)` 単位でプロセス内メモ化し、`ttl` 秒後に失効して再生成、`ttl = 0` は永久を意味します；未設定または無効時はキャッシュ経路を一切通しません（出力は変化なし）。api.json / export はルートのマウント時に一度構築済みで、永久キャッシュと等価です
+- **ビルド時マテリアライズ**：api.json、エクスポート、codegen テンプレート、`/apidoc/mock` のボディはルートのマウント時に一度だけ生成され、リクエスト時はテーブル参照のみ。`ApidocConfig.cache` は互換性のため残していますが、mock レスポンスにリクエスト時のメモ化は不要です
 - **共有リンク**：`GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` のディープリンク（`?app=<key>&ep=<インターフェース url>&method=<メソッド>[&token=…]`）；ドキュメントページの各インターフェースの横に「共有」ボタンがあり（クリップボードに書き込み、失敗時はコピー可能な入力欄にフォールバック）、ディープリンクを開くとそのアプリ/インターフェースへ直接ジャンプします；認証が有効なときはリンクにサーバー発行の token が付き（アプリ独立パスワードがグローバルより優先）、開くとパスワード不要です
 - **コードジェネレータ**：`GET /apidoc/generate?template=<name>` → レンダリング済みテキスト（未知のテンプレートは 404）；内蔵 `api.ts`（フロントエンド Api ファイル）、`handler.rs`（Rust インターフェースの雛形）、`schema.sql`（`tables` から CREATE TABLE 文を生成）；`ApidocConfig.codegen` の同名テンプレートが内蔵を上書きします。テンプレート構文は 2 種類のみ：`{{変数}}`（未定義ならそのまま保持）と `{{#each リスト}}…{{/each}}`（ネスト可、例：`tables` × `fields`）
 - **デバッグイベント**：オンラインデバッグパネルに折りたたみ式の「前処理スクリプト / 後処理スクリプト」（localStorage に永続化）を追加 — 前処理スクリプトは `new Function('ctx', code)` によりリクエスト前に実行され、`ctx.url/method/headers/body` を変更したり、オブジェクトを返して浅くマージできます；後処理スクリプトはレスポンス後に実行され `status/ms/text/url/method/ep` を読み取れ、文字列を返すと表示中のレスポンステキストを置き換えます；スクリプトのエラーは結果エリアに提示されるだけで、リクエストは中断されません
+
+## マルチプロトコルのドキュメントとデバッグ（P1–P6）
+
+![apidoc-rust マルチプロトコルデバッグ構成](../images/multiprotocol-en.svg)
+
+- **45 個のプロトコル注釈**と汎用 `#[apidoc::protocol("kind", ...)]`。`event` はストリームメッセージ、`param(..., field = "1")` はプロトコルのフィールド番号を宣言します。
+- **ブラウザ直結デバッグ**（Rust 依存なし）: SOAP、GraphQL（subscription 含む）、JSON-RPC、XML-RPC、OData、MCP、A2A、Webhooks、WebSocket（テキスト/バイナリ）、SSE、Socket.IO、STOMP（バイナリ含む）、WebRTC/DataChannel、HLS。
+- **サーバー側エグゼキュータ**（feature-gated）: HTTP/2、HTTP/3、gRPC、Thrift、Dubbo/Hessian2、ISO 8583、TCP/UDP/Raw/Unix、MQTT、AMQP、Kafka、XMPP、STOMP/TCP、CoAP、LwM2M、Modbus、DNP3、IEC 104、BACnet/IP、OPC UA、RTP/RTCP/RTSP/SIP/RTMP。`debug-all` で一括有効化。
+- **P6**: Webhook キャプチャ、AsyncAPI 2.6 エクスポート、`apidoc-idl` CLI による `.proto`/`.thrift` インポート、Dubbo Nacos レジストリ、イベントからの mock 例。
+- **セキュリティ**: サーバー側デバッグは既定で無効、有効化にはグローバル認証が必須。SSRF ガードは解決後の各 IP を検証して接続を固定し、リダイレクト/プロキシとクラウドメタデータを拒否。サイズ/フレーム/タイムアウトは上限付き。ピン留め TLS のないプロトコルは fail closed。
+- **性能**: ドキュメント、エクスポート、codegen、mock ボディはビルド時に生成。apidoc のローカルルートは p99 10ms 未満（`tests/latency.rs`）。
 
 ## アーキテクチャ
 
@@ -101,7 +112,7 @@ apidoc-rust の実装方針：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 設定（resolver 2）
-├── VERSION                    # プロジェクトバージョン（v2.0.0）
+├── VERSION                    # プロジェクトバージョン（v2.1.0）
 ├── crates/
 │   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
 │   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML
@@ -110,7 +121,7 @@ apidoc-rust/
 │   │   ├── src/ui.html        # 共有ドキュメント UI（コア crate がエクスポート、両アダプタが参照）
 │   │   ├── tests/             # 統合テスト（マクロ展開/集約/シリアライズ/クロス crate）
 │   │   └── examples/demo.rs   # サンプル：注釈 + api.json 出力
-│   ├── apidoc-macros/         # proc-macro：20 つの属性マクロ
+│   ├── apidoc-macros/         # proc-macro：65+ 属性マクロ（45 プロトコル別名を含む）
 │   │   └── src/lib.rs         # マクロ定義 + パラメータ解析 + コンパイル期検証
 
 │   ├── apidoc-test-fixtures/  # クロス crate 登録テストフィクスチャ
@@ -128,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.0"        # または path = "crates/apidoc"
+apidoc-rust = "2.1"        # または path = "crates/apidoc"
 
 serde_json = "1"      # api.json 出力用
 linkme = "0.3"        # 必須：マクロが生成する登録コードがこれを参照します
@@ -246,17 +257,19 @@ fn create_user() -> String {
 
 ### 6. オンラインエクスポート（M5）
 
-アダプタに 3 形式のエクスポートインターフェースが組み込まれており、マウントするだけで使えます（未知の `format` は 400 を返します）：
+アダプタに 4 形式のエクスポートインターフェースが組み込まれており、マウントするだけで使えます（未知の `format` は 400 を返します）：
 
 ```bash
 GET /apidoc/export?format=md        # グループ別ディレクトリ + パラメータ表 + レスポンスブロック（text/markdown）
 GET /apidoc/export?format=ts        # group ごとに名前空間で {Name}Params / {Name}Result 型を生成（application/typescript）
 GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 記述ファイル（application/json）
+GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**：プロジェクト Wiki / リリースノートに貼り付けるのに適しており、グループごとにディレクトリを出力し、各インターフェースにパラメータ表とレスポンスブロック付き；
 - **typescript**：フロントエンドがそのまま型定義として貼り付け可能；未グループのインターフェースは `defaultGroup` 名前空間に入る（`default` は TS の予約語のため識別子にできない）；
-- **swagger**：`info.version` は `ApidocConfig.version`（ドキュメント化された API バージョン）から取得し、未設定時は apidoc-rust のパッケージバージョン（現在 2.0.0）にフォールバック；path パラメータは URL テンプレートに基づくため、そのまま Swagger UI やコードジェネレータにインポート可能。
+- **swagger**：`info.version` は `ApidocConfig.version`（ドキュメント化された API バージョン）から取得し、未設定時は apidoc-rust のパッケージバージョン（現在 2.1.0）にフォールバック；path パラメータは URL テンプレートに基づくため、そのまま Swagger UI やコードジェネレータにインポート可能。
+- **asyncapi**：WebSocket、SSE、MQTT、Kafka、STOMP などのイベントエンドポイント向けの channel/operation/message を出力（AsyncAPI 2.6）。
 
 ### 7. actix-web アダプタ
 
@@ -264,7 +277,7 @@ Web フレームワークに actix-web を使う場合は `features = ["actix"]`
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.0", features = ["actix"] }
+apidoc-rust = { version = "2.1", features = ["actix"] }
 ```
 
 ```rust

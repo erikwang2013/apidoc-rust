@@ -42,7 +42,7 @@ apidoc-rust의 구현 방향:
 - **Json·TypeScript 생성**: 각 인터페이스의 Json 요청/응답 예시와 TypeScript 타입 정의를 자동 생성해 프런트엔드에서 바로 사용할 수 있습니다.
 - **코드 생성기**: 설정 + 템플릿으로 비즈니스 코드와 프런트엔드 Api 파일을 생성합니다.
 - **인터페이스 공유**: 지정한 앱/인터페이스의 공유 링크를 생성하고 `swagger.json`을 내보낼 수 있습니다.
-- **안전한 접근**: 전역 비밀번호와 앱/버전별 독립 비밀번호 권한 부여를 지원하며, 문서 캐시를 켤 수 있습니다.
+- **안전한 접근**: 전역 비밀번호와 앱/버전별 독립 비밀번호 권한 부여를 지원하며, 문서는 빌드 시 생성되어 로컬 응답이 p99 10ms 미만입니다.
 
 ## 기능
 
@@ -64,7 +64,7 @@ apidoc-rust의 구현 방향:
 
 ### 구현됨 (M5)
 
-- **3가지 형식 내보내기**(`crates/apidoc/src/export/`): markdown / typescript / swagger(OpenAPI 3.0.0), 코어 crate가 `export::markdown::render` / `export::typescript::render` / `export::swagger::render` 제공
+- **4가지 형식 내보내기**(`crates/apidoc/src/export/`): markdown / typescript / swagger(OpenAPI 3.0.0), 코어 crate가 `export::markdown::render` / `export::typescript::render` / `export::swagger::render` 제공
 - **내보내기 라우트**: 어댑터에 `GET /apidoc/export?format=md|ts|swagger` 추가, 알 수 없는 format은 400 반환; Content-Type은 각각 `text/markdown` / `application/typescript` / `application/json`
 - **markdown**: 그룹 목차 + 파라미터 테이블 + 응답 블록; **typescript**: group별 네임스페이스로 `{Name}Params` / `{Name}Result` 타입 생성, 그룹 없는 인터페이스는 `defaultGroup`에 포함(`default`는 TS 예약어); **swagger**: `info.version`은 Cargo 패키지 버전 사용
 - **actix-web 어댑터**(`crates/apidoc/src/actix.rs`): axum 어댑터와 기능 1:1 — `apidoc_routes(ApidocConfig) -> Scope`로 /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export 마운트, `cors_layer(CorsConfig)`로 크로스 오리진 허용
@@ -79,10 +79,21 @@ apidoc-rust의 구현 방향:
 ### 구현됨 (v2)
 
 - **데이터 테이블 필드 참조(`table`)**: `#[apidoc::table("user")]`는 `ApidocConfig.tables`에 해당 key로 설정된 테이블의 필드를 `returned`에 **평탄화**해 병합합니다(`ref`와 같은 의미이며, 데이터 소스가 다른 엔드포인트가 아니라 설정 테이블이라는 점만 다릅니다); 필드는 `required` / `default` / `desc` / `mock` 지원; 설정되지 않은 key는 stderr 경고만 발생; 이 주석을 사용하지 않으면 출력은 v1과 바이트 수준 동일
-- **문서 캐시**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — `/apidoc/mock` 출력을 `(url, method)` 기준으로 프로세스 내 메모이제이션하고 `ttl`초 후 만료되어 재생성, `ttl = 0`은 영구를 의미; 미설정이거나 비활성이면 캐시 경로를 전혀 타지 않음(출력 변화 없음). api.json / export는 라우트 마운트 시 이미 한 번 생성되므로 영구 캐시와 동등
+- **빌드 시 물질화**: api.json, 내보내기, codegen 템플릿, `/apidoc/mock` 본문은 라우트 마운트 시 한 번 생성되며 요청 시에는 테이블 조회만 합니다. `ApidocConfig.cache`는 호환성을 위해 남아 있지만 mock 응답에 요청 시 메모이제이션이 더 이상 필요하지 않습니다
 - **공유 링크**: `GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` 딥링크(`?app=<key>&ep=<인터페이스 url>&method=<메서드>[&token=…]`); 문서 페이지의 각 인터페이스 옆에 「공유」 버튼(클립보드에 기록, 실패 시 복사 가능한 입력 상자로 폴백)이 있고, 딥링크를 열면 해당 앱/인터페이스로 바로 이동; 인증 활성화 시 링크에 서버가 발급한 token이 붙어(앱 독립 비밀번호가 전역 비밀번호보다 우선) 열면 비밀번호 불필요
 - **코드 생성기**: `GET /apidoc/generate?template=<name>` → 렌더링된 텍스트(알 수 없는 템플릿은 404); 내장 `api.ts`(프런트엔드 Api 파일), `handler.rs`(Rust 인터페이스 골격), `schema.sql`(`tables` 기준 CREATE TABLE 문 생성); `ApidocConfig.codegen`의 동명 템플릿이 내장을 덮어씀. 템플릿 문법은 두 가지뿐: `{{변수}}`(정의되지 않으면 그대로 유지)와 `{{#each 목록}}…{{/each}}`(중첩 가능, 예: `tables` × `fields`)
 - **디버깅 이벤트**: 온라인 디버깅 패널에 접이식 「사전 스크립트 / 사후 스크립트」(localStorage에 영속화) 추가 — 사전 스크립트는 `new Function('ctx', code)`로 요청 전에 실행되며 `ctx.url/method/headers/body`를 변경하거나 객체를 반환해 얕게 병합할 수 있고; 사후 스크립트는 응답 후 실행되어 `status/ms/text/url/method/ep`를 읽을 수 있으며 문자열을 반환하면 표시되는 응답 텍스트를 교체; 스크립트 오류는 결과 영역에만 표시되고 요청을 중단하지 않음
+
+## 멀티 프로토콜 문서화 및 디버깅(P1–P6)
+
+![apidoc-rust 멀티 프로토콜 디버그 아키텍처](../images/multiprotocol-en.svg)
+
+- **45개 프로토콜 애노테이션**과 범용 `#[apidoc::protocol("kind", ...)]`; `event`는 스트림 메시지를, `param(..., field = "1")`은 프로토콜 필드 번호를 선언합니다.
+- **브라우저 직접 디버깅**(Rust 의존성 없음): SOAP, GraphQL(subscription 포함), JSON-RPC, XML-RPC, OData, MCP, A2A, Webhooks, WebSocket(텍스트/바이너리), SSE, Socket.IO, STOMP(바이너리 포함), WebRTC/DataChannel, HLS.
+- **서버 측 실행기**(feature-gated): HTTP/2, HTTP/3, gRPC, Thrift, Dubbo/Hessian2, ISO 8583, TCP/UDP/Raw/Unix, MQTT, AMQP, Kafka, XMPP, STOMP/TCP, CoAP, LwM2M, Modbus, DNP3, IEC 104, BACnet/IP, OPC UA, RTP/RTCP/RTSP/SIP/RTMP. `debug-all`로 한 번에 활성화합니다.
+- **P6**: Webhook 캡처, AsyncAPI 2.6 내보내기, `apidoc-idl` CLI를 통한 `.proto`/`.thrift` 가져오기, Dubbo Nacos 레지스트리, 이벤트 기반 mock 예제.
+- **보안**: 서버 측 디버깅은 기본적으로 꺼져 있으며 전역 인증이 필요합니다. SSRF 가드는 확인한 각 IP를 검증하고 연결을 고정하며, 리디렉션/프록시와 클라우드 메타데이터는 거부합니다. 크기/프레임/타임아웃은 상한이 있으며, 고정 TLS가 없는 프로토콜은 fail closed입니다.
+- **성능**: 문서, 내보내기, codegen, mock 본문은 빌드 시 생성됩니다. apidoc 로컬 라우트는 p99 10ms 미만입니다(`tests/latency.rs`).
 
 ## 아키텍처
 
@@ -101,7 +112,7 @@ apidoc-rust의 구현 방향:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 설정(resolver 2)
-├── VERSION                    # 프로젝트 버전(v2.0.0)
+├── VERSION                    # 프로젝트 버전(v2.1.0)
 ├── crates/
 │   ├── apidoc/                # 런타임 코어(프레임워크 무관)
 │   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML
@@ -110,7 +121,7 @@ apidoc-rust/
 │   │   ├── src/ui.html        # 공유 문서 UI(코어 crate에서 내보내며, 두 어댑터가 참조)
 │   │   ├── tests/             # 통합 테스트(매크로 확장/집계/직렬화/크로스 crate)
 │   │   └── examples/demo.rs   # 예제: 주석 + api.json 출력
-│   ├── apidoc-macros/         # proc-macro: 20개 속성 매크로
+│   ├── apidoc-macros/         # proc-macro: 65+ 속성 매크로(45개 프로토콜 별칭 포함)
 │   │   └── src/lib.rs         # 매크로 정의 + 파라미터 파싱 + 컴파일 타임 검증
 
 │   ├── apidoc-test-fixtures/  # 크로스 crate 등록 테스트 픽스처
@@ -128,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.0"        # 또는 path = "crates/apidoc"
+apidoc-rust = "2.1"        # 또는 path = "crates/apidoc"
 
 serde_json = "1"      # api.json 출력용
 linkme = "0.3"        # 필수: 매크로가 생성한 등록 코드가 이를 참조합니다
@@ -246,17 +257,19 @@ fn create_user() -> String {
 
 ### 6. 온라인 내보내기(M5)
 
-어댑터에 내장된 3가지 형식 내보내기 인터페이스, 연결 후 바로 사용(알 수 없는 `format`은 400 반환):
+어댑터에 내장된 4가지 형식 내보내기 인터페이스, 연결 후 바로 사용(알 수 없는 `format`은 400 반환):
 
 ```bash
 GET /apidoc/export?format=md        # 그룹 목차 + 파라미터 테이블 + 응답 블록(text/markdown)
 GET /apidoc/export?format=ts        # group별 네임스페이스로 {Name}Params / {Name}Result 타입 생성(application/typescript)
 GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 설명 파일(application/json)
+GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: 프로젝트 Wiki / 릴리스 노트에 붙여넣기 적합, 그룹별 목차 출력, 각 인터페이스에 파라미터 테이블과 응답 블록 포함;
 - **typescript**: 프론트엔드가 바로 타입 정의로 붙여넣기 가능; 그룹 없는 인터페이스는 `defaultGroup` 네임스페이스에 포함(`default`는 TS 예약어라 식별자로 사용 불가);
-- **swagger**: `info.version`은 `ApidocConfig.version`(문서화된 API 버전)에서 가져오고, 미설정 시 apidoc-rust 패키지 버전(현재 2.0.0)으로 폴백; path 파라미터는 URL 템플릿 기준이므로 Swagger UI나 코드 생성기에 바로 가져올 수 있습니다.
+- **swagger**: `info.version`은 `ApidocConfig.version`(문서화된 API 버전)에서 가져오고, 미설정 시 apidoc-rust 패키지 버전(현재 2.1.0)으로 폴백; path 파라미터는 URL 템플릿 기준이므로 Swagger UI나 코드 생성기에 바로 가져올 수 있습니다.
+- **asyncapi**: WebSocket, SSE, MQTT, Kafka, STOMP 등 이벤트 엔드포인트의 channel/operation/message 생성(AsyncAPI 2.6).
 
 ### 7. actix-web 어댑터
 
@@ -264,7 +277,7 @@ Web 프레임워크로 actix-web을 사용할 때 `features = ["actix"]` 연결(
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.0", features = ["actix"] }
+apidoc-rust = { version = "2.1", features = ["actix"] }
 ```
 
 ```rust

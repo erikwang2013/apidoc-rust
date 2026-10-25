@@ -1,97 +1,103 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 815" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 850" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="815" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="815" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="850" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="850" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Project Features (M1–M6 Complete)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Project Features (M1–M6 + P1–P6)</text>
 
   <!-- Card 1 -->
-  <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
-  <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">Annotation-based Documentation</text>
-  <text x="60" y="130" font-size="13" fill="#333">M1 seven macros: title / desc / method / url / param / query / returned</text>
-  <text x="60" y="150" font-size="13" fill="#333">M3 adds 12: tag / group / author / header / route_param /</text>
-  <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
-  <text x="60" y="190" font-size="13" fill="#333">Params support nested required / default / desc / mock / children</text>
+  <rect x="40" y="78" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="68" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="84" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
+  <text x="60" y="114" font-size="17" font-weight="bold" fill="#1e8449">Annotation-based Docs</text>
+  <text x="60" y="138" font-size="12.5" fill="#333">7 base macros: title/desc/method/url/param/query/returned</text>
+  <text x="60" y="156" font-size="12.5" fill="#333">M3 adds tag/group/header/table/ref/sort/md</text>
+  <text x="60" y="174" font-size="12.5" fill="#333">P1–P6 adds 45 protocol annotations + events</text>
+  <text x="60" y="192" font-size="12.5" fill="#333">Params: required/default/desc/mock/children</text>
 
   <!-- Card 2 -->
-  <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="740" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
-  <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">Compile-time Validation</text>
-  <text x="500" y="130" font-size="13" fill="#333">url must start with /, method whitelist, param name required</text>
-  <text x="500" y="150" font-size="13" fill="#333">Invalid annotations fail at compile time (precise span); docs never drift from code</text>
-  <text x="500" y="190" font-size="13" fill="#333">The 12 extended annotations (M3) are fully validated too</text>
+  <rect x="480" y="78" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="68" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="84" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
+  <text x="500" y="114" font-size="17" font-weight="bold" fill="#1e8449">Compile-time Validation</text>
+  <text x="500" y="138" font-size="12.5" fill="#333">url starts with /, method whitelist, name required</text>
+  <text x="500" y="156" font-size="12.5" fill="#333">Invalid annotations fail the build with precise spans</text>
+  <text x="500" y="174" font-size="12.5" fill="#333">Docs and code can never drift apart</text>
+  <text x="500" y="192" font-size="12.5" fill="#333">All 45 protocol alias kinds are validated too</text>
 
   <!-- Card 3 -->
-  <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="300" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
-  <text x="60" y="256" font-size="17" font-weight="bold" fill="#1e8449">Automatic Collection</text>
-  <text x="60" y="280" font-size="13" fill="#333">linkme distributed_slice static registration, no manual endpoint list</text>
-  <text x="60" y="300" font-size="13" fill="#333">DocRegistry::collect() merges by id, restores declaration order by seq</text>
-  <text x="60" y="320" font-size="13" fill="#333">Cross-crate collection: scanning code yields every endpoint</text>
+  <rect x="40" y="224" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="214" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="230" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
+  <text x="60" y="260" font-size="17" font-weight="bold" fill="#1e8449">Automatic Collection</text>
+  <text x="60" y="284" font-size="12.5" fill="#333">linkme distributed_slice static registration</text>
+  <text x="60" y="302" font-size="12.5" fill="#333">DocRegistry::collect() merges by id and seq</text>
+  <text x="60" y="320" font-size="12.5" fill="#333">Cross-crate collection, zero runtime cost</text>
+  <text x="60" y="338" font-size="12.5" fill="#333">api.json built once when routes are mounted</text>
 
   <!-- Card 4 -->
-  <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M2</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">axum / actix Adapters + Docs UI</text>
-  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (UI) · /apidoc/api.json · /apidoc/mock</text>
-  <text x="500" y="300" font-size="13" fill="#333">apidoc-actix: thin wrapper, 4 routes incl. /apidoc/export (M5)</text>
-  <text x="500" y="320" font-size="13" fill="#333">Embedded docs UI debug panel (static Html, zero external deps)</text>
+  <rect x="480" y="224" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="214" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="230" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M2</text>
+  <text x="500" y="260" font-size="17" font-weight="bold" fill="#1e8449">axum / actix + Docs UI</text>
+  <text x="500" y="284" font-size="12.5" fill="#333">apidoc-axum / apidoc-actix, 1:1 feature parity</text>
+  <text x="500" y="302" font-size="12.5" fill="#333">apidoc, api.json, mock, export, auth, share, generate</text>
+  <text x="500" y="320" font-size="12.5" fill="#333">debug, stream, webhook routes + CORS</text>
+  <text x="500" y="338" font-size="12.5" fill="#333">Embedded HTML docs UI, zero external deps</text>
 
   <!-- Card 5 -->
   <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="300" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M4</text>
-  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">Online Debugging + Mock Engine</text>
-  <text x="60" y="430" font-size="13" fill="#333">Debug panel: mock prefill + browser CORS direct to target endpoint</text>
-  <text x="60" y="450" font-size="13" fill="#333">crates/apidoc-mock engine: depends on the fake crate for data</text>
-  <text x="60" y="470" font-size="13" fill="#333">15 rules: name/email/phone/IP/URL/UUID/date/number/float/bool/text…</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">Online Debug + Mock</text>
+  <text x="60" y="430" font-size="12.5" fill="#333">Mock prefill + browser CORS direct requests</text>
+  <text x="60" y="448" font-size="12.5" fill="#333">Params, headers, pre/post scripts, response view</text>
+  <text x="60" y="466" font-size="12.5" fill="#333">Mock engine: 15 fake rules, nested children</text>
+  <text x="60" y="484" font-size="12.5" fill="#333">Server-side executors for 40+ protocols</text>
 
   <!-- Card 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M5</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">Three-format Export (M5)</text>
-  <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI 3.0)</text>
-  <text x="500" y="450" font-size="13" fill="#333">info.version taken from the Cargo package version (build-time pre-serialization)</text>
-  <text x="500" y="470" font-size="13" fill="#333">UI / api.json / export share the same data model</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">Exports + Codegen</text>
+  <text x="500" y="430" font-size="12.5" fill="#333">md / ts / swagger (OpenAPI 3.0) / asyncapi 2.6</text>
+  <text x="500" y="448" font-size="12.5" fill="#333">Built-in api.ts, handler.rs, schema.sql</text>
+  <text x="500" y="466" font-size="12.5" fill="#333">Custom templates via ApidocConfig.codegen</text>
+  <text x="500" y="484" font-size="12.5" fill="#333">All artifacts materialized at build time</text>
 
-  <!-- Card 7: M6a password auth -->
-  <rect x="40" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M6a</text>
-  <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">Password Auth</text>
-  <text x="60" y="580" font-size="13" fill="#333">POST /apidoc/auth (JSON body) exchanges for a token</text>
-  <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock require ?token=; missing/expired/invalid returns 401</text>
-  <text x="60" y="620" font-size="13" fill="#333">HMAC-SHA256 signed token (constant-time MAC check)</text>
-  <text x="60" y="640" font-size="13" fill="#333">password / secret_key are never serialized · app password overrides global</text>
+  <!-- Card 7 -->
+  <rect x="40" y="516" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="506" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="522" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M6a</text>
+  <text x="60" y="552" font-size="17" font-weight="bold" fill="#1e8449">Password Auth</text>
+  <text x="60" y="576" font-size="12.5" fill="#333">POST /apidoc/auth exchanges password for token</text>
+  <text x="60" y="594" font-size="12.5" fill="#333">Data routes require ?token=; otherwise 401</text>
+  <text x="60" y="612" font-size="12.5" fill="#333">HMAC-SHA256, constant-time compare</text>
+  <text x="60" y="630" font-size="12.5" fill="#333">Secrets never serialized; random fallback key</text>
 
-  <!-- Card 8: M6b multi-app multi-version -->
-  <rect x="480" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="740" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M6b</text>
-  <text x="500" y="556" font-size="17" font-weight="bold" fill="#1e8449">Multi-app Multi-version</text>
-  <text x="500" y="580" font-size="13" fill="#333">#[apidoc::app("key")] mounts endpoints · ApidocConfig.apps config tree</text>
-  <text x="500" y="600" font-size="13" fill="#333">api.json outputs the doc.apps tree (key / title / items recursive)</text>
-  <text x="500" y="620" font-size="13" fill="#333">UI top app/version selector · tokens stored per appKey in localStorage</text>
-  <text x="500" y="640" font-size="13" fill="#333">Unmounted endpoints fall into the default app · byte-identical to M5 when unconfigured</text>
+  <!-- Card 8 -->
+  <rect x="480" y="516" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="506" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="522" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M6b</text>
+  <text x="500" y="552" font-size="17" font-weight="bold" fill="#1e8449">Multi-app Multi-version</text>
+  <text x="500" y="576" font-size="12.5" fill="#333">#[apidoc::app("key")] + ApidocConfig.apps tree</text>
+  <text x="500" y="594" font-size="12.5" fill="#333">api.json emits doc.apps (key/title/items)</text>
+  <text x="500" y="612" font-size="12.5" fill="#333">UI app/version picker; token per appKey</text>
+  <text x="500" y="630" font-size="12.5" fill="#333">Unannotated endpoints land in default app</text>
 
-  <!-- Card 9: v2 planning -->
-  <rect x="40" y="670" width="860" height="120" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="740" y="660" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="815" y="676" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Planned</text>
-  <text x="60" y="706" font-size="17" font-weight="bold" fill="#566573">v2 Planning</text>
-  <text x="60" y="730" font-size="13" fill="#333">Code generator · data table field references · share links · debug events</text>
-  <text x="60" y="750" font-size="13" fill="#333">Adapters: axum / actix both covered (1:1 features)</text>
-  <text x="60" y="770" font-size="13" fill="#333">M1–M6 all complete (incl. password auth · multi-app multi-version)</text>
+  <!-- Card 9 -->
+  <rect x="40" y="662" width="860" height="130" rx="10" fill="#eaf7ef" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="652" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="668" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Done</text>
+  <text x="60" y="698" font-size="17" font-weight="bold" fill="#1e8449">Multi-Protocol / Integrations</text>
+  <text x="60" y="722" font-size="12.5" fill="#333">Protocol annotations · browser-direct · server executors · Webhook · AsyncAPI</text>
+  <text x="60" y="740" font-size="12.5" fill="#333">40+ protocols with server executors; one feature per protocol family</text>
+  <text x="60" y="758" font-size="12.5" fill="#333">proto/thrift IDL import · Dubbo Nacos registry · event-based mocks</text>
+  <text x="60" y="776" font-size="12.5" fill="#333">Zero heavy deps by default · M1–M6 + P1–P6 all complete</text>
 
-  <text x="470" y="805" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <text x="470" y="830" text-anchor="middle" font-size="12" fill="#888">watermark: https://erik.xyz</text>
 </svg>

@@ -42,7 +42,7 @@ Pendekatan implementasi apidoc-rust:
 - **Pembuatan Json/TypeScript**: setiap antarmuka otomatis menghasilkan contoh permintaan/respons Json dan definisi tipe TypeScript, siap dipakai langsung di frontend.
 - **Generator kode**: konfigurasi + template cukup untuk menghasilkan kode bisnis dan file Api frontend.
 - **Berbagi antarmuka**: dapat menghasilkan tautan berbagi untuk aplikasi/antarmuka tertentu dan mengekspor `swagger.json`.
-- **Akses aman**: mendukung otorisasi kata sandi global dan kata sandi independen per aplikasi/versi, serta dapat mengaktifkan cache dokumentasi.
+- **Akses aman**: mendukung otorisasi kata sandi global dan kata sandi independen per aplikasi/versi; dokumen dimaterialisasi saat build dan respons lokal di bawah p99 10ms.
 
 ## Fitur
 
@@ -64,7 +64,7 @@ Pendekatan implementasi apidoc-rust:
 
 ### Sudah Diimplementasikan (M5)
 
-- **Ekspor tiga format** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), crate inti menyediakan `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
+- **Ekspor empat format** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), crate inti menyediakan `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **Rute ekspor**: adaptor menambah `GET /apidoc/export?format=md|ts|swagger`, format tidak dikenal mengembalikan 400; Content-Type masing-masing `text/markdown` / `application/typescript` / `application/json`
 - **markdown**: direktori berkelompok + tabel parameter + blok respons; **typescript**: menghasilkan tipe `{Name}Params` / `{Name}Result` per namespace group, antarmuka tanpa group masuk ke `defaultGroup` (`default` kata cadangan TS); **swagger**: `info.version` diambil dari versi paket Cargo
 - **Adaptor actix-web** (`crates/apidoc/src/actix.rs`): fungsionalitas 1:1 dengan adaptor axum — `apidoc_routes(ApidocConfig) -> Scope` memasang /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` mengizinkan lintas-domain
@@ -79,10 +79,21 @@ Pendekatan implementasi apidoc-rust:
 ### Sudah Diimplementasikan (v2)
 
 - **Referensi field tabel data (`table`)**: `#[apidoc::table("user")]` menggabungkan field tabel yang dikonfigurasi berdasarkan key di `ApidocConfig.tables` dengan cara **meratakan** field ke dalam `returned` (semantik sama dengan `ref`; bedanya sumber data adalah tabel konfigurasi, bukan endpoint lain); field mendukung `required` / `default` / `desc` / `mock`; key yang tidak dikonfigurasi hanya memberi peringatan di stderr; tanpa anotasi ini output identik byte demi byte dengan v1
-- **Cache dokumentasi**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — output `/apidoc/mock` dimemoisasi di dalam proses berdasarkan `(url, method)` dan dibangun ulang setelah `ttl` detik; `ttl = 0` berarti permanen; jika tidak dikonfigurasi atau nonaktif, jalur cache sama sekali tidak dilalui (output tidak berubah). api.json / export sudah dibangun sekali saat rute dipasang, setara cache permanen
+- **Materialisasi saat build**: api.json, ekspor, template codegen, dan body `/apidoc/mock` dibuat sekali saat rute dipasang; permintaan hanya melakukan pencarian tabel. `ApidocConfig.cache` dipertahankan untuk kompatibilitas, tetapi respons mock tidak lagi memerlukan memoisasi saat permintaan
 - **Tautan berbagi**: `GET /apidoc/share?app=&url=&method=&base=` → tautan dalam `{"url":"…"}` (`?app=<key>&ep=<url antarmuka>&method=<metode>[&token=…]`); di halaman dokumentasi setiap antarmuka memiliki tombol «Bagikan» (menulis ke clipboard; jika gagal, turun ke kolom teks yang bisa disalin); membuka tautan dalam langsung menuju aplikasi/antarmuka tersebut; saat otentikasi aktif tautan membawa token yang diterbitkan server (kata sandi independen aplikasi diutamakan dari global) dan terbuka tanpa kata sandi
 - **Generator kode**: `GET /apidoc/generate?template=<name>` → teks hasil render (template tidak dikenal → 404); menyertakan `api.ts` (file Api frontend), `handler.rs` (kerangka antarmuka Rust), `schema.sql` (pernyataan pembuatan tabel yang dihasilkan dari `tables`); template dengan nama sama di `ApidocConfig.codegen` menimpa template bawaan. Sintaks template hanya ada dua: `{{variabel}}` (jika tidak terdefinisi dipertahankan apa adanya) dan `{{#each daftar}}…{{/each}}` (bisa bersarang, mis. `tables` × `fields`)
 - **Peristiwa debugging**: panel debugging online menambah blok «Skrip Pra» / «Skrip Pasca» yang bisa dilipat (dipersistensi ke localStorage) — skrip Pra dijalankan sebelum permintaan dengan `new Function('ctx', code)`, dapat mengubah `ctx.url/method/headers/body` atau mengembalikan objek untuk penggabungan dangkal; skrip Pasca dijalankan setelah respons dan dapat membaca `status/ms/text/url/method/ep`; jika mengembalikan string, string tersebut menggantikan teks respons yang ditampilkan; error skrip hanya diberitahukan di area hasil dan tidak menghentikan permintaan
+
+## Dokumentasi dan Debug Multi-Protokol (P1–P6)
+
+![Arsitektur debug multi-protokol apidoc-rust](../images/multiprotocol-en.svg)
+
+- **45 anotasi protokol** plus bentuk generik `#[apidoc::protocol("kind", ...)]`; `event` mendeklarasikan pesan stream dan `param(..., field = "1")` mendeklarasikan nomor field protokol.
+- **Debug langsung di browser** (tanpa dependensi Rust): SOAP, GraphQL (termasuk subscription), JSON-RPC, XML-RPC, OData, MCP, A2A, Webhooks, WebSocket (teks/biner), SSE, Socket.IO, STOMP (termasuk biner), WebRTC/DataChannel, HLS.
+- **Eksekutor sisi server** (feature-gated): HTTP/2, HTTP/3, gRPC, Thrift, Dubbo/Hessian2, ISO 8583, TCP/UDP/Raw/Unix, MQTT, AMQP, Kafka, XMPP, STOMP/TCP, CoAP, LwM2M, Modbus, DNP3, IEC 104, BACnet/IP, OPC UA, RTP/RTCP/RTSP/SIP/RTMP. `debug-all` mengaktifkan semuanya.
+- **P6**: capture Webhook, ekspor AsyncAPI 2.6, impor `.proto`/`.thrift` melalui CLI `apidoc-idl`, registry Dubbo Nacos, contoh mock dari event.
+- **Keamanan**: debug sisi server mati secara default dan memerlukan autentikasi global; guard SSRF me-resolve dan memvalidasi setiap IP lalu mem-pin koneksi; redirect/proxy dan metadata cloud ditolak; ukuran/frame/timeout dibatasi; protokol tanpa TLS yang di-pin gagal tertutup.
+- **Performa**: dokumen, ekspor, codegen, dan body mock dimaterialisasi saat build; rute lokal apidoc tetap di bawah p99 10ms (`tests/latency.rs`).
 
 ## Arsitektur
 
@@ -101,7 +112,7 @@ Pendekatan implementasi apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Konfigurasi workspace (resolver 2)
-├── VERSION                    # Versi proyek (v2.0.0)
+├── VERSION                    # Versi proyek (v2.1.0)
 ├── crates/
 │   ├── apidoc/                # Inti runtime (independen kerangka kerja)
 │   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json + UI_HTML
@@ -110,7 +121,7 @@ apidoc-rust/
 │   │   ├── src/ui.html        # UI dokumentasi bersama (diekspor crate inti, dirujuk kedua adaptor)
 │   │   ├── tests/             # Tes integrasi (ekspansi makro/agregasi/serialisasi/antar-crate)
 │   │   └── examples/demo.rs   # Contoh: anotasi + output api.json
-│   ├── apidoc-macros/         # proc-macro: 20 makro atribut
+│   ├── apidoc-macros/         # proc-macro: 65+ makro atribut (termasuk 45 alias protokol)
 │   │   └── src/lib.rs         # Definisi makro + parsing parameter + validasi waktu kompilasi
 
 │   ├── apidoc-test-fixtures/  # Fixture pengujian registrasi antar-crate
@@ -128,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.0"        # atau path = "crates/apidoc"
+apidoc-rust = "2.1"        # atau path = "crates/apidoc"
 
 serde_json = "1"      # untuk output api.json
 linkme = "0.3"        # wajib: kode registrasi hasil makro merujuknya
@@ -246,17 +257,19 @@ fn create_user() -> String {
 
 ### 6. Ekspor Online (M5)
 
-Adaptor memiliki antarmuka ekspor tiga format bawaan, langsung bisa dipakai setelah dipasang (format `format` tidak dikenal mengembalikan 400):
+Adaptor memiliki antarmuka ekspor empat format bawaan, langsung bisa dipakai setelah dipasang (format `format` tidak dikenal mengembalikan 400):
 
 ```bash
 GET /apidoc/export?format=md        # direktori berkelompok + tabel parameter + blok respons (text/markdown)
 GET /apidoc/export?format=ts        # menghasilkan tipe {Name}Params / {Name}Result per namespace group (application/typescript)
 GET /apidoc/export?format=swagger   # file deskripsi OpenAPI 3.0.0 (application/json)
+GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: cocok ditempel ke Wiki proyek / catatan rilis, mengeluarkan direktori per grup, setiap antarmuka dengan tabel parameter dan blok respons;
 - **typescript**: frontend bisa langsung ditempel sebagai definisi tipe; antarmuka tanpa group masuk ke namespace `defaultGroup` (`default` kata cadangan TS, tidak bisa dijadikan pengenal);
-- **swagger**: `info.version` diambil dari `ApidocConfig.version` (versi API yang didokumentasikan); jika tidak diisi, memakai versi paket apidoc-rust (saat ini 2.0.0); parameter path diambil dari template URL, sehingga spesifikasinya bisa langsung diimpor ke Swagger UI atau generator kode.
+- **swagger**: `info.version` diambil dari `ApidocConfig.version` (versi API yang didokumentasikan); jika tidak diisi, memakai versi paket apidoc-rust (saat ini 2.1.0); parameter path diambil dari template URL, sehingga spesifikasinya bisa langsung diimpor ke Swagger UI atau generator kode.
+- **asyncapi**: channel/operation/message untuk endpoint event seperti WebSocket, SSE, MQTT, Kafka, STOMP (AsyncAPI 2.6).
 
 ### 7. Adaptor actix-web
 
@@ -264,7 +277,7 @@ Saat kerangka web memakai actix-web, pasang `features = ["actix"]` (fungsionalit
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.0", features = ["actix"] }
+apidoc-rust = { version = "2.1", features = ["actix"] }
 ```
 
 ```rust

@@ -1,97 +1,103 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 815" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 850" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="815" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="815" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="850" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="850" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">Fitur Proyek apidoc-rust (M1–M6 Selesai)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Project Features (M1–M6 + P1–P6)</text>
 
-  <!-- Kartu 1 -->
-  <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M1</text>
-  <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">Dokumentasi Berbasis Anotasi</text>
-  <text x="60" y="130" font-size="13" fill="#333">M1 tujuh makro: title / desc / method / url / param / query / returned</text>
-  <text x="60" y="150" font-size="13" fill="#333">M3 menambah 12: tag / group / author / header / route_param /</text>
-  <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
-  <text x="60" y="190" font-size="13" fill="#333">Parameter mendukung nesting required / default / desc / mock / children</text>
+  <!-- Card 1 -->
+  <rect x="40" y="78" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="68" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="84" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
+  <text x="60" y="114" font-size="17" font-weight="bold" fill="#1e8449">Annotation-based Docs</text>
+  <text x="60" y="138" font-size="12.5" fill="#333">7 base macros: title/desc/method/url/param/query/returned</text>
+  <text x="60" y="156" font-size="12.5" fill="#333">M3 adds tag/group/header/table/ref/sort/md</text>
+  <text x="60" y="174" font-size="12.5" fill="#333">P1–P6 adds 45 protocol annotations + events</text>
+  <text x="60" y="192" font-size="12.5" fill="#333">Params: required/default/desc/mock/children</text>
 
-  <!-- Kartu 2 -->
-  <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="740" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M1</text>
-  <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">Validasi Waktu Kompilasi</text>
-  <text x="500" y="130" font-size="13" fill="#333">url harus diawali /, whitelist method, param name wajib diisi</text>
-  <text x="500" y="150" font-size="13" fill="#333">Anotasi tidak valid error saat kompilasi (span presisi), dokumentasi selalu sinkron dengan kode</text>
-  <text x="500" y="190" font-size="13" fill="#333">12 anotasi perluasan M3 juga divalidasi penuh</text>
+  <!-- Card 2 -->
+  <rect x="480" y="78" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="68" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="84" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
+  <text x="500" y="114" font-size="17" font-weight="bold" fill="#1e8449">Compile-time Validation</text>
+  <text x="500" y="138" font-size="12.5" fill="#333">url starts with /, method whitelist, name required</text>
+  <text x="500" y="156" font-size="12.5" fill="#333">Invalid annotations fail the build with precise spans</text>
+  <text x="500" y="174" font-size="12.5" fill="#333">Docs and code can never drift apart</text>
+  <text x="500" y="192" font-size="12.5" fill="#333">All 45 protocol alias kinds are validated too</text>
 
-  <!-- Kartu 3 -->
-  <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="300" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M1</text>
-  <text x="60" y="256" font-size="17" font-weight="bold" fill="#1e8449">Pengumpulan Otomatis</text>
-  <text x="60" y="280" font-size="13" fill="#333">Registrasi statis linkme distributed_slice, tanpa daftar API manual</text>
-  <text x="60" y="300" font-size="13" fill="#333">DocRegistry::collect() menggabungkan berdasarkan id, mengembalikan urutan deklarasi berdasarkan seq</text>
-  <text x="60" y="320" font-size="13" fill="#333">Pengumpulan otomatis antar-crate, setara dengan "memindai kode langsung mendapat semua API"</text>
+  <!-- Card 3 -->
+  <rect x="40" y="224" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="214" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="230" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
+  <text x="60" y="260" font-size="17" font-weight="bold" fill="#1e8449">Automatic Collection</text>
+  <text x="60" y="284" font-size="12.5" fill="#333">linkme distributed_slice static registration</text>
+  <text x="60" y="302" font-size="12.5" fill="#333">DocRegistry::collect() merges by id and seq</text>
+  <text x="60" y="320" font-size="12.5" fill="#333">Cross-crate collection, zero runtime cost</text>
+  <text x="60" y="338" font-size="12.5" fill="#333">api.json built once when routes are mounted</text>
 
-  <!-- Kartu 4 -->
-  <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M2</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">Adaptor axum / actix + UI Dokumentasi</text>
-  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (UI) · /apidoc/api.json · /apidoc/mock</text>
-  <text x="500" y="300" font-size="13" fill="#333">apidoc-actix: pembungkus tipis, 4 rute termasuk /apidoc/export (M5)</text>
-  <text x="500" y="320" font-size="13" fill="#333">Panel debugging UI dokumentasi tertanam (halaman statis Html, tanpa dependensi eksternal)</text>
+  <!-- Card 4 -->
+  <rect x="480" y="224" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="214" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="230" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M2</text>
+  <text x="500" y="260" font-size="17" font-weight="bold" fill="#1e8449">axum / actix + Docs UI</text>
+  <text x="500" y="284" font-size="12.5" fill="#333">apidoc-axum / apidoc-actix, 1:1 feature parity</text>
+  <text x="500" y="302" font-size="12.5" fill="#333">apidoc, api.json, mock, export, auth, share, generate</text>
+  <text x="500" y="320" font-size="12.5" fill="#333">debug, stream, webhook routes + CORS</text>
+  <text x="500" y="338" font-size="12.5" fill="#333">Embedded HTML docs UI, zero external deps</text>
 
-  <!-- Kartu 5 -->
+  <!-- Card 5 -->
   <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="300" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M4</text>
-  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">Debugging Online + Mesin Mock</text>
-  <text x="60" y="430" font-size="13" fill="#333">Panel debugging: praisi mock + koneksi langsung CORS browser ke API target</text>
-  <text x="60" y="450" font-size="13" fill="#333">Mesin crates/apidoc-mock: bergantung pada crate fake untuk menghasilkan data</text>
-  <text x="60" y="470" font-size="13" fill="#333">15 aturan: nama/email/telepon/IP/URL/UUID/tanggal/angka/float/boolean/teks…</text>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M4</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">Online Debug + Mock</text>
+  <text x="60" y="430" font-size="12.5" fill="#333">Mock prefill + browser CORS direct requests</text>
+  <text x="60" y="448" font-size="12.5" fill="#333">Params, headers, pre/post scripts, response view</text>
+  <text x="60" y="466" font-size="12.5" fill="#333">Mock engine: 15 fake rules, nested children</text>
+  <text x="60" y="484" font-size="12.5" fill="#333">Server-side executors for 40+ protocols</text>
 
-  <!-- Kartu 6 -->
+  <!-- Card 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M5</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">Ekspor Tiga Format (M5)</text>
-  <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI 3.0)</text>
-  <text x="500" y="450" font-size="13" fill="#333">info.version diambil dari versi paket Cargo (pra-serialisasi saat build)</text>
-  <text x="500" y="470" font-size="13" fill="#333">UI / api.json / ekspor berbagi model data yang sama</text>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M5</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">Exports + Codegen</text>
+  <text x="500" y="430" font-size="12.5" fill="#333">md / ts / swagger (OpenAPI 3.0) / asyncapi 2.6</text>
+  <text x="500" y="448" font-size="12.5" fill="#333">Built-in api.ts, handler.rs, schema.sql</text>
+  <text x="500" y="466" font-size="12.5" fill="#333">Custom templates via ApidocConfig.codegen</text>
+  <text x="500" y="484" font-size="12.5" fill="#333">All artifacts materialized at build time</text>
 
-  <!-- Kartu 7: M6a otentikasi kata sandi -->
-  <rect x="40" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M6a</text>
-  <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">Otentikasi Kata Sandi</text>
-  <text x="60" y="580" font-size="13" fill="#333">POST /apidoc/auth (JSON body) untuk token</text>
-  <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock wajib membawa ?token=, tidak ada/kadaluarsa/salah mengembalikan 401</text>
-  <text x="60" y="620" font-size="13" fill="#333">Tanda tangan HMAC-SHA256 (MAC waktu konstan)</text>
-  <text x="60" y="640" font-size="13" fill="#333">password / secret_key tidak pernah diserialisasi · kata sandi aplikasi diutamakan dari global</text>
+  <!-- Card 7 -->
+  <rect x="40" y="516" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="506" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="522" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M6a</text>
+  <text x="60" y="552" font-size="17" font-weight="bold" fill="#1e8449">Password Auth</text>
+  <text x="60" y="576" font-size="12.5" fill="#333">POST /apidoc/auth exchanges password for token</text>
+  <text x="60" y="594" font-size="12.5" fill="#333">Data routes require ?token=; otherwise 401</text>
+  <text x="60" y="612" font-size="12.5" fill="#333">HMAC-SHA256, constant-time compare</text>
+  <text x="60" y="630" font-size="12.5" fill="#333">Secrets never serialized; random fallback key</text>
 
-  <!-- Kartu 8: M6b multi-aplikasi multi-versi -->
-  <rect x="480" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="740" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Sudah Diimplementasikan M6b</text>
-  <text x="500" y="556" font-size="17" font-weight="bold" fill="#1e8449">Multi-Aplikasi Multi-Versi</text>
-  <text x="500" y="580" font-size="13" fill="#333">#[apidoc::app("key")] memasang API · pohon konfigurasi ApidocConfig.apps</text>
-  <text x="500" y="600" font-size="13" fill="#333">api.json mengeluarkan pohon doc.apps (key / title / items rekursif)</text>
-  <text x="500" y="620" font-size="13" fill="#333">Pemilih aplikasi/versi di bagian atas UI · token disimpan di localStorage per appKey</text>
-  <text x="500" y="640" font-size="13" fill="#333">API tanpa app masuk ke aplikasi default · tanpa konfigurasi, identik bit-per-bit dengan M5</text>
+  <!-- Card 8 -->
+  <rect x="480" y="516" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="506" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="522" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M6b</text>
+  <text x="500" y="552" font-size="17" font-weight="bold" fill="#1e8449">Multi-app Multi-version</text>
+  <text x="500" y="576" font-size="12.5" fill="#333">#[apidoc::app("key")] + ApidocConfig.apps tree</text>
+  <text x="500" y="594" font-size="12.5" fill="#333">api.json emits doc.apps (key/title/items)</text>
+  <text x="500" y="612" font-size="12.5" fill="#333">UI app/version picker; token per appKey</text>
+  <text x="500" y="630" font-size="12.5" fill="#333">Unannotated endpoints land in default app</text>
 
-  <!-- Kartu 9: rencana v2 -->
-  <rect x="40" y="670" width="860" height="120" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="740" y="660" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="815" y="676" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Dalam Rencana</text>
-  <text x="60" y="706" font-size="17" font-weight="bold" fill="#566573">Rencana v2</text>
-  <text x="60" y="730" font-size="13" fill="#333">Generator kode · referensi kolom tabel data · tautan berbagi · event debugging</text>
-  <text x="60" y="750" font-size="13" fill="#333">Adaptor: axum / actix sudah tercover (fitur 1:1)</text>
-  <text x="60" y="770" font-size="13" fill="#333">M1–M6 semua selesai (termasuk otentikasi kata sandi · multi-aplikasi multi-versi)</text>
+  <!-- Card 9 -->
+  <rect x="40" y="662" width="860" height="130" rx="10" fill="#eaf7ef" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="652" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="668" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Done</text>
+  <text x="60" y="698" font-size="17" font-weight="bold" fill="#1e8449">Multi-Protocol / Integrations</text>
+  <text x="60" y="722" font-size="12.5" fill="#333">Protocol annotations · browser-direct · server executors · Webhook · AsyncAPI</text>
+  <text x="60" y="740" font-size="12.5" fill="#333">40+ protocols with server executors; one feature per protocol family</text>
+  <text x="60" y="758" font-size="12.5" fill="#333">proto/thrift IDL import · Dubbo Nacos registry · event-based mocks</text>
+  <text x="60" y="776" font-size="12.5" fill="#333">Zero heavy deps by default · M1–M6 + P1–P6 all complete</text>
 
-  <text x="470" y="805" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <text x="470" y="830" text-anchor="middle" font-size="12" fill="#888">watermark: https://erik.xyz</text>
 </svg>

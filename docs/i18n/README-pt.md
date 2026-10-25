@@ -42,7 +42,7 @@ Abordagem de implementação do apidoc-rust:
 - **Geração Json/TypeScript**: cada endpoint gera automaticamente exemplos de requisição/resposta Json e definições de tipos TypeScript, prontos para uso direto no frontend.
 - **Gerador de código**: com configuração + templates é possível gerar o código de negócio e os arquivos Api do frontend.
 - **Compartilhamento de endpoints**: permite gerar links de compartilhamento de um aplicativo/endpoint específico e exportar `swagger.json`.
-- **Acesso seguro**: suporta autorização com senha global e senhas independentes por aplicativo/versão, além de permitir ativar o cache de documentação.
+- **Acesso seguro**: suporta autorização com senha global e senhas independentes por aplicativo/versão; a documentação é materializada na compilação e as respostas locais ficam abaixo de 10 ms p99.
 
 ## Recursos
 
@@ -64,7 +64,7 @@ Abordagem de implementação do apidoc-rust:
 
 ### Implementado (M5)
 
-- **Exportação em três formatos** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0); o crate central fornece `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
+- **Exportação em quatro formatos** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0); o crate central fornece `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **Rotas de exportação**: os adaptadores adicionam `GET /apidoc/export?format=md|ts|swagger`, formato desconhecido → 400; Content-Type: `text/markdown` / `application/typescript` / `application/json`
 - **markdown**: índice por grupos + tabela de parâmetros + bloco de resposta; **typescript**: gera os tipos `{Name}Params` / `{Name}Result` por namespace de grupo, endpoints sem grupo caem em `defaultGroup` (`default` é palavra reservada de TS); **swagger**: `info.version` vem da versão do pacote Cargo
 - **Adaptador actix-web** (`crates/apidoc/src/actix.rs`): funcionalidade 1:1 com o adaptador axum — `apidoc_routes(ApidocConfig) -> Scope` monta /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` libera CORS
@@ -79,10 +79,21 @@ Abordagem de implementação do apidoc-rust:
 ### Implementado (v2)
 
 - **Referência de campos de tabelas de dados (`table`)**: `#[apidoc::table("user")]` mescla (achatando-os) os campos da tabela configurada pela key em `ApidocConfig.tables` dentro de `returned` (mesma semântica do `ref`; a diferença é que a fonte de dados é uma tabela de configuração e não outro endpoint); os campos suportam `required` / `default` / `desc` / `mock`; uma key não configurada gera apenas um aviso no stderr; sem usar essa anotação, a saída é idêntica byte a byte à da v1
-- **Cache de documentação**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — a saída de `/apidoc/mock` é memorizada no processo por `(url, method)` e reconstruída após `ttl` segundos; `ttl = 0` significa permanente; se não configurado ou desativado, o caminho de cache não é usado (saída inalterada). api.json / export já são construídos uma vez ao montar as rotas, o que equivale a um cache permanente
+- **Materialização em compilação**: api.json, exportações, templates de codegen e corpos de `/apidoc/mock` são gerados uma vez ao montar as rotas; as requisições apenas consultam uma tabela. `ApidocConfig.cache` é mantido por compatibilidade, mas as respostas mock não precisam mais de memoização na requisição
 - **Links de compartilhamento**: `GET /apidoc/share?app=&url=&method=&base=` → link profundo `{"url":"…"}` (`?app=<key>&ep=<url do endpoint>&method=<método>[&token=…]`); na página de documentação cada endpoint tem um botão «Compartilhar» (escreve na área de transferência; em caso de falha, recorre a um campo de texto copiável); abrir o link profundo posiciona no aplicativo/endpoint correspondente; com a autenticação ativada o link inclui o token emitido pelo servidor (a senha independente do aplicativo prevalece sobre a global) e abre sem exigir senha
 - **Gerador de código**: `GET /apidoc/generate?template=<name>` → o texto renderizado (template desconhecido → 404); inclui `api.ts` (arquivo Api do frontend), `handler.rs` (esqueleto de endpoint em Rust) e `schema.sql` (instruções de criação de tabela geradas a partir de `tables`); um template de mesmo nome em `ApidocConfig.codegen` substitui o embutido. A sintaxe de template tem apenas duas formas: `{{variável}}` (se não definida, é mantida como está) e `{{#each lista}}…{{/each}}` (aninhável, ex.: `tables` × `fields`)
 - **Eventos de depuração**: o painel de depuração on-line ganha os blocos recolhíveis «Script prévio» / «Script posterior» (persistidos no localStorage) — o prévio é executado antes da requisição com `new Function('ctx', code)` e pode alterar `ctx.url/method/headers/body` ou devolver um objeto para mesclagem superficial; o posterior é executado após a resposta e pode ler `status/ms/text/url/method/ep`; se devolver uma string, ela substitui o texto de resposta exibido; erro no script é apenas avisado na área de resultados e não interrompe a requisição
+
+## Documentação e depuração multiprotocolo (P1–P6)
+
+![Arquitetura de depuração multiprotocolo do apidoc-rust](../images/multiprotocol-en.svg)
+
+- **45 anotações de protocolo** mais a forma genérica `#[apidoc::protocol("kind", ...)]`; `event` declara mensagens de fluxo e `param(..., field = "1")` declara números de campo do protocolo.
+- **Depuração direta no navegador** (sem dependência Rust): SOAP, GraphQL (incl. subscriptions), JSON-RPC, XML-RPC, OData, MCP, A2A, Webhooks, WebSocket (texto/binário), SSE, Socket.IO, STOMP (incl. binário), WebRTC/DataChannel, HLS.
+- **Executores no servidor** (feature-gated): HTTP/2, HTTP/3, gRPC, Thrift, Dubbo/Hessian2, ISO 8583, TCP/UDP/Raw/Unix, MQTT, AMQP, Kafka, XMPP, STOMP/TCP, CoAP, LwM2M, Modbus, DNP3, IEC 104, BACnet/IP, OPC UA, RTP/RTCP/RTSP/SIP/RTMP. `debug-all` ativa todos.
+- **P6**: captura de webhooks, exportação AsyncAPI 2.6, importação `.proto`/`.thrift` via CLI `apidoc-idl`, registro Dubbo Nacos, exemplos de mock a partir de eventos.
+- **Segurança**: a depuração no servidor fica desligada por padrão e exige autenticação global; o guard SSRF resolve e valida cada IP e fixa a conexão; redirecionamentos/proxies e metadados de nuvem são recusados; tamanho/frames/timeout têm limites; protocolos sem TLS fixado falham em fail-closed.
+- **Desempenho**: documentação, exportações, codegen e corpos mock são materializados na compilação; as rotas locais do apidoc ficam abaixo de 10 ms p99 (`tests/latency.rs`).
 
 ## Arquitetura
 
@@ -101,7 +112,7 @@ Abordagem de implementação do apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuração do workspace (resolver 2)
-├── VERSION                    # versão do projeto (v2.0.0)
+├── VERSION                    # versão do projeto (v2.1.0)
 ├── crates/
 │   ├── apidoc/                # núcleo em tempo de execução (independente de framework)
 │   │   ├── src/lib.rs         # modelo de dados + agregação DocRegistry + api.json + UI_HTML
@@ -110,7 +121,7 @@ apidoc-rust/
 │   │   ├── src/ui.html        # UI de documentação compartilhada (exportada pelo crate central, referenciada pelos dois adaptadores)
 │   │   ├── tests/             # testes de integração (expansão de macros/agregação/serialização/entre crates)
 │   │   └── examples/demo.rs   # exemplo: anotações + saída api.json
-│   ├── apidoc-macros/         # proc-macro: 20 macros de atributo
+│   ├── apidoc-macros/         # proc-macro: 65+ macros de atributo (incl. 45 aliases de protocolo)
 │   │   └── src/lib.rs         # definição de macros + análise de parâmetros + validação em tempo de compilação
 
 │   ├── apidoc-test-fixtures/  # fixture de teste para registro entre crates
@@ -128,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.0"        # ou path = "crates/apidoc"
+apidoc-rust = "2.1"        # ou path = "crates/apidoc"
 
 serde_json = "1"      # usado para gerar o api.json
 linkme = "0.3"        # obrigatório: o código de registro gerado pela macro o referencia
@@ -246,17 +257,19 @@ fn create_user() -> String {
 
 ### 6. Exportação on-line (M5)
 
-Os adaptadores integram rotas de exportação em três formatos, prontas ao conectar (formato desconhecido → 400):
+Os adaptadores integram rotas de exportação em quatro formatos, prontas ao conectar (formato desconhecido → 400):
 
 ```bash
 GET /apidoc/export?format=md        # índice por grupos + tabela de parâmetros + blocos de resposta (text/markdown)
 GET /apidoc/export?format=ts        # gera os tipos {Name}Params / {Name}Result por namespace de grupo (application/typescript)
 GET /apidoc/export?format=swagger   # arquivo descritivo OpenAPI 3.0.0 (application/json)
+GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: ideal para colar no Wiki do projeto / notas de versão, índice por grupos, cada endpoint com tabela de parâmetros e bloco de resposta;
 - **typescript**: o front pode colar diretamente as definições de tipos; endpoints sem grupo caem no namespace `defaultGroup` (`default` é palavra reservada de TS, não pode ser usado como identificador);
-- **swagger**: `info.version` vem de `ApidocConfig.version` (a versão documentada da API); se não definida, usa a versão do pacote apidoc-rust (atualmente 2.0.0); os parâmetros de caminho vêm do template de URL, de modo que a especificação pode ser importada diretamente no Swagger UI ou em um gerador de código.
+- **swagger**: `info.version` vem de `ApidocConfig.version` (a versão documentada da API); se não definida, usa a versão do pacote apidoc-rust (atualmente 2.1.0); os parâmetros de caminho vêm do template de URL, de modo que a especificação pode ser importada diretamente no Swagger UI ou em um gerador de código.
+- **asyncapi**: canais/operações/mensagens para WebSocket, SSE, MQTT, Kafka, STOMP e outros endpoints de eventos (AsyncAPI 2.6).
 
 ### 7. Adaptador actix-web
 
@@ -264,7 +277,7 @@ Se o framework Web for actix-web, conecte `features = ["actix"]` (funcionalidade
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.0", features = ["actix"] }
+apidoc-rust = { version = "2.1", features = ["actix"] }
 ```
 
 ```rust

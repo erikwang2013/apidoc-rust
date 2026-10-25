@@ -42,7 +42,7 @@ apidoc-rust का कार्यान्वयन दृष्टिकोण
 - **Json/TypeScript जनरेशन**: प्रत्येक इंटरफ़ेस के लिए Json अनुरोध/प्रतिक्रिया उदाहरण और TypeScript टाइप परिभाषाएँ स्वतः जनरेट होती हैं, जिन्हें सीधे फ्रंटएंड में उपयोग किया जा सकता है।
 - **कोड जनरेटर**: कॉन्फ़िगरेशन + टेम्पलेट से बिज़नेस कोड और फ्रंटएंड Api फ़ाइलें जनरेट की जा सकती हैं।
 - **इंटरफ़ेस साझाकरण**: किसी निर्दिष्ट ऐप/इंटरफ़ेस का शेयर लिंक बनाया जा सकता है और `swagger.json` निर्यात किया जा सकता है।
-- **सुरक्षित एक्सेस**: ग्लोबल पासवर्ड तथा ऐप/संस्करण के स्वतंत्र पासवर्ड प्रमाणीकरण का समर्थन करता है, और दस्तावेज़ कैश सक्षम किया जा सकता है।
+- **सुरक्षित एक्सेस**: ग्लोबल पासवर्ड तथा ऐप/संस्करण के स्वतंत्र पासवर्ड प्रमाणीकरण का समर्थन; दस्तावेज़ बिल्ड समय पर बनते हैं और स्थानीय उत्तर p99 10ms से नीचे रहते हैं।
 
 ## विशेषताएँ
 
@@ -64,7 +64,7 @@ apidoc-rust का कार्यान्वयन दृष्टिकोण
 
 ### कार्यान्वित (M5)
 
-- **तीन प्रारूपों में निर्यात** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), कोर crate `export::markdown::render` / `export::typescript::render` / `export::swagger::render` प्रदान करता है
+- **चार प्रारूपों में निर्यात** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), कोर crate `export::markdown::render` / `export::typescript::render` / `export::swagger::render` प्रदान करता है
 - **निर्यात रूट**: अडैप्टर में नया `GET /apidoc/export?format=md|ts|swagger`, अज्ञात format पर 400; Content-Type क्रमशः `text/markdown` / `application/typescript` / `application/json`
 - **markdown**: समूहित कैटलॉग + पैरामीटर तालिका + रिस्पॉन्स ब्लॉक; **typescript**: group namespace के अनुसार `{Name}Params` / `{Name}Result` टाइप जनरेट होते हैं, बिना समूह वाले इंटरफ़ेस `defaultGroup` में जाते हैं (`default` TS का आरक्षित शब्द है); **swagger**: `info.version` Cargo पैकेज संस्करण से लिया जाता है
 - **actix-web अडैप्टर** (`crates/apidoc/src/actix.rs`): axum अडैप्टर के साथ कार्यक्षमता 1:1 — `apidoc_routes(ApidocConfig) -> Scope` /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export माउंट करता है, `cors_layer(CorsConfig)` क्रॉस-डोमेन की अनुमति देता है
@@ -79,10 +79,21 @@ apidoc-rust का कार्यान्वयन दृष्टिकोण
 ### कार्यान्वित (v2)
 
 - **डेटा तालिका फ़ील्ड संदर्भ (`table`)**: `#[apidoc::table("user")]` `ApidocConfig.tables` में कॉन्फ़िगर किए गए टेबल key के अनुसार फ़ील्ड को **समतल** रूप में `returned` में जोड़ देता है (अर्थ वही जो `ref` का है, अंतर केवल यह कि डेटा स्रोत अन्य एंडपॉइंट नहीं बल्कि कॉन्फ़िगरेशन टेबल है); फ़ील्ड `required` / `default` / `desc` / `mock` का समर्थन करते हैं; कॉन्फ़िगर न की गई key पर केवल stderr चेतावनी; इस एनोटेशन का उपयोग न होने पर आउटपुट v1 के साथ बाइट-स्तर समान
-- **दस्तावेज़ कैश**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })`——`/apidoc/mock` का आउटपुट `(url, method)` के आधार पर प्रोसेस के भीतर मेमोइज़ होता है, `ttl` सेकंड बाद अमान्य होकर फिर से बनता है, `ttl = 0` का अर्थ स्थायी; कॉन्फ़िगर न होने या सक्षम न होने पर कैश पथ पर बिल्कुल नहीं जाता (आउटपुट में शून्य बदलाव)। api.json / export रूट माउंट करते समय एक बार बन चुके होते हैं, यानी स्थायी कैश के समान
+- **बिल्ड-टाइम मटीरियलाइज़ेशन**: api.json, निर्यात, codegen टेम्पलेट और `/apidoc/mock` बॉडी रूट माउंट होते समय एक बार बनते हैं; अनुरोध केवल तालिका में देखते हैं। `ApidocConfig.cache` संगतता के लिए रखा गया है, पर mock उत्तरों को अब अनुरोध-समय मेमोइज़ेशन की आवश्यकता नहीं
 - **साझा लिंक**: `GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` डीप-लिंक (`?app=<key>&ep=<接口 url>&method=<方法>[&token=…]`); दस्तावेज़ पेज में हर इंटरफ़ेस के पास «साझा करें» बटन (क्लिपबोर्ड पर लिखता है, विफल होने पर कॉपी-योग्य इनपुट बॉक्स में बदल जाता है), डीप-लिंक खोलते ही सीधे उस ऐप/इंटरफ़ेस पर पहुँच जाते हैं; प्रमाणीकरण चालू होने पर लिंक में सर्वर द्वारा जारी token जुड़ता है (ऐप का स्वतंत्र पासवर्ड वैश्विक से पहले), खोलते ही बिना पासवर्ड प्रवेश
 - **कोड जनरेटर**: `GET /apidoc/generate?template=<name>` → रेंडर किया गया टेक्स्ट (अज्ञात टेम्पलेट 404); अंतर्निहित `api.ts` (फ्रंटएंड Api फ़ाइल), `handler.rs` (Rust इंटरफ़ेस स्केलेटन), `schema.sql` (`tables` के अनुसार CREATE TABLE कथन); `ApidocConfig.codegen` में उसी नाम का टेम्पलेट अंतर्निहित को ओवरराइड कर देता है। टेम्पलेट सिंटैक्स केवल दो प्रकार के हैं: `{{变量}}` (अपरिभाषित होने पर ज्यों-का-त्यों रहता है) और `{{#each 列表}}…{{/each}}` (नेस्ट किए जा सकते हैं, जैसे `tables` × `fields`)
 - **डिबग इवेंट**: ऑनलाइन डिबगिंग पैनल में नया संकुचित करने योग्य «प्री-स्क्रिप्ट / पोस्ट-स्क्रिप्ट» (localStorage में सहेजा जाता है)——प्री-स्क्रिप्ट अनुरोध से पहले `new Function('ctx', code)` द्वारा चलती है और `ctx.url/method/headers/body` बदल सकती है या ऑब्जेक्ट लौटाकर शैलो-मर्ज करा सकती है; पोस्ट-स्क्रिप्ट प्रतिक्रिया के बाद चलती है और `status/ms/text/url/method/ep` पढ़ सकती है, तथा स्ट्रिंग लौटाने पर प्रदर्शित प्रतिक्रिया टेक्स्ट बदल जाता है; स्क्रिप्ट त्रुटि केवल परिणाम क्षेत्र में दिखती है और अनुरोध बाधित नहीं होता
+
+## बहु-प्रोटोकॉल दस्तावेज़ीकरण और डिबगिंग (P1–P6)
+
+![apidoc-rust बहु-प्रोटोकॉल डिबग आर्किटेक्चर](../images/multiprotocol-en.svg)
+
+- **45 प्रोटोकॉल एनोटेशन** और सामान्य `#[apidoc::protocol("kind", ...)]`; `event` स्ट्रीम संदेश घोषित करता है और `param(..., field = "1")` प्रोटोकॉल फ़ील्ड नंबर घोषित करता है।
+- **ब्राउज़र से सीधी डिबगिंग** (Rust निर्भरता के बिना): SOAP, GraphQL (subscriptions सहित), JSON-RPC, XML-RPC, OData, MCP, A2A, Webhooks, WebSocket (टेक्स्ट/बाइनरी), SSE, Socket.IO, STOMP (बाइनरी सहित), WebRTC/DataChannel, HLS।
+- **सर्वर-साइड एक्ज़ीक्यूटर** (feature-gated): HTTP/2, HTTP/3, gRPC, Thrift, Dubbo/Hessian2, ISO 8583, TCP/UDP/Raw/Unix, MQTT, AMQP, Kafka, XMPP, STOMP/TCP, CoAP, LwM2M, Modbus, DNP3, IEC 104, BACnet/IP, OPC UA, RTP/RTCP/RTSP/SIP/RTMP। `debug-all` से सभी सक्रिय होते हैं।
+- **P6**: Webhook कैप्चर, AsyncAPI 2.6 निर्यात, `apidoc-idl` CLI से `.proto`/`.thrift` आयात, Dubbo Nacos रजिस्ट्री, इवेंट-आधारित mock उदाहरण।
+- **सुरक्षा**: सर्वर-साइड डिबगिंग डिफ़ॉल्ट रूप से बंद है और वैश्विक प्रमाणीकरण आवश्यक है; SSRF गार्ड हर IP को हल और सत्यापित करके कनेक्शन पिन करता है; रीडायरेक्ट/प्रॉक्सी और क्लाउड मेटाडेटा अस्वीकृत हैं; आकार/फ़्रेम/टाइमआउट की सीमा है; पिन किए गए TLS के बिना प्रोटोकॉल fail closed हैं।
+- **प्रदर्शन**: दस्तावेज़, निर्यात, codegen और mock बॉडी बिल्ड समय पर बनते हैं; apidoc के स्थानीय रूट p99 10ms से नीचे रहते हैं (`tests/latency.rs`)।
 
 ## वास्तुकला
 
@@ -101,7 +112,7 @@ apidoc-rust का कार्यान्वयन दृष्टिकोण
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace कॉन्फ़िगरेशन (resolver 2)
-├── VERSION                    # परियोजना संस्करण (v2.0.0)
+├── VERSION                    # परियोजना संस्करण (v2.1.0)
 ├── crates/
 │   ├── apidoc/                # रनटाइम कोर (फ्रेमवर्क-स्वतंत्र)
 │   │   ├── src/lib.rs         # डेटा मॉडल + DocRegistry एकत्रीकरण + api.json + UI_HTML
@@ -110,7 +121,7 @@ apidoc-rust/
 │   │   ├── src/ui.html        # साझा दस्तावेज़ UI (कोर crate द्वारा निर्यात, दोनों अडैप्टर संदर्भित करते हैं)
 │   │   ├── tests/             # इंटीग्रेशन टेस्ट (मैक्रो विस्तार/एकत्रीकरण/क्रमांकन/क्रॉस-crate)
 │   │   └── examples/demo.rs   # उदाहरण: एनोटेशन + api.json आउटपुट
-│   ├── apidoc-macros/         # proc-macro: 20 एट्रिब्यूट मैक्रो
+│   ├── apidoc-macros/         # proc-macro: 65+ एट्रिब्यूट मैक्रो (45 प्रोटोकॉल उपनाम सहित)
 │   │   └── src/lib.rs         # मैक्रो परिभाषाएँ + पैरामीटर पार्सिंग + संकलन-समय सत्यापन
 
 │   ├── apidoc-test-fixtures/  # क्रॉस-crate पंजीकरण टेस्ट फिक्स्चर
@@ -128,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.0"        # या path = "crates/apidoc"
+apidoc-rust = "2.1"        # या path = "crates/apidoc"
 
 serde_json = "1"      # api.json आउटपुट के लिए
 linkme = "0.3"        # आवश्यक: मैक्रो-जनित रजिस्ट्रेशन कोड इसे संदर्भित करता है
@@ -246,17 +257,19 @@ fn create_user() -> String {
 
 ### 6. ऑनलाइन निर्यात (M5)
 
-अडैप्टर में तीन प्रारूपों का निर्यात इंटरफ़ेस बिल्ट-इन है, जोड़ते ही उपयोग होता है (अज्ञात `format` पर 400):
+अडैप्टर में चार प्रारूपों का निर्यात इंटरफ़ेस बिल्ट-इन है, जोड़ते ही उपयोग होता है (अज्ञात `format` पर 400):
 
 ```bash
 GET /apidoc/export?format=md        # समूहित कैटलॉग + पैरामीटर तालिका + रिस्पॉन्स ब्लॉक (text/markdown)
 GET /apidoc/export?format=ts        # group namespace के अनुसार {Name}Params / {Name}Result टाइप जनरेट (application/typescript)
 GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 विवरण फ़ाइल (application/json)
+GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: प्रोजेक्ट Wiki / रिलीज़ नोट्स में चिपकाने के लिए उपयुक्त, समूह के अनुसार कैटलॉग, प्रत्येक इंटरफ़ेस में पैरामीटर तालिका और रिस्पॉन्स ब्लॉक;
 - **typescript**: फ्रंटएंड सीधे टाइप परिभाषाओं के रूप में चिपका सकता है; बिना समूह वाले इंटरफ़ेस `defaultGroup` namespace में जाते हैं (`default` TS का आरक्षित शब्द है, पहचानकर्ता नहीं बन सकता);
-- **swagger**: `info.version` `ApidocConfig.version` (दस्तावेज़ीकृत API संस्करण) से लिया जाता है, अनसेट होने पर apidoc-rust पैकेज संस्करण (वर्तमान में 2.0.0) पर गिरता है; path पैरामीटर URL टेम्पलेट से आते हैं, इसलिए सीधे Swagger UI या कोड जनरेटर में आयात किया जा सकता है।
+- **swagger**: `info.version` `ApidocConfig.version` (दस्तावेज़ीकृत API संस्करण) से लिया जाता है, अनसेट होने पर apidoc-rust पैकेज संस्करण (वर्तमान में 2.1.0) पर गिरता है; path पैरामीटर URL टेम्पलेट से आते हैं, इसलिए सीधे Swagger UI या कोड जनरेटर में आयात किया जा सकता है।
+- **asyncapi**: WebSocket, SSE, MQTT, Kafka, STOMP आदि इवेंट endpoints के लिए channel/operation/message (AsyncAPI 2.6)।
 
 ### 7. actix-web अडैप्टर
 
@@ -264,7 +277,7 @@ Web फ्रेमवर्क actix-web होने पर `features = ["acti
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.0", features = ["actix"] }
+apidoc-rust = { version = "2.1", features = ["actix"] }
 ```
 
 ```rust

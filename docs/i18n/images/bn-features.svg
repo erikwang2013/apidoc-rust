@@ -1,97 +1,103 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 815" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 850" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="815" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="815" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="850" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="850" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust প্রজেক্ট কার্যকারিতা (M1–M6 সম্পন্ন)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Project Features (M1–M6 + P1–P6)</text>
 
-  <!-- কার্ড 1 -->
-  <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="300" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M1</text>
-  <text x="60" y="106" font-size="17" font-weight="bold" fill="#1e8449">অ্যানোটেশন-ভিত্তিক ডকুমেন্টেশন</text>
-  <text x="60" y="130" font-size="13" fill="#333">M1 সাতটি ম্যাক্রো: title / desc / method / url / param / query / returned</text>
-  <text x="60" y="150" font-size="13" fill="#333">M3 নতুন ১২টি: tag / group / author / header / route_param /</text>
-  <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
-  <text x="60" y="190" font-size="13" fill="#333">প্যারামিটার required / default / desc / mock / children নেস্টিং সমর্থন করে</text>
+  <!-- Card 1 -->
+  <rect x="40" y="78" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="68" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="84" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
+  <text x="60" y="114" font-size="17" font-weight="bold" fill="#1e8449">Annotation-based Docs</text>
+  <text x="60" y="138" font-size="12.5" fill="#333">7 base macros: title/desc/method/url/param/query/returned</text>
+  <text x="60" y="156" font-size="12.5" fill="#333">M3 adds tag/group/header/table/ref/sort/md</text>
+  <text x="60" y="174" font-size="12.5" fill="#333">P1–P6 adds 45 protocol annotations + events</text>
+  <text x="60" y="192" font-size="12.5" fill="#333">Params: required/default/desc/mock/children</text>
 
-  <!-- কার্ড 2 -->
-  <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="740" y="60" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="76" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M1</text>
-  <text x="500" y="106" font-size="17" font-weight="bold" fill="#1e8449">কম্পাইল-টাইম ভ্যালিডেশন</text>
-  <text x="500" y="130" font-size="13" fill="#333">url অবশ্যই / দিয়ে শুরু, method হোয়াইটলিস্ট, param name বাধ্যতামূলক</text>
-  <text x="500" y="150" font-size="13" fill="#333">অবৈধ অ্যানোটেশনে কম্পাইল-টাইম এরর (span সঠিক), ডকুমেন্টেশন ও কোড কখনো সিঙ্কের বাইরে যায় না</text>
-  <text x="500" y="190" font-size="13" fill="#333">M3-এর ১২টি এক্সটেনশন অ্যানোটেশনও সম্পূর্ণ ভ্যালিডেট হয়</text>
+  <!-- Card 2 -->
+  <rect x="480" y="78" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="68" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="84" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
+  <text x="500" y="114" font-size="17" font-weight="bold" fill="#1e8449">Compile-time Validation</text>
+  <text x="500" y="138" font-size="12.5" fill="#333">url starts with /, method whitelist, name required</text>
+  <text x="500" y="156" font-size="12.5" fill="#333">Invalid annotations fail the build with precise spans</text>
+  <text x="500" y="174" font-size="12.5" fill="#333">Docs and code can never drift apart</text>
+  <text x="500" y="192" font-size="12.5" fill="#333">All 45 protocol alias kinds are validated too</text>
 
-  <!-- কার্ড 3 -->
-  <rect x="40" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="300" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M1</text>
-  <text x="60" y="256" font-size="17" font-weight="bold" fill="#1e8449">স্বয়ংক্রিয় সংগ্রহ</text>
-  <text x="60" y="280" font-size="13" fill="#333">linkme distributed_slice স্ট্যাটিক রেজিস্ট্রেশন, ম্যানুয়াল ইন্টারফেস তালিকার দরকার নেই</text>
-  <text x="60" y="300" font-size="13" fill="#333">DocRegistry::collect() id অনুযায়ী মার্জ করে, seq অনুযায়ী ডিক্লারেশন ক্রম পুনরুদ্ধার করে</text>
-  <text x="60" y="320" font-size="13" fill="#333">ক্রস-crate স্বয়ংক্রিয় সংগ্রহ, "কোড স্ক্যান করলেই সব ইন্টারফেস" এর সমতুল্য</text>
+  <!-- Card 3 -->
+  <rect x="40" y="224" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="214" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="230" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M1</text>
+  <text x="60" y="260" font-size="17" font-weight="bold" fill="#1e8449">Automatic Collection</text>
+  <text x="60" y="284" font-size="12.5" fill="#333">linkme distributed_slice static registration</text>
+  <text x="60" y="302" font-size="12.5" fill="#333">DocRegistry::collect() merges by id and seq</text>
+  <text x="60" y="320" font-size="12.5" fill="#333">Cross-crate collection, zero runtime cost</text>
+  <text x="60" y="338" font-size="12.5" fill="#333">api.json built once when routes are mounted</text>
 
-  <!-- কার্ড 4 -->
-  <rect x="480" y="220" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M2</text>
-  <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">axum / actix অ্যাডাপ্টার + ডকুমেন্ট UI</text>
-  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum: /apidoc (UI) · /apidoc/api.json · /apidoc/mock</text>
-  <text x="500" y="300" font-size="13" fill="#333">apidoc-actix: পাতলা র্যাপার, /apidoc/export (M5) সহ ৪টি রুট</text>
-  <text x="500" y="320" font-size="13" fill="#333">এমবেডেড ডকুমেন্ট UI ডিবাগ প্যানেল (Html স্ট্যাটিক পেজ, বাহ্যিক নির্ভরতা শূন্য)</text>
+  <!-- Card 4 -->
+  <rect x="480" y="224" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="214" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="230" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M2</text>
+  <text x="500" y="260" font-size="17" font-weight="bold" fill="#1e8449">axum / actix + Docs UI</text>
+  <text x="500" y="284" font-size="12.5" fill="#333">apidoc-axum / apidoc-actix, 1:1 feature parity</text>
+  <text x="500" y="302" font-size="12.5" fill="#333">apidoc, api.json, mock, export, auth, share, generate</text>
+  <text x="500" y="320" font-size="12.5" fill="#333">debug, stream, webhook routes + CORS</text>
+  <text x="500" y="338" font-size="12.5" fill="#333">Embedded HTML docs UI, zero external deps</text>
 
-  <!-- কার্ড 5 -->
+  <!-- Card 5 -->
   <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="300" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M4</text>
-  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">অনলাইন ডিবাগিং + Mock ইঞ্জিন</text>
-  <text x="60" y="430" font-size="13" fill="#333">ডিবাগ প্যানেল: mock প্রি-ফিল + ব্রাউজার CORS ডাইরেক্টে টার্গেট ইন্টারফেসে</text>
-  <text x="60" y="450" font-size="13" fill="#333">crates/apidoc-mock ইঞ্জিন: fake crate-এর উপর নির্ভর করে ডেটা জেনারেশন</text>
-  <text x="60" y="470" font-size="13" fill="#333">১৫টি রুল: নাম/ইমেইল/ফোন/IP/URL/UUID/তারিখ/সংখ্যা/ফ্লোট/বুলিয়ান/টেক্সট…</text>
+  <text x="375" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M4</text>
+  <text x="60" y="406" font-size="17" font-weight="bold" fill="#1e8449">Online Debug + Mock</text>
+  <text x="60" y="430" font-size="12.5" fill="#333">Mock prefill + browser CORS direct requests</text>
+  <text x="60" y="448" font-size="12.5" fill="#333">Params, headers, pre/post scripts, response view</text>
+  <text x="60" y="466" font-size="12.5" fill="#333">Mock engine: 15 fake rules, nested children</text>
+  <text x="60" y="484" font-size="12.5" fill="#333">Server-side executors for 40+ protocols</text>
 
-  <!-- কার্ড 6 -->
+  <!-- Card 6 -->
   <rect x="480" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="360" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M5</text>
-  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">তিন ফরম্যাটে এক্সপোর্ট (M5)</text>
-  <text x="500" y="430" font-size="13" fill="#333">Markdown / TypeScript / Swagger (OpenAPI 3.0)</text>
-  <text x="500" y="450" font-size="13" fill="#333">info.version Cargo প্যাকেজ ভার্সন থেকে (বিল্ড-টাইম প্রি-সিরিয়ালাইজেশন)</text>
-  <text x="500" y="470" font-size="13" fill="#333">UI / api.json / এক্সপোর্ট একই ডেটা মডেল শেয়ার করে</text>
+  <text x="815" y="376" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M5</text>
+  <text x="500" y="406" font-size="17" font-weight="bold" fill="#1e8449">Exports + Codegen</text>
+  <text x="500" y="430" font-size="12.5" fill="#333">md / ts / swagger (OpenAPI 3.0) / asyncapi 2.6</text>
+  <text x="500" y="448" font-size="12.5" fill="#333">Built-in api.ts, handler.rs, schema.sql</text>
+  <text x="500" y="466" font-size="12.5" fill="#333">Custom templates via ApidocConfig.codegen</text>
+  <text x="500" y="484" font-size="12.5" fill="#333">All artifacts materialized at build time</text>
 
-  <!-- কার্ড 7: M6a পাসওয়ার্ড অথেনটিকেশন -->
-  <rect x="40" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="300" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="375" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M6a</text>
-  <text x="60" y="556" font-size="17" font-weight="bold" fill="#1e8449">পাসওয়ার্ড অথেনটিকেশন</text>
-  <text x="60" y="580" font-size="13" fill="#333">POST /apidoc/auth (JSON body) দিয়ে token নিন</text>
-  <text x="60" y="600" font-size="13" fill="#333">api.json / export / mock-এর জন্য ?token= আবশ্যক; অনুপস্থিত/মেয়াদোত্তীর্ণ/ভুল → 401</text>
-  <text x="60" y="620" font-size="13" fill="#333">HMAC-SHA256 স্বাক্ষর (MAC কনস্ট্যান্ট-টাইম যাচাই)</text>
-  <text x="60" y="640" font-size="13" fill="#333">password / secret_key কখনো সিরিয়ালাইজ হয় না · অ্যাপ পাসওয়ার্ড গ্লোবালের চেয়ে প্রাধান্য পায়</text>
+  <!-- Card 7 -->
+  <rect x="40" y="516" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="300" y="506" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="375" y="522" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M6a</text>
+  <text x="60" y="552" font-size="17" font-weight="bold" fill="#1e8449">Password Auth</text>
+  <text x="60" y="576" font-size="12.5" fill="#333">POST /apidoc/auth exchanges password for token</text>
+  <text x="60" y="594" font-size="12.5" fill="#333">Data routes require ?token=; otherwise 401</text>
+  <text x="60" y="612" font-size="12.5" fill="#333">HMAC-SHA256, constant-time compare</text>
+  <text x="60" y="630" font-size="12.5" fill="#333">Secrets never serialized; random fallback key</text>
 
-  <!-- কার্ড 8: M6b মাল্টি-অ্যাপ মাল্টি-ভার্সন -->
-  <rect x="480" y="520" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="740" y="510" width="150" height="24" rx="12" fill="#27ae60"/>
-  <text x="815" y="526" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">বাস্তবায়িত M6b</text>
-  <text x="500" y="556" font-size="17" font-weight="bold" fill="#1e8449">মাল্টি-অ্যাপ মাল্টি-ভার্সন</text>
-  <text x="500" y="580" font-size="13" fill="#333">#[apidoc::app("key")] ইন্টারফেস মাউন্ট করে · ApidocConfig.apps কনফিগ ট্রি</text>
-  <text x="500" y="600" font-size="13" fill="#333">api.json-এ doc.apps ট্রি (key / title / items রিকার্সিভ)</text>
-  <text x="500" y="620" font-size="13" fill="#333">UI-র উপরে অ্যাপ/ভার্সন সিলেক্টর · token প্রতি appKey-তে localStorage-এ</text>
-  <text x="500" y="640" font-size="13" fill="#333">অ্যাপ ছাড়া ইন্টারফেস ডিফল্ট অ্যাপে পড়ে · কনফিগ না থাকলে M5-এর সাথে বাইট-মিল</text>
+  <!-- Card 8 -->
+  <rect x="480" y="516" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="506" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="522" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Implemented M6b</text>
+  <text x="500" y="552" font-size="17" font-weight="bold" fill="#1e8449">Multi-app Multi-version</text>
+  <text x="500" y="576" font-size="12.5" fill="#333">#[apidoc::app("key")] + ApidocConfig.apps tree</text>
+  <text x="500" y="594" font-size="12.5" fill="#333">api.json emits doc.apps (key/title/items)</text>
+  <text x="500" y="612" font-size="12.5" fill="#333">UI app/version picker; token per appKey</text>
+  <text x="500" y="630" font-size="12.5" fill="#333">Unannotated endpoints land in default app</text>
 
-  <!-- কার্ড 9: v2 পরিকল্পনা -->
-  <rect x="40" y="670" width="860" height="120" rx="10" fill="#fdfefe" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <rect x="740" y="660" width="150" height="24" rx="12" fill="#95a5a6"/>
-  <text x="815" y="676" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">পরিকল্পনাধীন</text>
-  <text x="60" y="706" font-size="17" font-weight="bold" fill="#566573">v2 পরিকল্পনা</text>
-  <text x="60" y="730" font-size="13" fill="#333">কোড জেনারেটর · টেবিল ফিল্ড রেফারেন্স · শেয়ার লিংক · ডিবাগ ইভেন্ট</text>
-  <text x="60" y="750" font-size="13" fill="#333">অ্যাডাপ্টার: axum / actix দুটোই কভার্ড (ফিচার 1:1)</text>
-  <text x="60" y="770" font-size="13" fill="#333">M1–M6 সম্পূর্ণ (পাসওয়ার্ড অথেনটিকেশন · মাল্টি-অ্যাপ মাল্টি-ভার্সনসহ)</text>
+  <!-- Card 9 -->
+  <rect x="40" y="662" width="860" height="130" rx="10" fill="#eaf7ef" stroke="#27ae60" stroke-width="2"/>
+  <rect x="740" y="652" width="150" height="24" rx="12" fill="#27ae60"/>
+  <text x="815" y="668" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">Done</text>
+  <text x="60" y="698" font-size="17" font-weight="bold" fill="#1e8449">Multi-Protocol / Integrations</text>
+  <text x="60" y="722" font-size="12.5" fill="#333">Protocol annotations · browser-direct · server executors · Webhook · AsyncAPI</text>
+  <text x="60" y="740" font-size="12.5" fill="#333">40+ protocols with server executors; one feature per protocol family</text>
+  <text x="60" y="758" font-size="12.5" fill="#333">proto/thrift IDL import · Dubbo Nacos registry · event-based mocks</text>
+  <text x="60" y="776" font-size="12.5" fill="#333">Zero heavy deps by default · M1–M6 + P1–P6 all complete</text>
 
-  <text x="470" y="805" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <text x="470" y="830" text-anchor="middle" font-size="12" fill="#888">watermark: https://erik.xyz</text>
 </svg>

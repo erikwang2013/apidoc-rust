@@ -6,6 +6,7 @@ rust-version.workspace = true
 license.workspace = true
 description = "Generate apidoc annotations from .proto / .thrift IDL files"
 repository.workspace = true
+readme = "README.md"
 
 [dependencies]
 # 纯 Rust protobuf 编译器；0.7.x 是最后一条 MSRV <= 1.82 的线。

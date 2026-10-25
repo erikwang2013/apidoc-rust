@@ -73,7 +73,7 @@
 
   <text x="104" y="420" font-family="Noto Sans, DejaVu Sans, sans-serif" font-size="32" fill="#5C5680">Proc-macro powered API docs for Rust</text>
 
-  <text x="104" y="482" font-family="Noto Sans, DejaVu Sans, sans-serif" font-size="26" fill="#8B86AD">axum · actix-web · online debug · mock · export</text>
+  <text x="104" y="482" font-family="Noto Sans, DejaVu Sans, sans-serif" font-size="26" fill="#8B86AD">axum · actix-web · 45 protocols · gRPC · MQTT · Kafka</text>
 
   <text x="104" y="576" font-family="DejaVu Sans Mono, Liberation Mono, monospace" font-size="24" fill="#A5A0C4">github.com/erikwang2013/apidoc-rust</text>
 </svg>

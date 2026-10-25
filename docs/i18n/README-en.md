@@ -42,7 +42,7 @@ apidoc-rust's implementation approach:
 - **Json / TypeScript generation**: every endpoint automatically generates Json request/response examples and TypeScript type definitions, ready for direct use in the frontend.
 - **Code generator**: configuration + templates generate business code and frontend Api files.
 - **Endpoint sharing**: generate share links for a chosen app/endpoint and export `swagger.json`.
-- **Secure access**: global password and per-app/version independent password authorization, with optional documentation caching.
+- **Secure access**: global password and per-app/version independent password authorization; docs are materialized at build time, with local responses under 10ms p99.
 
 ## Features
 
@@ -64,7 +64,7 @@ apidoc-rust's implementation approach:
 
 ### Implemented (M5)
 
-- **Three-format export** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0); the core crate provides `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
+- **Four-format export** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0); the core crate provides `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **Export route**: the adapter adds `GET /apidoc/export?format=md|ts|swagger` — unknown formats return 400; Content-Type is `text/markdown` / `application/typescript` / `application/json` respectively
 - **markdown**: grouped catalog + parameter tables + response blocks; **typescript**: generates `{Name}Params` / `{Name}Result` types in per-group namespaces, ungrouped endpoints fall into `defaultGroup` (`default` is a TS reserved word); **swagger**: `info.version` is read from the Cargo package version
 - **actix-web adapter** (`crates/apidoc/src/actix.rs`): 1:1 feature parity with the axum adapter — `apidoc_routes(ApidocConfig) -> Scope` mounts /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, and `cors_layer(CorsConfig)` allows cross-origin
@@ -79,10 +79,21 @@ apidoc-rust's implementation approach:
 ### Implemented (v2)
 
 - **Data-table field references (`table`)**: `#[apidoc::table("user")]` **flattens** the fields of the table configured under that key in `ApidocConfig.tables` into `returned` (same semantics as `ref`; the only difference is that the data source is a configuration table rather than another endpoint); fields support `required` / `default` / `desc` / `mock`; an unconfigured key only produces a stderr warning; the output is byte-identical to v1 when the annotation is unused
-- **Documentation caching**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })` — the `/apidoc/mock` output is memoized in-process by `(url, method)` and rebuilt after `ttl` seconds, with `ttl = 0` meaning permanent; when unconfigured or disabled the cache path is bypassed entirely (zero output change). api.json / export are already built once when the routes are mounted, which is equivalent to permanent caching
+- **Build-time materialization**: api.json, exports, codegen templates and `/apidoc/mock` bodies are generated once when the routes are mounted; requests only do a table lookup. `ApidocConfig.cache` is kept for compatibility, but mock responses no longer need request-time memoization
 - **Share links**: `GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` deep link (`?app=<key>&ep=<endpoint url>&method=<method>[&token=…]`); every endpoint in the docs page has a "Share" button (writes to the clipboard, falling back to a copyable input field when that fails), and opening the deep link jumps straight to that app/endpoint; with auth enabled the link carries a server-issued token (an app's independent password takes precedence over the global one), so it opens without a password
 - **Code generator**: `GET /apidoc/generate?template=<name>` → the rendered text (404 for an unknown template); built-in templates `api.ts` (frontend Api file), `handler.rs` (Rust endpoint skeleton) and `schema.sql` (generates CREATE TABLE statements from `tables`); a template with the same name in `ApidocConfig.codegen` overrides the built-in one. The template syntax has only two forms: `{{variable}}` (kept as-is when undefined) and `{{#each list}}…{{/each}}` (nestable, e.g. `tables` × `fields`); newlines inside variable values are collapsed to spaces (all three artifacts are line-oriented)
 - **Debug events**: the online debugging panel gains collapsible "Pre-script / Post-script" editors (persisted to localStorage) — the pre-script runs before the request via `new Function('ctx', code)` and can modify `ctx.url/method/headers/body` or return an object for a shallow merge; the post-script runs after the response and can read `status/ms/text/url/method/ep`, returning a string to replace the displayed response text; script errors are only reported in the result area and never abort the request
+
+## Multi-Protocol Documentation & Debugging (P1–P6)
+
+![apidoc-rust multi-protocol debug architecture](../images/multiprotocol-en.svg)
+
+- **45 protocol annotations** plus generic `#[apidoc::protocol("kind", ...)]`; `event` declares stream messages and `param(..., field = "1")` declares protocol field numbers.
+- **Browser-direct debugging** (no Rust dependency): SOAP, GraphQL (incl. subscriptions), JSON-RPC, XML-RPC, OData, MCP, A2A, Webhooks, WebSocket (text/binary), SSE, Socket.IO, STOMP (incl. binary), WebRTC/DataChannel, HLS.
+- **Server-side executors** (feature-gated): HTTP/2, HTTP/3, gRPC, Thrift, Dubbo/Hessian2, ISO 8583, TCP/UDP/Raw/Unix, MQTT, AMQP, Kafka, XMPP, STOMP/TCP, CoAP, LwM2M, Modbus, DNP3, IEC 104, BACnet/IP, OPC UA, RTP/RTCP/RTSP/SIP/RTMP. `debug-all` enables them together.
+- **P6**: Webhook capture, AsyncAPI 2.6 export, `.proto`/`.thrift` import via the `apidoc-idl` CLI, Dubbo Nacos registry, event-based mock examples.
+- **Security**: server-side debugging is off by default and requires global auth; the SSRF guard resolves and validates every IP and pins connections; redirects/proxies and cloud metadata are denied; size/frames/timeout are capped; protocols without pinned TLS fail closed.
+- **Performance**: docs, exports, codegen and mock bodies are materialized at build time; apidoc local routes stay under 10ms p99 (`tests/latency.rs`).
 
 ## Architecture
 
@@ -101,7 +112,7 @@ apidoc-rust's implementation approach:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace config (resolver 2)
-├── VERSION                    # project version (v2.0.0)
+├── VERSION                    # project version (v2.1.0)
 ├── crates/
 │   ├── apidoc/                # runtime core (framework-agnostic)
 │   │   ├── src/lib.rs         # data model + DocRegistry aggregation + api.json + UI_HTML
@@ -110,7 +121,7 @@ apidoc-rust/
 │   │   ├── src/ui.html        # shared docs UI (exported by the core crate, referenced by both adapters)
 │   │   ├── tests/             # integration tests (macro expansion/aggregation/serialization/cross-crate)
 │   │   └── examples/demo.rs   # example: annotations + api.json output
-│   ├── apidoc-macros/         # proc-macro: 20 attribute macros
+│   ├── apidoc-macros/         # proc-macro: 65+ attribute macros (incl. 45 protocol aliases)
 │   │   └── src/lib.rs         # macro definitions + argument parsing + compile-time validation
 
 │   ├── apidoc-test-fixtures/  # cross-crate registration test fixtures
@@ -128,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.0"        # or path = "crates/apidoc"
+apidoc-rust = "2.1"        # or path = "crates/apidoc"
 
 serde_json = "1"      # for api.json output
 linkme = "0.3"        # required: macro-generated registration code refers to it
@@ -246,17 +257,19 @@ The 15 built-in fake rules: `name` / `company` / `email` / `phone` / `url` / `ip
 
 ### 6. Online Export (M5)
 
-The adapter ships three built-in export endpoints, usable immediately after mounting (unknown `format` returns 400):
+The adapter ships four built-in export endpoints, usable immediately after mounting (unknown `format` returns 400):
 
 ```bash
 GET /apidoc/export?format=md        # grouped catalog + parameter tables + response blocks (text/markdown)
 GET /apidoc/export?format=ts        # generates {Name}Params / {Name}Result types in per-group namespaces (application/typescript)
 GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 description file (application/json)
+GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: great for pasting into a project Wiki / release notes; outputs a catalog by group, each endpoint with parameter tables and response blocks;
 - **typescript**: the frontend can paste it directly as type definitions; ungrouped endpoints fall into the `defaultGroup` namespace (`default` is a TS reserved word and cannot be an identifier);
-- **swagger**: `info.version` is read from `ApidocConfig.version` (the documented API version), falling back to the apidoc-rust package version (currently 2.0.0); path parameters come from the URL template, so the spec imports directly into Swagger UI or code generators.
+- **swagger**: `info.version` is read from `ApidocConfig.version` (the documented API version), falling back to the apidoc-rust package version (currently 2.1.0); path parameters come from the URL template, so the spec imports directly into Swagger UI or code generators.
+- **asyncapi**: channels/operations/messages for WebSocket, SSE, MQTT, Kafka, STOMP and other event endpoints (AsyncAPI 2.6).
 
 ### 7. actix-web adapter
 
@@ -264,7 +277,7 @@ When using actix-web, add `features = ["actix"]` (1:1 feature parity with the ax
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.0", features = ["actix"] }
+apidoc-rust = { version = "2.1", features = ["actix"] }
 ```
 
 ```rust

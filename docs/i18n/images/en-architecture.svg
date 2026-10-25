@@ -1,83 +1,77 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 720" font-family="sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 940 860" font-family="sans-serif">
   <defs>
     <pattern id="wm" width="340" height="170" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
       <text x="8" y="44" font-size="30" fill="#888888" opacity="0.15">https://erik.xyz</text>
     </pattern>
   </defs>
-  <rect width="940" height="720" fill="url(#wm)"/>
-  <rect x="0" y="0" width="940" height="720" fill="none" stroke="#333" stroke-width="2"/>
+  <rect width="940" height="860" fill="url(#wm)"/>
+  <rect x="0" y="0" width="940" height="860" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Overall Architecture (M6 Complete)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Overall Architecture (M1–M6 + P1–P6 Multi-Protocol)</text>
+  <text x="470" y="60" text-anchor="middle" font-size="13" fill="#555">Annotations → document model → adapters → browser-direct / server executors → exports &amp; integrations</text>
 
-  <!-- User code layer -->
-  <rect x="120" y="62" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
-  <text x="140" y="88" font-size="17" font-weight="bold" fill="#5f4b00">User Code Layer</text>
-  <text x="140" y="112" font-size="13" fill="#333" font-family="monospace">#[apidoc::title(...)]  #[apidoc::method("GET")]  #[apidoc::param(name="id", ty="int", required)] ...</text>
+  <!-- User code -->
+  <rect x="60" y="78" width="820" height="74" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <text x="80" y="104" font-size="16" font-weight="bold" fill="#5f4b00">User code layer</text>
+  <text x="80" y="126" font-size="12.5" fill="#333" font-family="monospace">#[apidoc::title] #[apidoc::method] #[apidoc::param] #[apidoc::returned]</text>
+  <text x="80" y="144" font-size="12.5" fill="#333" font-family="monospace">#[apidoc::grpc(...)] #[apidoc::websocket(...)] #[apidoc::mqtt(...)] #[apidoc::event(...)]</text>
 
   <!-- Compile time -->
-  <rect x="120" y="138" width="700" height="72" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
-  <rect x="724" y="144" width="96" height="22" rx="11" fill="#6c5ce7"/>
-  <text x="772" y="159" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M1+M3+M6</text>
-  <text x="140" y="164" font-size="17" font-weight="bold" fill="#3d2f9e">Compile Time · apidoc-macros (proc-macro)</text>
-  <text x="140" y="188" font-size="12" fill="#333">20 attribute macros: 7 base (M1: title/desc/method/url/param/query/returned) + 12 extended (M3: tag/group/author/header/route_param/response_status/success/error/not_debug/md/sort/ref) + M6 app mounting</text>
-  <text x="140" y="204" font-size="12" fill="#555">All with compile-time parameter validation (url starts with /, method whitelist, param name required); invalid annotations fail the build</text>
-
-  <!-- Registration -->
-  <rect x="250" y="222" width="440" height="46" rx="8" fill="#fef9e7" stroke="#f39c12" stroke-width="2"/>
-  <rect x="610" y="227" width="62" height="20" rx="10" fill="#f39c12"/>
-  <text x="641" y="241" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1</text>
-  <text x="470" y="246" text-anchor="middle" font-size="15" font-weight="bold" fill="#7d5200">linkme distributed_slice Static Registration</text>
-  <text x="470" y="263" text-anchor="middle" font-size="12" fill="#555">DocFragmentEntry generated at compile time, zero-cost collection, aggregated automatically across crates</text>
+  <rect x="60" y="164" width="820" height="86" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
+  <text x="80" y="190" font-size="16" font-weight="bold" fill="#3d2f9e">Compile time · apidoc-macros (proc-macro)</text>
+  <text x="80" y="212" font-size="12.5" fill="#333">20 base annotations + 45 protocol aliases; kind / args / field numbers checked at compile time</text>
+  <text x="80" y="230" font-size="12.5" fill="#555">linkme distributed_slice emits DocFragmentEntry; cross-crate collection at zero runtime cost</text>
 
   <!-- Runtime core -->
-  <rect x="120" y="280" width="700" height="58" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
-  <rect x="730" y="285" width="64" height="20" rx="10" fill="#2980b9"/>
-  <text x="762" y="299" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M1+M6</text>
-  <text x="140" y="308" font-size="17" font-weight="bold" fill="#1a5276">Runtime Core · apidoc (framework-agnostic)</text>
-  <text x="140" y="330" font-size="13" fill="#333">DocRegistry::collect() merges fragments by id, restores declaration order by seq → ApiDoc data model</text>
-  <text x="140" y="346" font-size="13" fill="#555" font-family="monospace">→ api.json (serde serialization, shared by UI and export; M6b includes doc.apps tree) → export: md / ts / swagger (OpenAPI3)</text>
+  <rect x="60" y="264" width="820" height="86" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
+  <text x="80" y="290" font-size="16" font-weight="bold" fill="#1a5276">Runtime core · apidoc (framework-agnostic)</text>
+  <text x="80" y="312" font-size="12.5" fill="#333">DocRegistry::collect() merges fragments by id, restores declaration order by seq → api.json model</text>
+  <text x="80" y="330" font-size="12.5" fill="#555">HMAC auth · app tree · protocol registry · webhook capture · mocks and 4 exports materialized at build</text>
 
-  <!-- Auth (M6a) -->
-  <rect x="120" y="350" width="700" height="40" rx="8" fill="#fdedec" stroke="#c0392b" stroke-width="2"/>
-  <rect x="730" y="354" width="62" height="20" rx="10" fill="#c0392b"/>
-  <text x="761" y="368" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M6a</text>
-  <text x="140" y="368" font-size="13" fill="#333" font-family="monospace">auth.rs: POST /apidoc/auth (JSON body: password / appKey) exchanges for a token (HMAC-SHA256; password/secret_key are never serialized)</text>
+  <!-- Adapters -->
+  <rect x="60" y="364" width="820" height="74" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
+  <text x="80" y="390" font-size="16" font-weight="bold" fill="#1e8449">Adapters · axum / actix-web (1:1 feature parity)</text>
+  <text x="80" y="412" font-size="12.5" fill="#333" font-family="monospace">/apidoc · api.json · export · mock · auth · share · generate</text>
+  <text x="80" y="430" font-size="12.5" fill="#333" font-family="monospace">/apidoc/debug · /apidoc/debug/stream · /apidoc/webhook/:id · CORS</text>
 
-  <!-- Adapter layer done -->
-  <rect x="120" y="402" width="700" height="76" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="708" y="407" width="112" height="22" rx="11" fill="#27ae60"/>
-  <text x="764" y="422" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">M2+M4+M5+M6</text>
-  <text x="140" y="428" font-size="16" font-weight="bold" fill="#1e8449">Adapter Layer (Done) · apidoc-axum + apidoc-actix: route mounting + CORS</text>
-  <!-- actix done -->
-  <rect x="656" y="434" width="148" height="24" rx="6" fill="#27ae60" stroke="#27ae60" stroke-width="2"/>
-  <text x="730" y="450" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">apidoc-actix (Done)</text>
-  <text x="140" y="452" font-size="13" fill="#333">/apidoc (UI) · /apidoc/api.json · /apidoc/mock · /apidoc/export · /apidoc/auth (M6a token exchange)</text>
-  <text x="140" y="470" font-size="13" fill="#333">api.json / export / mock require ?token=; missing/expired/invalid returns 401; when auth is disabled: 404, data routes pass through</text>
+  <!-- Browser direct -->
+  <rect x="60" y="452" width="400" height="154" rx="8" fill="#eaf7ef" stroke="#27ae60" stroke-width="2"/>
+  <text x="80" y="478" font-size="15" font-weight="bold" fill="#1e8449">P1 · Browser-direct</text>
+  <text x="80" y="502" font-size="12" fill="#333">SOAP · GraphQL · JSON-RPC · XML-RPC · OData</text>
+  <text x="80" y="522" font-size="12" fill="#333">MCP · A2A · Webhooks · SSE · Socket.IO</text>
+  <text x="80" y="542" font-size="12" fill="#333">WebSocket (text/binary) · STOMP · GraphQL-WS</text>
+  <text x="80" y="562" font-size="12" fill="#333">WebRTC / DataChannel · HLS preview</text>
+  <text x="80" y="586" font-size="12" fill="#1e8449">No Rust deps · auth via URL query · pre/post scripts</text>
 
-  <!-- Presentation layer done -->
-  <rect x="120" y="490" width="700" height="64" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <rect x="708" y="495" width="84" height="20" rx="10" fill="#27ae60"/>
-  <text x="750" y="509" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
-  <text x="140" y="515" font-size="16" font-weight="bold" fill="#1e8449">Presentation Layer (Done) · docs UI debug panel (embedded Html, zero external deps)</text>
-  <text x="140" y="537" font-size="13" fill="#333">Catalog browsing / online debugging (CORS direct) / Mock prefill</text>
-  <text x="140" y="553" font-size="13" fill="#333">M6: password mask (POST exchanges for the token) · app/version selector · tokens stored in localStorage per appKey</text>
+  <!-- Server executors -->
+  <rect x="480" y="452" width="400" height="154" rx="8" fill="#eaf1fe" stroke="#2563eb" stroke-width="2"/>
+  <text x="500" y="478" font-size="15" font-weight="bold" fill="#1d4ed8">P2–P5 · Server executors</text>
+  <text x="500" y="502" font-size="12" fill="#333">HTTP/2 · HTTP/3 · gRPC · Thrift · Dubbo/Hessian2</text>
+  <text x="500" y="522" font-size="12" fill="#333">ISO 8583 · RTP/RTCP · RTSP · SIP · RTMP</text>
+  <text x="500" y="542" font-size="12" fill="#333">TCP/UDP/Raw/Unix · MQTT · AMQP · Kafka</text>
+  <text x="500" y="562" font-size="12" fill="#333">XMPP · STOMP/TCP · CoAP · LwM2M</text>
+  <text x="500" y="582" font-size="12" fill="#333">Modbus · DNP3 · IEC 104 · BACnet/IP · OPC UA</text>
+  <text x="500" y="600" font-size="11.5" fill="#1d4ed8">One feature per protocol family · debug-all aggregates</text>
 
-  <!-- Data flow -->
-  <rect x="120" y="566" width="700" height="64" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
-  <rect x="708" y="571" width="84" height="20" rx="10" fill="#b58900"/>
-  <text x="750" y="585" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">M4+M6</text>
-  <text x="140" y="588" font-size="13" fill="#333" font-family="monospace">browser → /apidoc (debug panel) → CORS direct → target endpoint (real request)</text>
-  <text x="140" y="606" font-size="13" fill="#333" font-family="monospace">browser → /apidoc/mock → Mock data (fake crate · 15 rules)</text>
-  <text x="140" y="622" font-size="13" fill="#333" font-family="monospace">browser → POST /apidoc/auth (password in the body) → token, data routes accessed with ?token=</text>
+  <!-- Security -->
+  <rect x="60" y="616" width="820" height="76" rx="8" fill="#fdeeee" stroke="#dc2626" stroke-width="2"/>
+  <text x="80" y="642" font-size="16" font-weight="bold" fill="#991b1b">Security &amp; runtime boundaries</text>
+  <text x="80" y="664" font-size="12.5" fill="#333">DebugConfig is off by default; enabling requires global auth; SSRF guard validates every IP and pins connections</text>
+  <text x="80" y="682" font-size="12.5" fill="#333">No redirects/proxy/CONNECT · cloud metadata denied · size/frame/timeout caps · no pinned TLS = fail closed</text>
+
+  <!-- Exports -->
+  <rect x="60" y="702" width="820" height="74" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
+  <text x="80" y="728" font-size="16" font-weight="bold" fill="#5f4b00">Exports &amp; integrations</text>
+  <text x="80" y="750" font-size="12.5" fill="#333">md / ts / swagger(OpenAPI 3.0) / asyncapi(2.6) · codegen · Mock · share links</text>
+  <text x="80" y="768" font-size="12.5" fill="#555">apidoc-idl: .proto / .thrift import · Dubbo Nacos registry · Webhook event capture</text>
 
   <!-- workspace -->
-  <rect x="120" y="642" width="700" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
-  <text x="470" y="660" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc (core·auth.rs) · macros (macros) · axum (adapter) · actix (adapter) · mock (Mock) · test-fixtures (test fixtures)</text>
+  <rect x="60" y="786" width="820" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
+  <text x="470" y="804" text-anchor="middle" font-size="12" fill="#333" font-family="monospace">workspace: apidoc · apidoc-macros · apidoc-idl · apidoc-test-fixtures</text>
 
-  <!-- Legend -->
-  <rect x="120" y="678" width="24" height="12" fill="#27ae60"/>
-  <text x="152" y="689" font-size="13" fill="#333">Implemented (M1–M6)</text>
-  <rect x="310" y="678" width="24" height="12" fill="none" stroke="#95a5a6" stroke-width="2" stroke-dasharray="6 4"/>
-  <text x="342" y="689" font-size="13" fill="#333">Planned (v2: code generator / share links etc.)</text>
-  <text x="700" y="689" font-size="13" fill="#888">watermark: https://erik.xyz</text>
+  <!-- legend -->
+  <rect x="60" y="826" width="22" height="12" fill="#27ae60"/>
+  <text x="90" y="837" font-size="12.5" fill="#333">Implemented (M1–M6 + P1–P6)</text>
+  <text x="330" y="837" font-size="12.5" fill="#555">Server debugging off by default · browser-direct needs no deps · see multiprotocol-en.svg</text>
+  <text x="700" y="850" font-size="12" fill="#888">watermark: https://erik.xyz</text>
 </svg>

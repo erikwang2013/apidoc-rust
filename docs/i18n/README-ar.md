@@ -42,7 +42,7 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 - **توليد Json/TypeScript**: يُولَّد لكل واجهة مثال طلب/استجابة Json وتعريفات أنواع TypeScript جاهزة للاستخدام مباشرة في الواجهة الأمامية.
 - **مولّد الأكواد**: بإعداد + قالب يُولَّد كود الأعمال وملفات Api للواجهة الأمامية.
 - **مشاركة الواجهات**: يمكن توليد رابط مشاركة لتطبيق/واجهة محددة، وتصدير `swagger.json`.
-- **وصول آمن**: يدعم كلمة مرور عامة وكلمات مرور مستقلة لكل تطبيق/إصدار، مع إمكانية تفعيل التخزين المؤقت للوثائق.
+- **وصول آمن**: يدعم كلمة مرور عامة وكلمات مرور مستقلة لكل تطبيق/إصدار؛ وتُبنى الوثائق وقت البناء، وتبقى الاستجابات المحلية دون 10ms p99.
 
 ## المميزات
 
@@ -64,7 +64,7 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 
 ### تم تنفيذه (M5)
 
-- **التصدير بثلاث صيغ** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0)، النواة توفر `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
+- **التصدير بأربع صيغ** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0)، النواة توفر `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
 - **مسار التصدير**: المحول يضيف `GET /apidoc/export?format=md|ts|swagger`، والصيغة غير المعروفة تعيد 400؛ وContent-Type تكون `text/markdown` / `application/typescript` / `application/json` على التوالي
 - **markdown**: فهرس مجمّع + جدول معاملات + كتلة استجابة؛ **typescript**: توليد أنواع `{Name}Params` / `{Name}Result` ضمن نطاق group، والواجهات غير المجمّعة تقع في `defaultGroup` (`default` كلمة محجوزة في TS)؛ **swagger**: `info.version` مأخوذ من إصدار حزمة Cargo
 - **محول actix-web** (`crates/apidoc/src/actix.rs`): وظائف متطابقة 1:1 مع محول axum — `apidoc_routes(ApidocConfig) -> Scope` يركّب /apidoc و/apidoc/api.json و/apidoc/mock و/apidoc/export، و`cors_layer(CorsConfig)` يسمح بالطلبات عبر النطاقات
@@ -79,10 +79,21 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 ### تم تنفيذه (v2)
 
 - **مراجع حقول جداول البيانات (`table`)**: تُدرج `#[apidoc::table("user")]` الحقول **مسطَّحة** في `returned` وفق مفتاح الجدول المهيأ في `ApidocConfig.tables` (بالدلالة نفسها التي لـ `ref`، والفرق أن مصدر البيانات جدول إعداد وليس واجهة أخرى)؛ وتدعم الحقول `required` / `default` / `desc` / `mock`؛ والمفتاح غير المهيأ يُصدر تحذير stderr فقط؛ وعند عدم استخدام هذا التعليق يبقى الإخراج مطابقًا بايتًا ببايت لـ v1
-- **تخزين الوثائق مؤقتًا**: `ApidocConfig.cache = Some(CacheConfig { enable, ttl })`——يُحفَظ إخراج `/apidoc/mock` في ذاكرة العملية وفق `(url, method)`، وينتهي مفعوله بعد `ttl` ثانية ليُعاد بناؤه، حيث `ttl = 0` تعني الدوام؛ وعند عدم التهيئة أو عدم التفعيل لا يُسلك مسار التخزين المؤقت إطلاقًا (صفر تغيير في الإخراج). أما api.json / export فتُبنى مرة واحدة عند تركيب المسارات، أي ما يعادل تخزينًا مؤقتًا دائمًا
+- **التجسيد وقت البناء**: يُبنى api.json والتصديرات وقالبات codegen وأجسام `/apidoc/mock` مرة واحدة عند تركيب المسارات؛ وتكتفي الطلبات بالبحث في جدول. يبقى `ApidocConfig.cache` للتوافق، لكن استجابات mock لم تعد تحتاج تخزينًا مؤقتًا وقت الطلب
 - **روابط المشاركة**: `GET /apidoc/share?app=&url=&method=&base=` → `{"url":"…"}` رابط عميق (`?app=<key>&ep=<接口 url>&method=<方法>[&token=…]`)؛ مع زر «مشاركة» بجوار كل واجهة في صفحة الوثائق (ينسخ إلى الحافظة، وعند الفشل يتحول إلى حقل قابل للنسخ)، وفتح الرابط العميق ينقل مباشرة إلى التطبيق/الواجهة المطلوبة؛ وعند تفعيل المصادقة يُرفق بالرابط token يُصدره الخادم (كلمة مرور التطبيق المستقلة لها الأولوية على العامة)، فيُفتح دون كلمة مرور
 - **مولّد الأكواد**: `GET /apidoc/generate?template=<name>` → نص بعد المعالجة (قالب غير معروف 404)؛ قوالب مدمجة: `api.ts` (ملف Api للواجهة الأمامية)، `handler.rs` (هيكل واجهة Rust)، `schema.sql` (يولّد عبارات CREATE TABLE وفق `tables`)؛ وقالب بالاسم نفسه في `ApidocConfig.codegen` يطغى على المدمج. صيغة القوالب اثنتان فقط: `{{变量}}` (يبقى كما هو إن لم يُعرَّف) و`{{#each 列表}}…{{/each}}` (قابل للتداخل، مثل `tables` × `fields`)
 - **أحداث التصحيح**: أُضيف إلى لوحة التصحيح أونلاين قسم قابل للطي «نصوص ما قبل الطلب / ما بعد الطلب» (يُحفظ في localStorage)——النص القبلي يُنفَّذ قبل الطلب عبر `new Function('ctx', code)` ويمكنه تعديل `ctx.url/method/headers/body` أو إرجاع كائن يُدمج دمجًا سطحيًا؛ والنص البعدي يُنفَّذ بعد الاستجابة ويقرأ `status/ms/text/url/method/ep`، وإذا أرجع نصًا استُبدل به النص المعروض للاستجابة؛ وخطأ السكريبت يظهر في منطقة النتائج فقط دون قطع الطلب
+
+## توثيق وتصحيح متعدد البروتوكولات (P1–P6)
+
+![بنية تصحيح متعدد البروتوكولات في apidoc-rust](../images/multiprotocol-en.svg)
+
+- **45 تعليقًا للبروتوكولات** إضافة إلى الصيغة العامة `#[apidoc::protocol("kind", ...)]`؛ يعلن `event` رسائل التدفق ويعلن `param(..., field = "1")` أرقام حقول البروتوكول.
+- **تصحيح مباشر من المتصفح** (دون اعتماد على Rust): SOAP، GraphQL (مع subscriptions)، JSON-RPC، XML-RPC، OData، MCP، A2A، Webhooks، WebSocket (نص/ثنائي)، SSE، Socket.IO، STOMP (مع الثنائي)، WebRTC/DataChannel، HLS.
+- **منفذات على الخادم** (feature-gated): HTTP/2، HTTP/3، gRPC، Thrift، Dubbo/Hessian2، ISO 8583، TCP/UDP/Raw/Unix، MQTT، AMQP، Kafka، XMPP، STOMP/TCP، CoAP، LwM2M، Modbus، DNP3، IEC 104، BACnet/IP، OPC UA، RTP/RTCP/RTSP/SIP/RTMP. ويُفعّلها `debug-all` جميعًا.
+- **P6**: التقاط Webhooks، تصدير AsyncAPI 2.6، استيراد `.proto`/`.thrift` عبر CLI `apidoc-idl`، سجل Dubbo Nacos، أمثلة mock من الأحداث.
+- **الأمان**: تصحيح الخادم معطّل افتراضيًا ويتطلب مصادقة عامة؛ يتحقق حارس SSRF من كل IP ويثبّت الاتصال، ويُرفض كل من إعادة التوجيه/الوكيل وبيانات السحابة الوصفية؛ وتُحدّ أحجام الاستجابة والإطارات والمهلة؛ والبروتوكولات بلا TLS مثبّت تفشل مغلقة.
+- **الأداء**: تُبنى الوثائق والتصديرات وcodegen وأجسام mock وقت البناء؛ وتبقى مسارات apidoc المحلية دون 10ms p99 (`tests/latency.rs`).
 
 ## البنية
 
@@ -101,7 +112,7 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 ```
 apidoc-rust/
 ├── Cargo.toml                 # إعداد workspace (resolver 2)
-├── VERSION                    # إصدار المشروع (v2.0.0)
+├── VERSION                    # إصدار المشروع (v2.1.0)
 ├── crates/
 │   ├── apidoc/                # النواة في زمن التشغيل (مستقلة عن الإطار)
 │   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json + UI_HTML
@@ -110,7 +121,7 @@ apidoc-rust/
 │   │   ├── src/ui.html        # واجهة الوثائق المشتركة (تصدّرها النواة، ويشير إليها المحولان)
 │   │   ├── tests/             # اختبارات التكامل (توسيع الماكرو / التجميع / التسلسل / عبر crates)
 │   │   └── examples/demo.rs   # مثال: تعليقات توضيحية + إخراج api.json
-│   ├── apidoc-macros/         # proc-macro: 20 ماكروات سمات
+│   ├── apidoc-macros/         # proc-macro: أكثر من 65 ماكرو سمة (بما فيها 45 اسمًا مستعارًا للبروتوكولات)
 │   │   └── src/lib.rs         # تعريفات الماكرو + تحليل المعاملات + التحقق في زمن الترجمة
 
 │   ├── apidoc-test-fixtures/  # نماذج اختبار التسجيل عبر crates
@@ -128,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.0"        # أو path = "crates/apidoc"
+apidoc-rust = "2.1"        # أو path = "crates/apidoc"
 
 serde_json = "1"      # لاستخدام إخراج api.json
 linkme = "0.3"        # مطلوب: كود التسجيل الناتج عن الماكرو يشير إليه
@@ -246,17 +257,19 @@ fn create_user() -> String {
 
 ### 6. التصدير أونلاين (M5)
 
-المحول يوفر واجهات تصدير بالصيغ الثلاث مدمجة، جاهزة فور التركيب (الصيغة غير المعروفة `format` تعيد 400):
+المحول يوفر واجهات تصدير بالصيغ الأربع مدمجة، جاهزة فور التركيب (الصيغة غير المعروفة `format` تعيد 400):
 
 ```bash
 GET /apidoc/export?format=md        # فهرس مجمّع + جدول معاملات + كتلة استجابة (text/markdown)
 GET /apidoc/export?format=ts        # توليد أنواع {Name}Params / {Name}Result ضمن نطاق group (application/typescript)
 GET /apidoc/export?format=swagger   # ملف وصف OpenAPI 3.0.0 (application/json)
+GET /apidoc/export?format=asyncapi # AsyncAPI 2.6 event/streaming spec (application/json)
 ```
 
 - **markdown**: مناسب للصقه في Wiki المشروع / ملاحظات الإصدار، يخرج فهرسًا مجمّعًا حسب المجموعة، وكل واجهة مع جدول معاملات وكتلة استجابة؛
 - **typescript**: الواجهة الأمامية يمكنها لصقه مباشرة كتعريفات أنواع؛ الواجهات غير المجمّعة تقع في نطاق `defaultGroup` (`default` كلمة محجوزة في TS، لا يمكن استخدامها كمعرّف)؛
-- **swagger**: `info.version` مأخوذ من `ApidocConfig.version` (إصدار الـ API الموثَّق)، وإذا لم يُعيَّن يرجع إلى إصدار حزمة apidoc-rust (حاليًا 2.0.0)؛ ومعاملات المسار مأخوذة من قالب URL، فيُستورد الملف مباشرة إلى Swagger UI أو مولّدات الكود.
+- **swagger**: `info.version` مأخوذ من `ApidocConfig.version` (إصدار الـ API الموثَّق)، وإذا لم يُعيَّن يرجع إلى إصدار حزمة apidoc-rust (حاليًا 2.1.0)؛ ومعاملات المسار مأخوذة من قالب URL، فيُستورد الملف مباشرة إلى Swagger UI أو مولّدات الكود.
+- **asyncapi**: قنوات/عمليات/رسائل لنقاط نهاية الأحداث مثل WebSocket وSSE وMQTT وKafka وSTOMP (AsyncAPI 2.6).
 
 ### 7. محول actix-web
 
@@ -264,7 +277,7 @@ GET /apidoc/export?format=swagger   # ملف وصف OpenAPI 3.0.0 (application/j
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.0", features = ["actix"] }
+apidoc-rust = { version = "2.1", features = ["actix"] }
 ```
 
 ```rust

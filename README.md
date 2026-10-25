@@ -36,6 +36,7 @@ apidoc-rust 的实现取向：
 - **开箱即用**：无需繁杂配置，安装后按文档编写注解即可自动生成 API 文档。
 - **轻松编写**：支持通用定义（definitions）、字段的 `ref` 引用，几句注解即可完成完整字段定义。
 - **在线调试**：文档页内直接调试接口，支持全局参数带入、Mock 数据、调试事件。
+- **多协议调试**：45 种协议注解（RPC、消息队列、工业、媒体、IoT 等），浏览器直连与服务端代发双通道，注解即生成协议文档与调试面板。
 - **多应用/多版本**：单应用、多应用、多版本项目均可配置，接口按应用/版本分组展示与切换。
 - **分组/Tag**：接口支持多级分组与 Tag 标记。
 - **Markdown 文档**：`md` 注解可将 Markdown 挂载为文档页。
@@ -48,7 +49,7 @@ apidoc-rust 的实现取向：
 
 ### 已实现（M1-M3）
 
-- **注解式文档**：`title` / `desc` / `method` / `url` / `param` / `query` / `returned` 七个属性宏，逐条注解，参数支持 `required` / `default` / `desc` / `mock` / `children` 嵌套
+- **注解式文档**：`title` / `desc` / `method` / `url` / `param` / `query` / `returned` 等属性宏（含 `tag` / `group` / `header` / `table` 与 45 个协议注解），逐条注解，参数支持 `required` / `default` / `desc` / `mock` / `children` / `field` 嵌套
 - **编译期校验**：url 必须以 `/` 开头、method 白名单、param name 必填等，非法注解编译期报错（span 精确）
 - **自动收集**：linkme `distributed_slice` 静态注册，无需手动接口清单；`DocRegistry::collect()` 按 id 合并、按 seq 恢复声明顺序，跨 crate 自动收集
 - **api.json 输出**：serde 序列化统一文档数据模型（config + endpoints），字段名与导出器共用同一份定义
@@ -64,7 +65,7 @@ apidoc-rust 的实现取向：
 
 ### 已实现（M5）
 
-- **导出三格式**（`crates/apidoc/src/export/`）：markdown / typescript / swagger（OpenAPI 3.0.0），核心 crate 提供 `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
+- **导出四格式**（`crates/apidoc/src/export/`）：markdown / typescript / swagger（OpenAPI 3.0.0）/ AsyncAPI 2.6（P6），核心 crate 提供 `export::markdown::render` / `export::typescript::render` / `export::swagger::render` / `export::asyncapi::render`
 - **导出路由**：适配器新增 `GET /apidoc/export?format=md|ts|swagger`，未知 format 返回 400；Content-Type 分别为 `text/markdown` / `application/typescript` / `application/json`
 - **markdown**：分组目录 + 参数表 + 响应块；**typescript**：按 group 命名空间生成 `{Name}Params` / `{Name}Result` 类型，未分组接口落入 `defaultGroup`（`default` 是 TS 保留字）；**swagger**：`info.version` 取 Cargo 包版本
 - **actix-web 适配器**（`crates/apidoc/src/actix.rs`，feature `actix`）：与 axum 适配器功能 1:1——`apidoc_routes(ApidocConfig) -> Scope` 挂载 /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export，`cors_layer(CorsConfig)` 放行跨域
@@ -84,27 +85,29 @@ apidoc-rust 的实现取向：
 - **代码生成器**：`GET /apidoc/generate?template=<name>` → 渲染后的文本（未知模板 404）；内置 `api.ts`（前端 Api 文件）、`handler.rs`（Rust 接口骨架）、`schema.sql`（按 `tables` 生成建表语句）；`ApidocConfig.codegen` 里的同名模板覆盖内置。模板语法只有两种：`{{变量}}`（未定义则原样保留）与 `{{#each 列表}}…{{/each}}`（可嵌套，如 `tables` × `fields`）；变量值里的换行统一折叠成空格（三份产物都是行式结构）
 - **调试事件**：在线调试面板新增可折叠的「前置脚本 / 后置脚本」（持久化到 localStorage）——前置以 `new Function('ctx', code)` 在请求前执行，可改 `ctx.url/method/headers/body` 或返回对象浅合并；后置在响应后执行，可读 `status/ms/text/url/method/ep`，返回字符串则替换展示的响应文本；脚本报错只在结果区提示，不中断请求
 
-### 已实现（多协议调试 P1）
+### 多协议注解
 
 - **协议注解**：每个协议一个独立注解，如 `#[apidoc::websocket("wss://…")]`、`#[apidoc::grpc(target = "http://…", service = "x.Y", method = "Z")]`、`#[apidoc::mqtt("mqtt://broker:1883", topic = "sensors/#")]`；位置参数等价于 `target = "…"`。底层与通用形式 `#[apidoc::protocol("kind", ...)]` 完全等价，新协议仍可用通用形式
 - **事件与字段**：`#[apidoc::event(direction = "in", name = "message")]` 声明流式消息，`#[apidoc::param(..., field = "1")]` 声明协议字段号
-- **浏览器直连调试**：SOAP、GraphQL（含订阅）、JSON-RPC、XML-RPC、OData、MCP、A2A、Webhooks、WebSocket（文本/二进制帧）、SSE、Socket.IO、STOMP（含二进制）、WebRTC/DataChannel、HLS
-- **服务端代发**（feature `debug-http`，默认关闭）：`POST /apidoc/debug`，可强制 HTTP/2、绕过 CORS/内网；开启需 `DebugConfig { enable_server_side: true }` + 全局鉴权，默认拒绝内网/回环/云元数据地址
 
-### 已实现（多协议调试 P2）
+### 已实现（多协议调试 P1–P6）
 
-服务端执行器按协议族独立 feature，默认构建不引入任何重型依赖；`debug-all` 一键启用全部 P2 执行器。开启服务端调试仍需 `DebugConfig { enable_server_side: true }` + 全局鉴权，所有目标先过 SSRF 守卫（默认拒绝内网/回环/云元数据，DNS 解析后逐 IP 校验并钉住连接）。
+![apidoc-rust 多协议调试架构](https://github.com/erikwang2013/apidoc-rust/raw/HEAD/docs/images/multiprotocol.svg)
 
-| 协议 | 注解 kind | 执行位置 | feature |
+| 阶段 | 协议 | 执行位置 | feature |
 |---|---|---|---|
-| WebSocket / WS Binary 长连接 | `websocket` / `ws-binary` | 服务端 `GET /apidoc/debug/stream` | `debug-session` |
-| gRPC（一元 + 服务端流） | `grpc` | 服务端 `POST /apidoc/debug` | `debug-grpc` |
-| Thrift（TBinaryProtocol） | `thrift` | 服务端 | `debug-thrift` |
-| Dubbo / Hessian2 | `dubbo` / `hessian` | 服务端 | `debug-dubbo` |
-| ISO 8583 | `iso8583` | 服务端 | `debug-iso8583` |
-| TCP / UDP / Raw / Unix Socket | `tcp` / `udp` / `raw` / `unix` | 服务端 | `debug-sockets` |
+| P1 | SOAP / GraphQL（含订阅）/ JSON-RPC / XML-RPC / OData / MCP / A2A / Webhooks / WebSocket（文本/二进制帧）/ SSE / Socket.IO / STOMP（含二进制）/ WebRTC / DataChannel / HLS | 浏览器直连 | 无 |
+| P2 | WebSocket 会话桥 / gRPC（一元 + 服务端流）/ Thrift / Dubbo + Hessian2 / ISO 8583 / TCP / UDP / Raw / Unix Domain Socket | 服务端 | `debug-session` / `debug-grpc` / `debug-thrift` / `debug-dubbo` / `debug-iso8583` / `debug-sockets` |
+| P3 | MQTT / AMQP 0-9-1 / Kafka / XMPP / STOMP over TCP | 服务端 | `debug-mqtt` / `debug-amqp` / `debug-kafka` / `debug-xmpp` / `debug-sockets`（STOMP） |
+| P4 | CoAP / LwM2M / Modbus TCP / DNP3 / IEC 60870-5-104 / BACnet/IP / OPC UA Binary | 服务端 | `debug-coap` / `debug-industrial` |
+| P5 | HTTP/2 / HTTP/3 / RTP / RTCP / RTSP / SIP / RTMP | 服务端 | `debug-http` / `debug-http3` / `debug-media` |
+| P6 | Webhook 入站捕获 / AsyncAPI 2.6 导出 / `.proto` + `.thrift` IDL 导入 / Dubbo Nacos 注册中心 / 事件 mock 示例 | 核心 + `apidoc-idl` CLI | 无（`apidoc-idl` 独立 crate） |
 
-字段号/类型等 schema 只从服务端已收集的文档端点读取，客户端不能注入。P3+：MQTT/AMQP/Kafka/XMPP、CoAP/LwM2M/工业协议、RTSP/RTMP/RTP/SIP/HTTP3 按 `docs/superpowers/plans/` 分批接入。
+**安全边界**：`DebugConfig { enable_server_side: true }` 默认关闭，开启必须配置全局鉴权；所有服务端目标先过 SSRF 守卫（allowlist、默认拒回环/私网/链路本地/CGNAT、云元数据永久拒绝、DNS 解析后逐 IP 校验并钉住连接、禁重定向/代理/CONNECT）；`max_bytes` / `max_frames` / `timeout` 全链路封顶；凭据永不进 api.json 或错误文本。`wss`、gRPC `https`、MQTT TLS、AMQP TLS 在未实现 pinned TLS 前 fail closed。
+
+**性能**：api.json、四种导出、代码生成模板与 mock 响应全部构建期物化；webhook 事件捕获时预序列化并按 100 条 / 256 KiB 截断。`tests/latency.rs` 验证 apidoc 本地路由 p99 < 10ms（不含服务端调试目标自身的网络耗时）。
+
+服务端执行器按协议族独立 feature，默认构建不引入任何重型依赖；`debug-all` 一键聚合全部执行器。
 
 ## 架构
 
@@ -123,21 +126,28 @@ apidoc-rust 的实现取向：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 配置（resolver 2）
-├── VERSION                    # 项目版本（v2.0.0）
+├── VERSION                    # 项目版本（v2.1.0）
 ├── crates/
 │   ├── apidoc/                # 单一发布包 apidoc-rust（lib 名 apidoc）
 │   │   ├── src/lib.rs         # 数据模型 + DocRegistry 聚合 + api.json + UI_HTML
 │   │   ├── src/auth.rs        # M6a 密码鉴权（HMAC 令牌签发/校验 + 路由守卫 + 失败退避）
-│   │   ├── src/mock.rs        # M4 Mock 引擎（feature `mock`，axum/actix 隐含启用）
-│   │   ├── src/axum.rs        # axum 适配器（feature `axum`：文档路由 + cors + mock + export）
+│   │   ├── src/mock.rs        # M4 Mock 引擎 + 事件示例（feature `mock`）
+│   │   ├── src/protocol.rs    # 45 种协议的注册表、交互/执行方式与 HTTP 兼容判定
+│   │   ├── src/webhook.rs     # Webhook 入站捕获（HMAC、限速、有界环形缓冲、预序列化）
+│   │   ├── src/debug/         # 服务端调试执行器（guard / session / http / grpc / thrift /
+│   │   │                      #   dubbo / sockets / mqtt / amqp / kafka / xmpp / stomp /
+│   │   │                      #   coap / lwm2m / industrial / media / http3）
+│   │   ├── src/axum.rs        # axum 适配器（文档/调试/流会话/Webhook 路由 + cors）
 │   │   ├── src/actix.rs       # actix-web 适配器（feature `actix`，与 axum 功能 1:1）
-│   │   ├── src/export/        # M5 导出：markdown / typescript / swagger
+│   │   ├── src/export/        # 导出：markdown / typescript / swagger / asyncapi + 代码生成
 │   │   ├── src/ui.html        # 共享文档 UI（核心 crate 导出，适配器引用）
-│   │   ├── tests/             # 集成测试（宏展开/聚合/序列化/跨 crate/适配器）
+│   │   ├── src/ui.*.js        # 调试面板：编码器 / 协议表单 / 服务端调试 / 流适配 / 媒体
+│   │   ├── tests/             # 集成测试（宏/聚合/序列化/调试执行器/延迟/JS 编码器）
 │   │   ├── examples/demo.rs   # 示例：注解 + 输出 api.json
 │   │   └── examples/axum_demo.rs  # 示例：axum 接入（feature `axum`）
-│   ├── apidoc-macros/         # proc-macro：20 个属性宏（经 apidoc-rust re-export）
-│   │   └── src/lib.rs         # 宏定义 + 参数解析 + 编译期校验
+│   ├── apidoc-macros/         # proc-macro：基础注解 + 45 个协议别名（经 re-export）
+│   │   └── src/               # 宏定义 / 参数解析 / 协议 kind 别名与编译期校验
+│   ├── apidoc-idl/            # `.proto` / `.thrift` → apidoc 注解的独立 CLI
 │   └── apidoc-test-fixtures/  # 跨 crate 注册测试夹具（仅 workspace，不发布）
 ├── .github/
 │   └── workflows/release.yml  # 发布工作流（读取 VERSION，增量创建 tag+release）
@@ -152,7 +162,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.0"     # 或 path = "crates/apidoc"
+apidoc-rust = "2.1"     # 或 path = "crates/apidoc"
 serde_json = "1"      # 输出 api.json 用
 linkme = "0.3"        # 宏生成的注册代码引用它（必须直接依赖）
 ```
@@ -320,17 +330,19 @@ fn create_user() -> String {
 
 ### 6. 在线导出（M5）
 
-适配器内置三格式导出接口，接入后即用（未知 `format` 返回 400）：
+适配器内置四种导出接口，接入后即用（未知 `format` 返回 400）：
 
 ```bash
 GET /apidoc/export?format=md        # 分组目录 + 参数表 + 响应块（text/markdown）
 GET /apidoc/export?format=ts        # 按 group 命名空间生成 {Name}Params / {Name}Result 类型（application/typescript）
 GET /apidoc/export?format=swagger   # OpenAPI 3.0.0 描述文件（application/json）
+GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6（事件/流式协议，application/json）
 ```
 
 - **markdown**：适合贴进项目 Wiki / 发布说明，按分组输出目录，每个接口带参数表与响应块；
 - **typescript**：前端可直接粘贴为类型定义；未分组接口落入 `defaultGroup` 命名空间（`default` 是 TS 保留字，不能作标识符）；
-- **swagger**：`info.version` 取 `ApidocConfig.version`（被文档化的 API 版本），未配置时回落到 apidoc-rust 包版本（当前 2.0.0）；path 参数以 URL 模板为准，可直接导入 Swagger UI 或代码生成器。
+- **swagger**：`info.version` 取 `ApidocConfig.version`（被文档化的 API 版本），未配置时回落到 apidoc-rust 包版本（当前 2.1.0）；path 参数以 URL 模板为准，可直接导入 Swagger UI 或代码生成器；
+- **asyncapi**：按协议生成 channel/operation/message，覆盖 WebSocket、SSE、MQTT、Kafka、STOMP 等事件端点。
 
 ### 7. actix-web 适配器
 
@@ -338,7 +350,7 @@ Web 框架用 actix-web 时开启 `features = ["actix"]`（与 axum 适配器功
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.0", features = ["actix"] }
+apidoc-rust = { version = "2.1", features = ["actix"] }
 ```
 
 ```rust
