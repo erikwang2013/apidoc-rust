@@ -1,6 +1,7 @@
-//! M5 导出：markdown / typescript / swagger（OpenAPI3）三种格式渲染。
+//! M5 导出：markdown / typescript / swagger（OpenAPI3）/ asyncapi 渲染。
 //! 各格式一个子模块，共享 helper 集中在本文件。
 
+pub mod asyncapi;
 pub mod markdown;
 pub mod swagger;
 pub mod typescript;

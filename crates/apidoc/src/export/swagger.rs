@@ -128,7 +128,8 @@ fn param_obj(p: &DocParam, loc: &str, required: bool) -> Value {
     })
 }
 
-fn schema_for(params: &[DocParam]) -> Value {
+/// 供 AsyncAPI 复用：params/returned → JSON Schema object。
+pub(crate) fn schema_for(params: &[DocParam]) -> Value {
     let mut props = Map::new();
     for p in params {
         props.insert(p.name.to_string(), prop_schema(p));

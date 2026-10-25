@@ -64,6 +64,8 @@ pub struct Core {
     md: Bytes,
     ts: Bytes,
     sw: Bytes,
+    /// P6 AsyncAPI 2.6（只含流式/事件协议），同样构建期物化。
+    asyncapi: Bytes,
     mocks: Vec<MockEndpointSpec>,
     /// 已渲染模板（内置 + config.codegen 同名覆盖），请求期只查表。
     generated: HashMap<String, Bytes>,
@@ -99,6 +101,10 @@ impl Core {
         let sw = Bytes::from(
             serde_json::to_string(&export::swagger::render(&doc, &api_version))
                 .expect("swagger must serialize"),
+        );
+        let asyncapi = Bytes::from(
+            serde_json::to_string(&export::asyncapi::render(&doc, &api_version))
+                .expect("asyncapi must serialize"),
         );
         // 鉴权配置与应用树按需捕获（password/secret_key 只在构建期内存中）
         let auth_cfg = doc.config.auth.clone();
@@ -154,6 +160,7 @@ impl Core {
             md,
             ts,
             sw,
+            asyncapi,
             mocks,
             generated,
             auth_cfg,
@@ -204,7 +211,7 @@ impl Core {
         R::new(200, "application/json", self.api_json.clone())
     }
 
-    /// GET /apidoc/export?format=md|ts|swagger，未知 format 400（无 Content-Type，对齐现状）。
+    /// GET /apidoc/export?format=md|ts|swagger|asyncapi，未知 format 400（无 Content-Type，对齐现状）。
     pub fn export(&self, q: &HashMap<String, String>) -> R {
         if !self.guard(q) {
             return Self::denied();
@@ -213,6 +220,7 @@ impl Core {
             Some("md") => R::new(200, "text/markdown", self.md.clone()),
             Some("ts") => R::new(200, "application/typescript", self.ts.clone()),
             Some("swagger") => R::new(200, "application/json", self.sw.clone()),
+            Some("asyncapi") => R::new(200, "application/json", self.asyncapi.clone()),
             _ => R::empty(400),
         }
     }
