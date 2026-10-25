@@ -59,12 +59,18 @@ pub fn generate_id() -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 
-#[derive(Clone, Serialize)]
+/// 入库后只保留 seq + 预序列化 JSON：GET 时只做拼接，零 serde 开销。
 struct StoredEvent {
     seq: u64,
+    json: String,
+}
+
+#[derive(Serialize)]
+struct EventJson<'a> {
+    seq: u64,
     ts: u64,
-    headers: BTreeMap<String, String>,
-    body: StoredBody,
+    headers: &'a BTreeMap<String, String>,
+    body: &'a StoredBody,
 }
 
 #[derive(Clone, Serialize)]
@@ -206,14 +212,17 @@ impl WebhookRegistry {
                 return (401, r#"{"error":"invalid signature"}"#.to_string());
             }
         }
-        let event = StoredEvent {
-            seq: hook.seq.fetch_add(1, Ordering::Relaxed) + 1,
+        let seq = hook.seq.fetch_add(1, Ordering::Relaxed) + 1;
+        let headers = bounded_headers(headers);
+        let body = stored_body(body);
+        let json = serde_json::to_string(&EventJson {
+            seq,
             ts: now_ms(),
-            headers: bounded_headers(headers),
-            body: stored_body(body),
-        };
-        let seq = event.seq;
-        hook.push(event);
+            headers: &headers,
+            body: &body,
+        })
+        .expect("webhook event must serialize");
+        hook.push(StoredEvent { seq, json });
         (202, format!("{{\"seq\":{seq}}}"))
     }
 
@@ -223,22 +232,29 @@ impl WebhookRegistry {
             return (404, r#"{"error":"unknown webhook"}"#.to_string());
         };
         let store = hook.store.lock().unwrap_or_else(|e| e.into_inner());
-        let mut events: Vec<&StoredEvent> = Vec::new();
+        let mut out = Vec::with_capacity(256);
+        out.extend_from_slice(b"{\"events\":[");
+        let mut first = true;
         let mut bytes = 0usize;
+        let mut count = 0usize;
         let mut truncated = false;
         for event in store.events.iter().filter(|e| e.seq > since) {
-            let size = event_size(event);
-            if events.len() >= MAX_EVENTS_PER_RESPONSE || bytes + size > MAX_RESPONSE_BYTES {
+            if count >= MAX_EVENTS_PER_RESPONSE || bytes + event.json.len() > MAX_RESPONSE_BYTES {
                 truncated = true;
                 break;
             }
-            bytes += size;
-            events.push(event);
+            if !first {
+                out.push(b',');
+            }
+            out.extend_from_slice(event.json.as_bytes());
+            first = false;
+            bytes += event.json.len();
+            count += 1;
         }
-        (
-            200,
-            serde_json::json!({ "events": events, "truncated": truncated }).to_string(),
-        )
+        out.extend_from_slice(b"],\"truncated\":");
+        out.extend_from_slice(if truncated { b"true" } else { b"false" });
+        out.push(b'}');
+        (200, String::from_utf8(out).expect("webhook JSON is UTF-8"))
     }
 
     /// Guarded configuration list — id/title only, never the secret.
@@ -271,8 +287,7 @@ fn bounded_headers(headers: &BTreeMap<String, String>) -> BTreeMap<String, Strin
 }
 
 fn event_size(e: &StoredEvent) -> usize {
-    let headers: usize = e.headers.iter().map(|(k, v)| k.len() + v.len()).sum();
-    64 + headers + e.body.data.len()
+    e.json.len()
 }
 
 fn decode_hex(s: &str) -> Option<Vec<u8>> {

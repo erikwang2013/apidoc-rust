@@ -102,6 +102,8 @@ apidoc-test-fixtures = { path = "../apidoc-test-fixtures" }
 # axum 集成测试（feature "axum" 时编译）
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tower = { version = "0.5", features = ["util"] }
+# latency test: per-thread CPU time excludes scheduler preemption on shared CI hosts
+libc = "0.2"
 # 本地 broker / h3 测试进程（仅测试目标链接，不进默认库依赖）
 rumqttd = { version = "0.20", default-features = false }
 rcgen = "0.13"

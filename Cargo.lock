@@ -416,6 +416,7 @@ dependencies = [
  "hmac",
  "http 1.5.0",
  "lapin",
+ "libc",
  "linkme",
  "prost",
  "prost-reflect",
