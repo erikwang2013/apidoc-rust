@@ -33,6 +33,8 @@ debug-dubbo = ["debug-sockets"]
 debug-iso8583 = ["debug-sockets"]
 # P2 gRPC：tonic 客户端 + 反射/描述符动态消息
 debug-grpc = ["debug-http", "dep:tonic", "dep:prost", "dep:prost-reflect", "dep:tonic-reflection", "dep:tokio-stream"]
+# P2 聚合开关：显式启用全部 P2 服务端执行器；默认构建仍零重型依赖。
+debug-all = ["debug-http", "debug-session", "debug-sockets", "debug-grpc", "debug-thrift", "debug-dubbo", "debug-iso8583"]
 
 [dependencies]
 linkme = "0.3"

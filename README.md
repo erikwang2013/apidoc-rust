@@ -90,7 +90,21 @@ apidoc-rust 的实现取向：
 - **事件与字段**：`#[apidoc::event(direction = "in", name = "message")]` 声明流式消息，`#[apidoc::param(..., field = "1")]` 声明协议字段号
 - **浏览器直连调试**：SOAP、GraphQL（含订阅）、JSON-RPC、XML-RPC、OData、MCP、A2A、Webhooks、WebSocket（文本/二进制帧）、SSE、Socket.IO、STOMP（含二进制）、WebRTC/DataChannel、HLS
 - **服务端代发**（feature `debug-http`，默认关闭）：`POST /apidoc/debug`，可强制 HTTP/2、绕过 CORS/内网；开启需 `DebugConfig { enable_server_side: true }` + 全局鉴权，默认拒绝内网/回环/云元数据地址
-- **P2+**：gRPC、Thrift、Dubbo、ISO 8583、TCP/UDP/Unix、MQTT/AMQP/Kafka、CoAP/LwM2M/工业协议、RTSP/RTMP/RTP/SIP/HTTP3 按 `docs/superpowers/plans/` 分批接入
+
+### 已实现（多协议调试 P2）
+
+服务端执行器按协议族独立 feature，默认构建不引入任何重型依赖；`debug-all` 一键启用全部 P2 执行器。开启服务端调试仍需 `DebugConfig { enable_server_side: true }` + 全局鉴权，所有目标先过 SSRF 守卫（默认拒绝内网/回环/云元数据，DNS 解析后逐 IP 校验并钉住连接）。
+
+| 协议 | 注解 kind | 执行位置 | feature |
+|---|---|---|---|
+| WebSocket / WS Binary 长连接 | `websocket` / `ws-binary` | 服务端 `GET /apidoc/debug/stream` | `debug-session` |
+| gRPC（一元 + 服务端流） | `grpc` | 服务端 `POST /apidoc/debug` | `debug-grpc` |
+| Thrift（TBinaryProtocol） | `thrift` | 服务端 | `debug-thrift` |
+| Dubbo / Hessian2 | `dubbo` / `hessian` | 服务端 | `debug-dubbo` |
+| ISO 8583 | `iso8583` | 服务端 | `debug-iso8583` |
+| TCP / UDP / Raw / Unix Socket | `tcp` / `udp` / `raw` / `unix` | 服务端 | `debug-sockets` |
+
+字段号/类型等 schema 只从服务端已收集的文档端点读取，客户端不能注入。P3+：MQTT/AMQP/Kafka/XMPP、CoAP/LwM2M/工业协议、RTSP/RTMP/RTP/SIP/HTTP3 按 `docs/superpowers/plans/` 分批接入。
 
 ## 架构
 
