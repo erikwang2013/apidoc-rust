@@ -1,7 +1,8 @@
 //! P2 Dubbo 2.0.x 执行器（hessian2 序列化，一元调用）。
 //!
 //! 请求体（JSON）：数组按 opts.param_types 顺序，或对象按 ep.params 顺序取参数。
-//! 只连直连 URL，注册中心在 P6。所有目标先过 `guard::check_host`。
+//! 直连 `opts.target` / req.target 优先；否则用 `opts.registry` 走 Nacos HTTP
+//! Open API 选第一个健康 provider。注册中心和 provider 都先过 `guard::check_host`。
 //!
 //! 帧：16 字节头（magic 0xdabb | request+two-way+hessian2 | status | request id |
 //! body 长度），body 依次为 dubbo 版本、service、version、method、参数类型描述、
@@ -13,7 +14,7 @@ use super::{guard, DebugRequest, DebugResponse, Payload};
 use crate::{DebugConfig, DocEndpoint};
 use serde_json::{json, Map, Value};
 use std::collections::BTreeMap;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::time::{Duration, Instant};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpStream;
@@ -22,6 +23,7 @@ const MAGIC: [u8; 2] = [0xda, 0xbb];
 const FLAG_REQUEST: u8 = 0x80 | 0x40 | 0x02; // request | two-way | hessian2
 const SERIALIZATION_HESSIAN2: u8 = 2;
 const STATUS_OK: u8 = 20;
+const NACOS_TIMEOUT: Duration = Duration::from_secs(3);
 
 pub async fn execute(
     cfg: &DebugConfig,
@@ -52,7 +54,20 @@ pub async fn execute(
     if body.len() > cfg.max_bytes {
         return Err(format!("dubbo request exceeds max_bytes ({})", cfg.max_bytes));
     }
-    let (host, port) = parse_host_port(&req.target, "tcp")?;
+    // 直连优先（opts.target 也覆盖 req.target）；都没有才查注册中心。
+    let direct = opt(req, ep, "target")
+        .filter(|t| !t.trim().is_empty())
+        .or_else(|| Some(req.target.clone()).filter(|t| !t.trim().is_empty()));
+    let (target, provider) = match direct {
+        Some(target) => (target, None),
+        None => {
+            let registry =
+                opt(req, ep, "registry").ok_or("dubbo requires a target or opts.registry")?;
+            let provider = resolve_provider(cfg, &registry).await?;
+            (provider.clone(), Some(provider))
+        }
+    };
+    let (host, port) = parse_host_port(&target, "tcp")?;
     let addrs = guard::check_host(cfg, &host, port).await?;
     let peer = addrs[0];
     let budget = Duration::from_millis(cfg.timeout_ms.max(1));
@@ -66,6 +81,9 @@ pub async fn execute(
     headers.insert("x-dubbo-service".into(), service);
     headers.insert("x-dubbo-method".into(), method);
     headers.insert("x-dubbo-status".into(), STATUS_OK.to_string());
+    if let Some(provider) = provider {
+        headers.insert("x-dubbo-provider".into(), provider);
+    }
     Ok(DebugResponse {
         status: 0,
         ms: started.elapsed().as_millis() as u64,
@@ -264,4 +282,131 @@ fn exception_message(value: &Value) -> String {
         }
     }
     value.to_string()
+}
+
+/// Nacos 实例列表 → 第一个 `healthy=true` 的 `ip:port`。
+/// 注册中心 host 与选出的 provider 后面都会再走一次 `guard::check_host`。
+async fn resolve_provider(cfg: &DebugConfig, registry: &str) -> Result<String, String> {
+    // shortcut: Nacos 认证（userinfo/accessToken）未支持，接入受保护注册中心时再加。
+    let url = reqwest::Url::parse(registry)
+        .map_err(|e| format!("invalid dubbo registry URL: {e}"))?;
+    if url.scheme() != "nacos" {
+        return Err(format!(
+            "unsupported dubbo registry scheme `{}` (only nacos:// is supported)",
+            url.scheme()
+        ));
+    }
+    let host = url
+        .host_str()
+        .ok_or("nacos registry URL requires a host")?
+        .to_string();
+    let port = url.port().ok_or("nacos registry URL requires a port")?;
+    let mut service = None;
+    let mut group = None;
+    let mut namespace = None;
+    for (key, value) in url.query_pairs() {
+        match key.as_ref() {
+            "service" => service = Some(value.into_owned()),
+            "group" => group = Some(value.into_owned()),
+            "namespace" => namespace = Some(value.into_owned()),
+            _ => {}
+        }
+    }
+    let service = service
+        .filter(|s| !s.is_empty())
+        .ok_or("nacos registry URL requires service=<name>")?;
+
+    let addrs = guard::check_host(cfg, &host, port).await?;
+    let mut api = format!(
+        "http://{host}:{port}/nacos/v1/ns/instance/list?serviceName={}",
+        encode_query(&service)
+    );
+    for (key, value) in [("groupName", group), ("namespaceId", namespace)] {
+        if let Some(value) = value.filter(|v| !v.is_empty()) {
+            api.push('&');
+            api.push_str(key);
+            api.push('=');
+            api.push_str(&encode_query(&value));
+        }
+    }
+    let api =
+        reqwest::Url::parse(&api).map_err(|e| format!("invalid nacos instance-list URL: {e}"))?;
+
+    let mut builder = reqwest::Client::builder()
+        .timeout(NACOS_TIMEOUT)
+        // 每一跳都可能是新的未校验地址。
+        .redirect(reqwest::redirect::Policy::none())
+        // 走系统代理会绕过上面的 IP 校验。
+        .no_proxy();
+    if host.parse::<IpAddr>().is_err() {
+        if let Some(addr) = addrs.first() {
+            builder = builder.resolve(&host, *addr);
+        }
+    }
+    let client = builder
+        .build()
+        .map_err(|e| format!("failed to build nacos client: {e}"))?;
+    let mut res = client
+        .get(api)
+        .send()
+        .await
+        // without_url：错误里不带注册中心查询参数（service/group/namespace）。
+        .map_err(|e| format!("nacos request failed: {}", e.without_url()))?;
+    if !res.status().is_success() {
+        return Err(format!(
+            "nacos registry returned HTTP {}",
+            res.status().as_u16()
+        ));
+    }
+    let mut bytes = Vec::new();
+    while let Some(chunk) = res
+        .chunk()
+        .await
+        .map_err(|e| format!("nacos response read failed: {}", e.without_url()))?
+    {
+        if bytes.len() + chunk.len() > cfg.max_bytes {
+            return Err(format!("nacos response exceeds max_bytes ({})", cfg.max_bytes));
+        }
+        bytes.extend_from_slice(&chunk);
+    }
+    let data: Value = serde_json::from_slice(&bytes)
+        .map_err(|e| format!("invalid nacos response: {e}"))?;
+    let hosts = data
+        .get("hosts")
+        .and_then(Value::as_array)
+        .ok_or("nacos response has no hosts array")?;
+    for entry in hosts {
+        if entry.get("healthy").and_then(Value::as_bool) != Some(true) {
+            continue;
+        }
+        let ip = entry
+            .get("ip")
+            .and_then(Value::as_str)
+            .ok_or("nacos host entry is missing ip")?;
+        let port = entry
+            .get("port")
+            .and_then(Value::as_u64)
+            .and_then(|p| u16::try_from(p).ok())
+            .ok_or("nacos host entry has an invalid port")?;
+        let host = if ip.contains(':') {
+            format!("[{ip}]") // IPv6 provider
+        } else {
+            ip.to_string()
+        };
+        return Ok(format!("{host}:{port}"));
+    }
+    Err("nacos registry has no healthy providers".into())
+}
+
+/// 查询参数值 percent-encode（保留 RFC 3986 unreserved）；服务名里的 `:` 会变成 `%3A`。
+fn encode_query(value: &str) -> String {
+    let mut out = String::with_capacity(value.len());
+    for byte in value.bytes() {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {
+            out.push(byte as char);
+        } else {
+            out.push_str(&format!("%{byte:02X}"));
+        }
+    }
+    out
 }
