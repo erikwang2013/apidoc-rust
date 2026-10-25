@@ -59,6 +59,21 @@ fn proto_rejects_non_builtin_imports_without_reading_them() {
 }
 
 #[test]
+fn deeply_nested_proto_messages_stay_bounded() {
+    let mut source = String::from("syntax = \"proto3\";\npackage demo;\n");
+    for i in 0..70 {
+        source.push_str(&format!("message M{i} {{ "));
+    }
+    source.push_str("string leaf = 1;");
+    for _ in 0..70 {
+        source.push_str(" }");
+    }
+    source.push_str("\nservice S { rpc Call (M0) returns (M0); }\n");
+    let generated = proto::generate(&source, None).unwrap();
+    assert!(generated.contains("fn call()"), "{generated}");
+}
+
+#[test]
 fn thrift_snapshot_is_stable() {
     let generated = thrift_idl::generate(include_str!("fixtures/service.thrift")).unwrap();
     assert_eq!(generated, include_str!("fixtures/service.rs"));
