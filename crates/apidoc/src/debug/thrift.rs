@@ -35,6 +35,7 @@ enum Spec {
     I64,
     Double,
     String,
+    Binary,
     List(Box<Spec>),
     Map(Box<Spec>, Box<Spec>),
     Struct(Vec<FieldSpec>),
@@ -56,7 +57,7 @@ impl Spec {
             Spec::I32 => T_I32,
             Spec::I64 => T_I64,
             Spec::Double => T_DOUBLE,
-            Spec::String => T_STRING,
+            Spec::String | Spec::Binary => T_STRING,
             Spec::List(_) => T_LIST,
             Spec::Map(_, _) => T_MAP,
             Spec::Struct(_) => T_STRUCT,
@@ -84,7 +85,8 @@ impl Spec {
             "i32" | "int" => Ok(Spec::I32),
             "i64" | "long" => Ok(Spec::I64),
             "double" | "float" => Ok(Spec::Double),
-            "string" | "binary" | "bytes" => Ok(Spec::String),
+            "string" => Ok(Spec::String),
+            "binary" | "bytes" => Ok(Spec::Binary),
             "enum" => Ok(Spec::I32),
             "struct" | "object" => {
                 let mut fields = Vec::new();
@@ -199,22 +201,21 @@ fn build_request(
         }
         None => json!({}),
     };
+    let ep = ep.ok_or("thrift requires endpoint schema (params/returned)")?;
     let mut out = Vec::new();
     write_message_begin(&mut out, method, 1, 0);
-    if let Some(ep) = ep {
-        for param in &ep.params {
-            let spec = Spec::parse(param.ty, param.children)?;
-            let id = param
-                .field
-                .ok_or_else(|| format!("thrift param `{}` requires field", param.name))?
-                .parse::<i16>()
-                .map_err(|_| format!("invalid thrift field id for `{}`", param.name))?;
-            if let Some(value) = body.get(param.name) {
-                write_field(&mut out, spec.wire(), id);
-                write_value(&mut out, &spec, value)?;
-            } else if param.required {
-                return Err(format!("thrift missing required param `{}`", param.name));
-            }
+    for param in &ep.params {
+        let spec = Spec::parse(param.ty, param.children)?;
+        let id = param
+            .field
+            .ok_or_else(|| format!("thrift param `{}` requires field", param.name))?
+            .parse::<i16>()
+            .map_err(|_| format!("invalid thrift field id for `{}`", param.name))?;
+        if let Some(value) = body.get(param.name) {
+            write_field(&mut out, spec.wire(), id);
+            write_value(&mut out, &spec, value)?;
+        } else if param.required {
+            return Err(format!("thrift missing required param `{}`", param.name));
         }
     }
     out.push(T_STOP);
@@ -279,6 +280,15 @@ fn write_value(out: &mut Vec<u8>, spec: &Spec, value: &Value) -> Result<(), Stri
             out.extend_from_slice(&(text.len() as i32).to_be_bytes());
             out.extend_from_slice(text.as_bytes());
         }
+        Spec::Binary => {
+            use base64::Engine as _;
+            let text = value.as_str().ok_or("expected base64 string for binary")?;
+            let bytes = base64::engine::general_purpose::STANDARD
+                .decode(text)
+                .map_err(|e| format!("invalid base64 binary param: {e}"))?;
+            out.extend_from_slice(&(bytes.len() as i32).to_be_bytes());
+            out.extend_from_slice(&bytes);
+        }
         Spec::List(inner) => {
             let items = value.as_array().ok_or("expected array")?;
             out.push(inner.wire());
@@ -316,6 +326,7 @@ fn write_map_key(out: &mut Vec<u8>, spec: &Spec, key: &str) -> Result<(), String
             out.extend_from_slice(&(key.len() as i32).to_be_bytes());
             out.extend_from_slice(key.as_bytes());
         }
+        Spec::Binary => return Err("unsupported thrift map key type".into()),
         Spec::Bool => out.push(if key == "true" { 1 } else { 0 }),
         Spec::Byte | Spec::I16 | Spec::I32 | Spec::I64 => {
             let n: i64 = key.parse().map_err(|_| format!("invalid numeric map key `{key}`"))?;
@@ -342,7 +353,12 @@ fn read_value(input: &mut &[u8], wire: u8, spec: Option<&Spec>) -> Result<Value,
         T_STRING => {
             let len = read_i32(input)?;
             let bytes = take(input, len)?;
-            Ok(json!(String::from_utf8_lossy(bytes)))
+            if matches!(spec, Some(Spec::Binary)) {
+                use base64::Engine as _;
+                Ok(json!(base64::engine::general_purpose::STANDARD.encode(bytes)))
+            } else {
+                Ok(json!(String::from_utf8_lossy(bytes)))
+            }
         }
         T_STRUCT => read_struct_value(input, spec),
         T_LIST | T_SET => read_list_value(input, spec),

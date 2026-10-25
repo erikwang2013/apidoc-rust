@@ -95,7 +95,7 @@ fn uint_option(value: u32) -> Vec<u8> {
 #[tokio::test]
 async fn register_returns_location() {
     let (addr, handle) = mock(
-        "/rd",
+        "rd",
         RequestType::Post,
         Vec::new(),
         Reply {
@@ -126,7 +126,7 @@ async fn register_returns_location() {
 #[tokio::test]
 async fn update_and_deregister_use_location_path() {
     let (addr, handle) = mock(
-        "/rd/abc",
+        "rd/abc",
         RequestType::Post,
         Vec::new(),
         Reply {
@@ -153,7 +153,7 @@ async fn update_and_deregister_use_location_path() {
     handle.await.unwrap();
 
     let (addr, handle) = mock(
-        "/rd/abc",
+        "rd/abc",
         RequestType::Delete,
         Vec::new(),
         Reply {
@@ -183,13 +183,13 @@ async fn update_and_deregister_use_location_path() {
 #[tokio::test]
 async fn read_decodes_single_resource_tlv() {
     let (addr, handle) = mock(
-        "/3/0/9",
+        "3/0/9",
         RequestType::Get,
         Vec::new(),
         Reply {
             code: ResponseType::Content,
             // resource 9, 2-byte integer 300
-            payload: vec![0xC0, 0x09, 0x02, 0x01, 0x2C],
+            payload: vec![0xC2, 0x09, 0x01, 0x2C],
             content_format: Some(11_542),
             location: Vec::new(),
         },
@@ -220,7 +220,7 @@ async fn read_decodes_single_resource_tlv() {
 #[tokio::test]
 async fn write_encodes_resource_tlv() {
     let (addr, handle) = mock(
-        "/3/0/13",
+        "3/0/13",
         RequestType::Put,
         // resource 13, inline length 1, value 5
         vec![0xC1, 0x0D, 0x05],
@@ -257,7 +257,7 @@ async fn write_encodes_resource_tlv() {
 #[tokio::test]
 async fn unexpected_response_code_is_reported() {
     let (addr, handle) = mock(
-        "/3/0/9",
+        "3/0/9",
         RequestType::Get,
         Vec::new(),
         Reply {

@@ -45,7 +45,7 @@ async fn integrity_poll_decodes_golden_response() {
     let addr = listener.local_addr().unwrap();
     let handle = tokio::spawn(async move {
         let (mut stream, _) = listener.accept().await.unwrap();
-        let mut request = [0u8; 15];
+        let mut request = [0u8; 18];
         stream.read_exact(&mut request).await.unwrap();
         assert_eq!(
             request.to_vec(),

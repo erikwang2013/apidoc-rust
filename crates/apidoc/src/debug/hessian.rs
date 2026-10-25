@@ -104,7 +104,11 @@ fn decode_tag(input: &mut &[u8], tag: u8) -> Result<Value, String> {
             Ok(json!(high + mid + read_u8(input)? as i32))
         }
         0x59 => Ok(json!(read_i32(input)?)),
-        0x5b..=0x5f => Ok(json!((tag - 0x5b) as f64)),
+        0x5b => Ok(json!(0.0)),
+        0x5c => Ok(json!(1.0)),
+        0x5d => Ok(json!(read_i8(input)? as f64)),
+        0x5e => Ok(json!(read_i16(input)? as f64)),
+        0x5f => Ok(json!(read_f32(input)? as f64)),
         // list
         0x57 => read_list_until_end(input),
         0x58 => {
@@ -216,9 +220,22 @@ fn read_u8(input: &mut &[u8]) -> Result<u8, String> {
     Ok(byte)
 }
 
+fn read_i8(input: &mut &[u8]) -> Result<i8, String> {
+    Ok(read_u8(input)? as i8)
+}
+
 fn read_u16(input: &mut &[u8]) -> Result<u16, String> {
     let b = take(input, 2)?;
     Ok(u16::from_be_bytes([b[0], b[1]]))
+}
+
+fn read_i16(input: &mut &[u8]) -> Result<i16, String> {
+    Ok(read_u16(input)? as i16)
+}
+
+fn read_f32(input: &mut &[u8]) -> Result<f32, String> {
+    let b = take(input, 4)?;
+    Ok(f32::from_bits(u32::from_be_bytes([b[0], b[1], b[2], b[3]])))
 }
 
 fn read_i32(input: &mut &[u8]) -> Result<i32, String> {
