@@ -1,0 +1,17 @@
+[package]
+name = "apidoc-idl"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Generate apidoc annotations from .proto / .thrift IDL files"
+repository.workspace = true
+
+[dependencies]
+# 纯 Rust protobuf 编译器；0.7.x 是最后一条 MSRV <= 1.82 的线。
+protox = "0.7.2"
+prost-types = "0.13"
+
+[[bin]]
+name = "apidoc-idl"
+path = "src/main.rs"
