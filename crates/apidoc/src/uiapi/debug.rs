@@ -68,6 +68,11 @@ fn build_request(ep: &DocEndpoint, input: &UiDebugInput) -> crate::debug::DebugR
     opts.remove("target");
     if let Some(fields) = &input.fields {
         for (key, value) in fields {
+            // 保留键只认服务端注解：dubbo 读 opts.target、rtsp 读 opts.url，
+            // 客户端 fields 不得改写已确定的 relay 目标/地址。
+            if key == "target" || (kind == "rtsp" && key == "url") {
+                continue;
+            }
             opts.insert(
                 key.clone(),
                 value
@@ -85,7 +90,8 @@ fn build_request(ep: &DocEndpoint, input: &UiDebugInput) -> crate::debug::DebugR
             encoding: input.encoding.clone().unwrap_or_else(|| "utf8".to_string()),
             data: payload.clone(),
         });
-    let _ = &input.query; // query fields are folded into `target` by the UI for relay requests
+    // client query is intentionally unused: the target (including its query) is server-derived
+    let _ = &input.query;
     DebugRequest {
         kind,
         // 服务端注解/配置是目标地址的唯一来源（spec: client may not change host/port）。
@@ -369,6 +375,36 @@ mod build_request_tests {
         };
         let req = build_request(&ep, &UiDebugInput::default());
         assert_eq!(req.target, "wss://configured.example/ws");
+    }
+
+    // R1: reserved opts read by feature-gated executors must not come from client fields.
+    #[test]
+    fn client_fields_cannot_inject_reserved_relay_opts() {
+        for (kind, url, reserved) in [
+            ("dubbo", "dubbo://configured.example:20880", "target"),
+            ("rtsp", "rtsp://configured.example/live", "url"),
+        ] {
+            let ep = DocEndpoint { protocol: kind.into(), url: url.into(), ..Default::default() };
+            let body: UiDebugBody = serde_json::from_value(json!({
+                "input": {"fields": {
+                    "target": "tcp://attacker.example:1",
+                    "url": "rtsp://attacker.example/live",
+                    "service": "svc"
+                }}
+            }))
+            .unwrap();
+            let req = build_request(&ep, &body.input);
+            assert_eq!(req.target, url, "{kind}: server target must win");
+            assert!(
+                !req.opts.contains_key(reserved),
+                "{kind}: client field `{reserved}` leaked into opts"
+            );
+            assert_eq!(
+                req.opts.get("service").map(String::as_str),
+                Some("svc"),
+                "{kind}: non-reserved field kept"
+            );
+        }
     }
 }
 
