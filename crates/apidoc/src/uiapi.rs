@@ -87,8 +87,36 @@ fn guard(core: &Core, token: &str, app_key: &str) -> bool {
     core.guard(&q)
 }
 
+/// 每应用对外 host：`APIDOC_PUBLIC_HOSTS` 为 JSON 对象 `{appKey: host}`，
+/// 未命中时回落到 `APIDOC_PUBLIC_HOST`。
+/// 偏离 Phase 1 计划的 `AppConfig.public_host` 字段：新增公共字段会破坏大量
+/// `AppConfig` 字面量；env map 保持公共 API 与 `api.json` 字节稳定。
+fn public_hosts() -> BTreeMap<String, String> {
+    match std::env::var("APIDOC_PUBLIC_HOSTS") {
+        Ok(raw) => serde_json::from_str(&raw).unwrap_or_else(|e| {
+            eprintln!("apidoc: ignoring invalid APIDOC_PUBLIC_HOSTS JSON: {e}");
+            BTreeMap::new()
+        }),
+        Err(_) => BTreeMap::new(),
+    }
+}
+
 fn public_host() -> String {
     std::env::var("APIDOC_PUBLIC_HOST").unwrap_or_default()
+}
+
+/// 纯函数：先查 appKey 专属 host（空串视为未配置），再回落全局 host。
+fn host_for(hosts: &BTreeMap<String, String>, fallback: &str, app_key: &str) -> String {
+    hosts
+        .get(app_key)
+        .filter(|host| !host.is_empty())
+        .cloned()
+        .unwrap_or_else(|| fallback.to_string())
+}
+
+/// 端点所属应用 key：未标注 app 的端点属于默认应用。
+fn endpoint_app_key(ep: &DocEndpoint) -> &str {
+    if ep.app_key.is_empty() { "default" } else { ep.app_key.as_str() }
 }
 
 fn endpoint_id(ep: &DocEndpoint) -> String {
@@ -142,12 +170,12 @@ fn flatten_apps<'a>(core: &'a Core) -> Vec<AppLeaf<'a>> {
     out
 }
 
-fn app_leaf_json(leaf: &AppLeaf<'_>) -> Value {
+fn app_leaf_json(leaf: &AppLeaf<'_>, hosts: &BTreeMap<String, String>, fallback: &str) -> Value {
     json!({
         "key": leaf.key,
         "title": leaf.title,
         "path": leaf.key,
-        "host": public_host(),
+        "host": host_for(hosts, fallback, &leaf.key),
         "hasPassword": leaf.has_password,
         "groups": [],
     })
@@ -160,30 +188,35 @@ fn pick_app<'a, 'b>(apps: &'a [AppLeaf<'b>], app_key: &str) -> Option<&'a AppLea
     apps.iter().find(|leaf| leaf.key == app_key)
 }
 
+/// 该协议的服务端执行器是否编进本构建。
+/// 与 `debug::execute` / `debug::stream_dispatch` 的 feature gate 一一对应；
+/// capabilities 与 detail 必须共用这一判断，避免"能选但一发就报未编译"。
+fn executor_compiled(kind: &str) -> bool {
+    match kind {
+        "http" => cfg!(feature = "debug-http"),
+        "websocket" | "ws-binary" => cfg!(feature = "debug-session"),
+        "grpc" => cfg!(feature = "debug-grpc"),
+        "thrift" => cfg!(feature = "debug-thrift"),
+        "dubbo" | "hessian" => cfg!(feature = "debug-dubbo"),
+        "iso8583" => cfg!(feature = "debug-iso8583"),
+        "mqtt" => cfg!(feature = "debug-mqtt"),
+        "amqp" => cfg!(feature = "debug-amqp"),
+        "kafka" => cfg!(feature = "debug-kafka"),
+        "xmpp" => cfg!(feature = "debug-xmpp"),
+        "tcp" | "udp" | "raw" | "unix" | "stomp" => cfg!(feature = "debug-sockets"),
+        "coap" | "lwm2m" => cfg!(feature = "debug-coap"),
+        "modbus" | "dnp3" | "iec104" | "bacnet" | "opcua" => cfg!(feature = "debug-industrial"),
+        "rtp" | "rtcp" | "rtsp" | "sip" | "rtmp" => cfg!(feature = "debug-media"),
+        "http3" => cfg!(feature = "debug-http3"),
+        _ => false,
+    }
+}
+
 fn relay_protocols() -> Vec<&'static str> {
-    let mut out = vec!["http"];
-    if cfg!(feature = "debug-session") {
-        out.push("websocket");
-    }
-    if cfg!(feature = "debug-grpc") {
-        out.push("grpc");
-    }
-    if cfg!(feature = "debug-thrift") {
-        out.push("thrift");
-    }
-    if cfg!(feature = "debug-dubbo") {
-        out.push("dubbo");
-    }
-    if cfg!(feature = "debug-iso8583") {
-        out.push("iso8583");
-    }
-    if cfg!(feature = "debug-mqtt") {
-        out.push("mqtt");
-    }
-    if cfg!(feature = "debug-sockets") {
-        out.extend(["tcp", "udp", "unix"]);
-    }
-    out
+    ["http", "websocket", "grpc", "thrift", "dubbo", "iso8583", "mqtt", "tcp", "udp", "unix"]
+        .into_iter()
+        .filter(|kind| executor_compiled(kind))
+        .collect()
 }
 
 fn capabilities_data(core: &Core) -> Value {
@@ -230,9 +263,11 @@ pub fn config(core: &Core, q: &HashMap<String, String>, token: &str) -> R {
     if !guard(core, token, app_key) {
         return unauthorized();
     }
+    let hosts = public_hosts();
+    let fallback = public_host();
     let apps = flatten_apps(core)
         .iter()
-        .map(|leaf| app_leaf_json(leaf))
+        .map(|leaf| app_leaf_json(leaf, &hosts, &fallback))
         .collect::<Vec<_>>();
     ok(json!({
         "title": core.doc().config.title,
@@ -260,6 +295,8 @@ pub fn menus(core: &Core, body: &[u8], token: &str) -> R {
     let Some(leaf) = pick_app(&apps, &scope.app_key) else {
         return error(404, 404, "app not found");
     };
+    let hosts = public_hosts();
+    let fallback = public_host();
     let mut groups: BTreeMap<String, Vec<&DocEndpoint>> = BTreeMap::new();
     for ep in leaf.endpoints {
         let group = if ep.group.is_empty() {
@@ -310,7 +347,7 @@ pub fn menus(core: &Core, body: &[u8], token: &str) -> R {
     tags.sort();
     tags.dedup();
     ok(json!({
-        "app": app_leaf_json(leaf),
+        "app": app_leaf_json(leaf, &hosts, &fallback),
         "data": data,
         "tags": tags,
         "groups": [],
@@ -324,11 +361,7 @@ pub fn detail(core: &Core, body: &[u8], token: &str) -> R {
     let Some(ep) = find_endpoint(core, &input.path) else {
         return error(404, 404, "action not found");
     };
-    let app_key = if ep.app_key.is_empty() {
-        "default"
-    } else {
-        ep.app_key.as_str()
-    };
+    let app_key = endpoint_app_key(ep);
     if !input.app_key.is_empty() && input.app_key != app_key {
         return error(404, 404, "action not found");
     }
@@ -506,7 +539,14 @@ fn debug_mode(
     if server_enabled && spec.is_some_and(|s| s.execution != protocol::Execution::Browser) {
         // Phase 1: stream_dispatch only supports WebSocket; other server
         // protocols use the unary executor until their stream bridges land.
-        return ("relay-unary", true, String::new());
+        if executor_compiled(kind) {
+            return ("relay-unary", true, String::new());
+        }
+        return (
+            "relay-unary",
+            false,
+            format!("server executor for `{kind}` is not compiled in this build"),
+        );
     }
     (
         "relay-unary",
@@ -624,11 +664,7 @@ pub fn doc_detail(core: &Core, body: &[u8], token: &str) -> R {
     let Some(ep) = find_endpoint(core, &input.path) else {
         return error(404, 404, "doc not found");
     };
-    let app_key = if ep.app_key.is_empty() {
-        "default"
-    } else {
-        ep.app_key.as_str()
-    };
+    let app_key = endpoint_app_key(ep);
     if !input.app_key.is_empty() && input.app_key != app_key {
         return error(404, 404, "doc not found");
     }
@@ -642,6 +678,15 @@ pub fn doc_detail(core: &Core, body: &[u8], token: &str) -> R {
 }
 
 pub fn verify_auth(core: &Core, body: &[u8]) -> R {
+    // Phase 1 does not implement share scopes: answer 501 instead of ignoring
+    // the field and minting a normal credential (which would over-grant).
+    let share_key = serde_json::from_slice::<Value>(body)
+        .ok()
+        .and_then(|v| v.get("shareKey").and_then(Value::as_str).map(str::to_string))
+        .unwrap_or_default();
+    if !share_key.is_empty() {
+        return error(501, 501, "shareKey is not supported in Phase 1");
+    }
     let Some(req) = crate_auth::parse_login(body) else {
         return error(400, 400, "invalid body");
     };
@@ -668,3 +713,47 @@ pub fn verify_auth(core: &Core, body: &[u8]) -> R {
 }
 
 pub use debug::{debug_poll, debug_send, debug_start, debug_stop};
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // I5: per-app host from APIDOC_PUBLIC_HOSTS json map, fallback to APIDOC_PUBLIC_HOST.
+    #[test]
+    fn per_app_host_map_overrides_fallback() {
+        let hosts = BTreeMap::from([
+            ("A".to_string(), "https://a.example".to_string()),
+            ("empty".to_string(), String::new()),
+        ]);
+        assert_eq!(host_for(&hosts, "https://fallback.example", "A"), "https://a.example");
+        assert_eq!(host_for(&hosts, "https://fallback.example", "B"), "https://fallback.example");
+        assert_eq!(
+            host_for(&hosts, "https://fallback.example", "empty"),
+            "https://fallback.example"
+        );
+        assert_eq!(host_for(&BTreeMap::new(), "", "A"), "");
+    }
+
+    // M3: 未编译执行器的协议不得在 detail 里标 debuggable。
+    #[test]
+    fn debug_mode_hides_uncompiled_executor() {
+        // socketio has a server execution policy but no executor in any feature set.
+        let spec = crate::protocol::spec("socketio");
+        assert!(spec.is_some());
+        let (mode, debuggable, reason) = debug_mode("socketio", spec, true);
+        assert_eq!(mode, "relay-unary");
+        assert!(!debuggable);
+        assert!(reason.contains("not compiled"), "{reason}");
+    }
+
+    #[test]
+    fn debug_mode_keeps_browser_protocols() {
+        let (mode, debuggable, _) = debug_mode("http", crate::protocol::spec("http"), false);
+        assert_eq!(mode, "browser-http");
+        assert!(debuggable);
+        let (mode, debuggable, _) =
+            debug_mode("websocket", crate::protocol::spec("websocket"), false);
+        assert_eq!(mode, "browser-websocket");
+        assert!(debuggable);
+    }
+}

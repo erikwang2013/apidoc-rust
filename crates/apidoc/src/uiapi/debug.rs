@@ -14,11 +14,12 @@ use crate::route_core::{Core, R};
 #[cfg(feature = "debug-http")]
 use crate::DocEndpoint;
 
-use super::{body_json, error, find_endpoint, guard, ok, unauthorized};
+use super::{body_json, endpoint_app_key, error, find_endpoint, guard, ok, unauthorized};
 
+/// 客户端输入。注意没有 `target`：转发目标只能来自服务端端点配置
+/// （`protocol_opts["target"]` 或 `ep.url`），客户端不可改 host/port。
 #[derive(Deserialize, Default)]
 struct UiDebugInput {
-    target: Option<String>,
     headers: Option<BTreeMap<String, String>>,
     #[serde(default)]
     query: Option<BTreeMap<String, String>>,
@@ -87,10 +88,11 @@ fn build_request(ep: &DocEndpoint, input: &UiDebugInput) -> crate::debug::DebugR
     let _ = &input.query; // query fields are folded into `target` by the UI for relay requests
     DebugRequest {
         kind,
-        target: input
-            .target
-            .clone()
-            .or_else(|| ep.protocol_opts.get("target").cloned())
+        // 服务端注解/配置是目标地址的唯一来源（spec: client may not change host/port）。
+        target: ep
+            .protocol_opts
+            .get("target")
+            .cloned()
             .unwrap_or_else(|| ep.url.clone()),
         method: Some(ep.method.clone()),
         headers: input.headers.clone().unwrap_or_default(),
@@ -109,12 +111,18 @@ pub async fn debug_send(core: &Core, body: &[u8], token: &str) -> R {
     let Some(input) = body_json::<UiDebugBody>(body) else {
         return error(400, 400, "invalid body");
     };
-    if !guard(core, token, &input.app_key) {
-        return unauthorized();
-    }
+    // 先解析端点，再用端点自己的 appKey 鉴权：客户端 appKey 只做一致性校验，
+    // 不能让 A 应用的令牌打 B 应用的端点（find_endpoint 覆盖全文档）。
     let Some(ep) = find_endpoint(core, &input.path) else {
         return error(404, 404, "action not found");
     };
+    let app_key = endpoint_app_key(ep);
+    if !input.app_key.is_empty() && input.app_key != app_key {
+        return error(404, 404, "action not found");
+    }
+    if !guard(core, token, app_key) {
+        return unauthorized();
+    }
     #[cfg(feature = "debug-http")]
     {
         let Some(cfg) = core.debug_config().filter(|cfg| cfg.enable_server_side) else {
@@ -141,7 +149,7 @@ pub async fn debug_send(core: &Core, body: &[u8], token: &str) -> R {
     }
     #[cfg(not(feature = "debug-http"))]
     {
-        let _ = (core, ep);
+        let _ = ep;
         ok(
             json!({"ok": false, "error": "server-side debug is not compiled in (enable feature `debug-http`)"}),
         )
@@ -153,6 +161,8 @@ struct Session {
     rx: tokio::sync::mpsc::Receiver<String>,
     handle: Option<Box<dyn crate::debug::session::StreamSession>>,
     created: std::time::Instant,
+    /// 创建会话的端点所属应用；poll/stop 只认这个作用域，不认客户端 appKey。
+    app_key: String,
 }
 
 #[cfg(feature = "debug-session")]
@@ -174,12 +184,17 @@ pub async fn debug_start(core: &Core, body: &[u8], token: &str) -> R {
     let Some(input) = body_json::<UiDebugBody>(body) else {
         return error(400, 400, "invalid body");
     };
-    if !guard(core, token, &input.app_key) {
-        return unauthorized();
-    }
+    // 同 debug_send：鉴权与会话作用域都绑定端点自己的 appKey。
     let Some(ep) = find_endpoint(core, &input.path) else {
         return error(404, 404, "action not found");
     };
+    let app_key = endpoint_app_key(ep);
+    if !input.app_key.is_empty() && input.app_key != app_key {
+        return error(404, 404, "action not found");
+    }
+    if !guard(core, token, app_key) {
+        return unauthorized();
+    }
     #[cfg(all(feature = "debug-http", feature = "debug-session"))]
     {
         let Some(cfg) = core.debug_config().filter(|cfg| cfg.enable_server_side) else {
@@ -196,6 +211,7 @@ pub async fn debug_start(core: &Core, body: &[u8], token: &str) -> R {
                         rx,
                         handle: Some(handle),
                         created: std::time::Instant::now(),
+                        app_key: app_key.to_string(),
                     },
                 );
                 ok(json!({"ok": true, "sessionId": id}))
@@ -216,53 +232,66 @@ pub async fn debug_poll(core: &Core, body: &[u8], token: &str) -> R {
     let Some(input) = body_json::<SessionBody>(body) else {
         return error(400, 400, "invalid body");
     };
-    if !guard(core, token, &input.app_key) {
-        return unauthorized();
-    }
     #[cfg(feature = "debug-session")]
     {
-        let mut guard = sessions().lock().await;
-        let expired = guard
-            .get(&input.session_id)
-            .is_none_or(|session| session.created.elapsed().as_secs() > 60);
-        if expired {
-            guard.remove(&input.session_id);
+        // 作用域取会话创建时记录的 appKey；客户端 appKey 只在会话不存在时兜底。
+        let (app_key, alive) = {
+            let mut all = sessions().lock().await;
+            if all
+                .get(&input.session_id)
+                .is_none_or(|session| session.created.elapsed().as_secs() > 60)
+            {
+                all.remove(&input.session_id);
+                (input.app_key.clone(), false)
+            } else {
+                let app_key = all
+                    .get(&input.session_id)
+                    .map(|session| session.app_key.clone())
+                    .unwrap_or_else(|| input.app_key.clone());
+                (app_key, true)
+            }
+        };
+        if !guard(core, token, &app_key) {
+            return unauthorized();
+        }
+        if !alive {
             return ok(json!({"ok": false, "error": "session not found or expired"}));
         }
+        let mut all = sessions().lock().await;
+        let Some(session) = all.get_mut(&input.session_id) else {
+            return ok(json!({"ok": false, "error": "session not found or expired"}));
+        };
         let mut messages = Vec::new();
-        if let Some(session) = guard.get_mut(&input.session_id) {
-            while messages.len() < 100 {
-                let Ok(text) = session.rx.try_recv() else {
-                    break;
-                };
-                let Ok(value) = serde_json::from_str::<Value>(&text) else {
-                    messages.push(json!({"type": "frame", "body": text, "encoding": "text"}));
-                    continue;
-                };
-                match value["type"].as_str().unwrap_or("") {
-                    "frame" => {
-                        let time = value["ts"]
-                            .as_u64()
-                            .map(|n| n.to_string())
-                            .unwrap_or_default();
-                        messages.push(json!({
-                            "time": time,
-                            "type": "frame",
-                            "body": value["data"].as_str().unwrap_or(""),
-                            "encoding": normalize_encoding(value["encoding"].as_str().unwrap_or("utf8")),
-                        }));
-                    }
-                    "error" => messages.push(json!({"type": "error", "body": value["error"]})),
-                    "close" => messages.push(json!({"type": "close", "body": value["reason"]})),
-                    _ => {}
+        while messages.len() < 100 {
+            let Ok(text) = session.rx.try_recv() else {
+                break;
+            };
+            let Ok(value) = serde_json::from_str::<Value>(&text) else {
+                messages.push(json!({"type": "frame", "body": text, "encoding": "text"}));
+                continue;
+            };
+            match value["type"].as_str().unwrap_or("") {
+                "frame" => {
+                    let time = value["ts"].as_u64().map(|n| n.to_string()).unwrap_or_default();
+                    messages.push(json!({
+                        "time": time,
+                        "type": "frame",
+                        "body": value["data"].as_str().unwrap_or(""),
+                        "encoding": normalize_encoding(value["encoding"].as_str().unwrap_or("utf8")),
+                    }));
                 }
+                "error" => messages.push(json!({"type": "error", "body": value["error"]})),
+                "close" => messages.push(json!({"type": "close", "body": value["reason"]})),
+                _ => {}
             }
         }
         ok(json!({"ok": true, "messages": messages}))
     }
     #[cfg(not(feature = "debug-session"))]
     {
-        let _ = (core, input);
+        if !guard(core, token, &input.app_key) {
+            return unauthorized();
+        }
         ok(
             json!({"ok": false, "error": "streaming debug is not compiled in (enable feature `debug-session`)"}),
         )
@@ -273,11 +302,18 @@ pub async fn debug_stop(core: &Core, body: &[u8], token: &str) -> R {
     let Some(input) = body_json::<SessionBody>(body) else {
         return error(400, 400, "invalid body");
     };
-    if !guard(core, token, &input.app_key) {
-        return unauthorized();
-    }
     #[cfg(feature = "debug-session")]
     {
+        // 同 poll：已有会话按创建者的 appKey 鉴权，避免跨应用停别人的会话。
+        let app_key = sessions()
+            .lock()
+            .await
+            .get(&input.session_id)
+            .map(|session| session.app_key.clone())
+            .unwrap_or_else(|| input.app_key.clone());
+        if !guard(core, token, &app_key) {
+            return unauthorized();
+        }
         let session = sessions().lock().await.remove(&input.session_id);
         if let Some(mut session) = session {
             if let Some(mut handle) = session.handle.take() {
@@ -288,9 +324,118 @@ pub async fn debug_stop(core: &Core, body: &[u8], token: &str) -> R {
     }
     #[cfg(not(feature = "debug-session"))]
     {
-        let _ = (core, input);
+        if !guard(core, token, &input.app_key) {
+            return unauthorized();
+        }
         ok(
             json!({"ok": false, "error": "streaming debug is not compiled in (enable feature `debug-session`)"}),
         )
+    }
+}
+
+#[cfg(all(test, feature = "debug-http"))]
+mod build_request_tests {
+    use super::*;
+    use std::collections::BTreeMap;
+
+    // I2: 客户端 input.target 必须被忽略，目标只来自服务端注解配置。
+    #[test]
+    fn relay_target_comes_from_server_config_only() {
+        let ep = DocEndpoint {
+            protocol: "websocket".into(),
+            url: "wss://configured.example/ws".into(),
+            protocol_opts: BTreeMap::from([(
+                "target".to_string(),
+                "wss://annotated.example/ws".to_string(),
+            )]),
+            ..Default::default()
+        };
+        let body: UiDebugBody = serde_json::from_value(json!({
+            "appKey": "",
+            "path": "",
+            "input": {"target": "https://attacker.example/steal"}
+        }))
+        .unwrap();
+        let req = build_request(&ep, &body.input);
+        assert_eq!(req.target, "wss://annotated.example/ws");
+    }
+
+    #[test]
+    fn relay_target_falls_back_to_endpoint_url() {
+        let ep = DocEndpoint {
+            protocol: "websocket".into(),
+            url: "wss://configured.example/ws".into(),
+            ..Default::default()
+        };
+        let req = build_request(&ep, &UiDebugInput::default());
+        assert_eq!(req.target, "wss://configured.example/ws");
+    }
+}
+
+#[cfg(all(test, feature = "debug-session"))]
+mod session_scope_tests {
+    use super::*;
+    use crate::auth::{auth_token, AuthConfig};
+    use crate::{ApidocConfig, AppConfig};
+
+    fn core() -> Core {
+        Core::build(ApidocConfig {
+            apps: vec![
+                AppConfig {
+                    key: "A".into(),
+                    title: "A".into(),
+                    items: Vec::new(),
+                    password: Some("pwA".into()),
+                },
+                AppConfig {
+                    key: "B".into(),
+                    title: "B".into(),
+                    items: Vec::new(),
+                    password: Some("pwB".into()),
+                },
+            ],
+            ..Default::default()
+        })
+    }
+
+    async fn insert_session(id: &str, app_key: &str) {
+        let (tx, rx) = tokio::sync::mpsc::channel(1);
+        drop(tx);
+        sessions().lock().await.insert(
+            id.to_string(),
+            Session {
+                rx,
+                handle: None,
+                created: std::time::Instant::now(),
+                app_key: app_key.to_string(),
+            },
+        );
+    }
+
+    // I1: poll/stop 必须按会话创建时的 appKey 鉴权，客户端 appKey 不作数。
+    #[tokio::test]
+    async fn poll_and_stop_bind_to_session_app_not_client_app() {
+        let core = core();
+        let cfg = AuthConfig::default();
+        let token_a = auth_token("pwA", &cfg);
+        let token_b = auth_token("pwB", &cfg);
+        let id = "test-session-cross-app";
+        insert_session(id, "A").await;
+
+        // 客户端谎报 appKey=B 也应按会话的 A 作用域拒绝 B 令牌。
+        let body = json!({"sessionId": id, "appKey": "B"}).to_string();
+        let res = debug_poll(&core, body.as_bytes(), &token_b).await;
+        assert_eq!(res.status, 401, "app B token must not poll app A's session");
+        let res = debug_stop(&core, body.as_bytes(), &token_b).await;
+        assert_eq!(res.status, 401, "app B token must not stop app A's session");
+        assert!(sessions().lock().await.contains_key(id), "rejected stop must keep session");
+
+        let res = debug_poll(&core, body.as_bytes(), &token_a).await;
+        assert_eq!(res.status, 200);
+        let value: Value = serde_json::from_slice(&res.body).unwrap();
+        assert_eq!(value["data"]["ok"], true);
+        let res = debug_stop(&core, body.as_bytes(), &token_a).await;
+        assert_eq!(res.status, 200);
+        assert!(!sessions().lock().await.contains_key(id));
     }
 }

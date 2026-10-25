@@ -2,7 +2,7 @@
 
 use apidoc::auth::AuthConfig;
 use apidoc::axum::apidoc_routes;
-use apidoc::ApidocConfig;
+use apidoc::{ApidocConfig, AppConfig};
 use axum::body::Body;
 use axum::http::{header, Request, StatusCode};
 use serde_json::{json, Value};
@@ -154,4 +154,73 @@ async fn docs_and_auth_failures() {
     )
     .await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
+}
+
+// C2: 原生 /apidoc/debug 必须保持全局密码独占——应用密码令牌不得调用。
+#[tokio::test]
+async fn native_debug_requires_global_token() {
+    let app = apidoc_routes(ApidocConfig {
+        title: "Demo".into(),
+        auth: Some(AuthConfig {
+            enable: true,
+            password: "pw".into(),
+            secret_key: "s".into(),
+            expire: 3600,
+        }),
+        apps: vec![AppConfig {
+            key: "A".into(),
+            title: "A".into(),
+            items: Vec::new(),
+            password: Some("app-pw".into()),
+        }],
+        ..Default::default()
+    });
+
+    let (status, body) = send(
+        &app,
+        "POST",
+        "/apidoc/ui/v1/verifyAuth",
+        r#"{"password":"app-pw","appKey":"A"}"#,
+        "",
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{body}");
+    let app_token = body["data"]["token"].as_str().unwrap();
+    let global_token = login(&app).await;
+
+    let (status, _) = send(
+        &app,
+        "POST",
+        &format!("/apidoc/debug?appKey=A&token={app_token}"),
+        "{}",
+        "",
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED, "app token must not reach native debug");
+
+    // 全局令牌通过守卫后落到"服务端调试未启用"（403），证明守卫本身放行。
+    let (status, _) = send(
+        &app,
+        "POST",
+        &format!("/apidoc/debug?appKey=A&token={global_token}"),
+        "{}",
+        "",
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+// M2: shareKey 在 Phase 1 未实现，必须明确 501，而不是静默签发普通令牌。
+#[tokio::test]
+async fn verify_auth_rejects_share_key_with_501() {
+    let (status, body) = send(
+        &app(),
+        "POST",
+        "/apidoc/ui/v1/verifyAuth",
+        r#"{"password":"pw","shareKey":"share-1"}"#,
+        "",
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_IMPLEMENTED);
+    assert_eq!(body["code"], 501);
 }
