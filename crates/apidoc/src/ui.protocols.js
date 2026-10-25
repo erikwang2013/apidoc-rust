@@ -146,7 +146,7 @@ function odataForm(ep) {
 
 function webhookForm() {
   const box = el('div');
-  box.appendChild(el('p', 'empty', 'Webhook 出站调试：按普通 HTTP 请求发送；入站捕获在 P6 提供。'));
+  box.appendChild(el('p', 'empty', 'Webhook 出站调试：按普通 HTTP 请求发送；入站捕获通过 /apidoc/webhook/{id} 查看。'));
   return { extras: box };
 }
 

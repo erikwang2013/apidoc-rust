@@ -143,6 +143,46 @@ async fn tcp_read_timeout_returns_empty_body() {
     assert!(res.body.data.is_empty());
 }
 
+/// UDP 与 TCP 共用 check_host：默认拒绝回环，显式允许后同一目标可通。
+#[tokio::test]
+async fn udp_loopback_denied_by_default_then_allowed_when_private() {
+    let server = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+    let addr = server.local_addr().unwrap();
+    tokio::spawn(async move {
+        let mut buf = [0u8; 16];
+        let (n, peer) = server.recv_from(&mut buf).await.unwrap();
+        server.send_to(&buf[..n], peer).await.unwrap();
+    });
+
+    let err = execute(
+        &DebugConfig::default(),
+        &req(
+            "udp",
+            format!("udp://{addr}"),
+            Some("pong"),
+            &[("read_ms", "100")],
+        ),
+        None,
+    )
+    .await
+    .unwrap_err();
+    assert!(err.contains("private/loopback"), "{err}");
+
+    let res = execute(
+        &allow_private(),
+        &req(
+            "udp",
+            format!("udp://{addr}"),
+            Some("pong"),
+            &[("read_ms", "500")],
+        ),
+        None,
+    )
+    .await
+    .unwrap();
+    assert_eq!(res.body.data, "pong");
+}
+
 #[cfg(unix)]
 #[tokio::test]
 async fn unix_stream_echo_and_default_deny() {

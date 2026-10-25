@@ -9,7 +9,9 @@ use async_trait::async_trait;
 use base64::Engine;
 use futures_util::stream::SplitSink;
 use futures_util::{SinkExt, StreamExt};
+use std::time::Duration;
 use tokio::sync::mpsc;
+use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{MaybeTlsStream, WebSocketStream};
 
@@ -40,12 +42,31 @@ pub async fn connect_stream(
     req: &DebugRequest,
     frames: mpsc::Sender<String>,
 ) -> Result<Box<dyn StreamSession>, String> {
-    guard::check(cfg, &req.target).await?;
-    // shortcut: connect_async 会再次解析 DNS；guard 已校验解析结果，但连接时重解析
-    // 存在窄 TOCTOU 窗口。P6 改成先连已校验 IP 再手写握手。
-    let (ws, _) = tokio_tungstenite::connect_async(req.target.as_str())
+    let checked = guard::check(cfg, &req.target).await?;
+    if req.target.starts_with("wss://") {
+        return Err("wss requires pinned TLS; not supported in this build (use ws://)".into());
+    }
+    // 手工连到已校验 IP，再在原始 URL 的 Host 语义上完成 WS 握手（防 DNS rebinding）。
+    let mut request = req
+        .target
+        .as_str()
+        .into_client_request()
+        .map_err(|e| format!("invalid ws target: {e}"))?;
+    for (key, value) in &req.headers {
+        let name = tokio_tungstenite::tungstenite::http::HeaderName::from_bytes(key.as_bytes())
+            .map_err(|e| format!("invalid ws header name `{key}`: {e}"))?;
+        let value = tokio_tungstenite::tungstenite::http::HeaderValue::from_str(value)
+            .map_err(|e| format!("invalid ws header value for `{key}`: {e}"))?;
+        request.headers_mut().insert(name, value);
+    }
+    let connect_timeout = Duration::from_millis(cfg.timeout_ms.max(1));
+    let tcp = tokio::time::timeout(connect_timeout, tokio::net::TcpStream::connect(checked.addrs[0]))
         .await
+        .map_err(|_| "ws connect timed out".to_string())?
         .map_err(|e| format!("ws connect failed: {e}"))?;
+    let (ws, _) = tokio_tungstenite::client_async(request, MaybeTlsStream::Plain(tcp))
+        .await
+        .map_err(|e| format!("ws handshake failed: {e}"))?;
     let (sink, mut stream) = ws.split();
     let tx = frames.clone();
     tokio::spawn(async move {
@@ -97,4 +118,33 @@ fn now_ms() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_millis() as u64)
         .unwrap_or(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn wss_fails_closed_without_pinned_tls() {
+        let req = DebugRequest {
+            kind: "websocket".into(),
+            target: "wss://127.0.0.1:1/channel".into(),
+            method: None,
+            headers: Default::default(),
+            body: None,
+            opts: Default::default(),
+            endpoint: None,
+            timeout_ms: None,
+        };
+        let (frames, _rx) = mpsc::channel(1);
+        let cfg = DebugConfig {
+            allow_private_networks: true,
+            ..Default::default()
+        };
+        let err = connect_stream(&cfg, &req, frames)
+            .await
+            .err()
+            .expect("wss must fail closed");
+        assert!(err.contains("wss") && err.contains("TLS"), "{err}");
+    }
 }

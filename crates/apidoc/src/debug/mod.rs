@@ -22,6 +22,42 @@ pub mod hessian;
 mod dubbo;
 #[cfg(feature = "debug-iso8583")]
 pub mod iso8583;
+#[cfg(feature = "debug-mqtt")]
+mod mqtt;
+#[cfg(feature = "debug-amqp")]
+mod amqp;
+#[cfg(feature = "debug-kafka")]
+mod kafka;
+#[cfg(feature = "debug-xmpp")]
+mod xmpp;
+#[cfg(feature = "debug-sockets")]
+mod stomp;
+#[cfg(feature = "debug-coap")]
+mod coap;
+#[cfg(feature = "debug-coap")]
+mod lwm2m;
+#[cfg(feature = "debug-industrial")]
+mod modbus;
+#[cfg(feature = "debug-industrial")]
+mod dnp3;
+#[cfg(feature = "debug-industrial")]
+mod iec104;
+#[cfg(feature = "debug-industrial")]
+mod bacnet;
+#[cfg(feature = "debug-industrial")]
+mod opcua;
+#[cfg(feature = "debug-media")]
+pub mod rtp;
+#[cfg(feature = "debug-media")]
+pub mod rtcp;
+#[cfg(feature = "debug-media")]
+pub mod rtsp;
+#[cfg(feature = "debug-media")]
+pub mod sip;
+#[cfg(feature = "debug-media")]
+pub mod rtmp;
+#[cfg(feature = "debug-http3")]
+pub mod http3;
 
 use crate::{DebugConfig, DocEndpoint};
 use base64::Engine;
@@ -52,6 +88,9 @@ pub struct DebugRequest {
 pub struct EndpointRef {
     pub url: String,
     pub method: String,
+    /// 协议 kind；非 HTTP 端点通常共享空 url/GET，必须靠它区分。
+    #[serde(default)]
+    pub protocol: String,
 }
 
 /// 二进制安全的载荷：encoding = utf8 / hex / base64。
@@ -86,14 +125,46 @@ impl Payload {
 }
 
 fn decode_hex(s: &str) -> Result<Vec<u8>, String> {
-    let cleaned: String = s.chars().filter(|c| !c.is_whitespace()).collect();
-    if cleaned.len() % 2 != 0 {
+    fn digit(byte: u8) -> Option<u8> {
+        match byte {
+            b'0'..=b'9' => Some(byte - b'0'),
+            b'a'..=b'f' => Some(byte - b'a' + 10),
+            b'A'..=b'F' => Some(byte - b'A' + 10),
+            _ => None,
+        }
+    }
+    let mut out = Vec::with_capacity(s.len() / 2);
+    let mut high: Option<u8> = None;
+    for byte in s.bytes().filter(|b| !b.is_ascii_whitespace()) {
+        let nibble = digit(byte).ok_or("invalid hex body: non-hex character")?;
+        match high.take() {
+            Some(h) => out.push((h << 4) | nibble),
+            None => high = Some(nibble),
+        }
+    }
+    if high.is_some() {
         return Err("invalid hex body: odd number of digits".into());
     }
-    (0..cleaned.len())
-        .step_by(2)
-        .map(|i| u8::from_str_radix(&cleaned[i..i + 2], 16).map_err(|_| "invalid hex body".to_string()))
-        .collect()
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn hex_decode_rejects_non_ascii_without_panic() {
+        let payload = Payload {
+            encoding: "hex".into(),
+            data: "€€".into(),
+        };
+        assert!(payload.decode().is_err());
+        let ok = Payload {
+            encoding: "hex".into(),
+            data: "00 ff".into(),
+        };
+        assert_eq!(ok.decode().unwrap(), vec![0, 255]);
+    }
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -126,8 +197,6 @@ pub async fn execute(
     match req.kind.as_str() {
         "http" | "http2" | "http-binary" | "soap" | "graphql" | "jsonrpc" | "xmlrpc"
         | "odata" | "mcp" | "a2a" | "webhook" => http::execute(cfg, req).await,
-        // HTTP/3 需要 QUIC 执行器，P0 只保留文档/UI 标识；服务端代发在后续阶段接入。
-        "http3" => Err("HTTP/3 server executor is not available in this build yet".into()),
         #[cfg(feature = "debug-sockets")]
         "tcp" | "udp" | "raw" | "unix" => sockets::execute(cfg, req).await,
         #[cfg(feature = "debug-grpc")]
@@ -138,6 +207,42 @@ pub async fn execute(
         "dubbo" | "hessian" => dubbo::execute(cfg, req, ep).await,
         #[cfg(feature = "debug-iso8583")]
         "iso8583" => iso8583::execute(cfg, req, ep).await,
+        #[cfg(feature = "debug-mqtt")]
+        "mqtt" => mqtt::execute(cfg, req, ep).await,
+        #[cfg(feature = "debug-amqp")]
+        "amqp" => amqp::execute(cfg, req, ep).await,
+        #[cfg(feature = "debug-kafka")]
+        "kafka" => kafka::execute(cfg, req, ep).await,
+        #[cfg(feature = "debug-xmpp")]
+        "xmpp" => xmpp::execute(cfg, req, ep).await,
+        #[cfg(feature = "debug-sockets")]
+        "stomp" => stomp::execute(cfg, req, ep).await,
+        #[cfg(feature = "debug-coap")]
+        "coap" => coap::execute(cfg, req).await,
+        #[cfg(feature = "debug-coap")]
+        "lwm2m" => lwm2m::execute(cfg, req).await,
+        #[cfg(feature = "debug-industrial")]
+        "modbus" => modbus::execute(cfg, req).await,
+        #[cfg(feature = "debug-industrial")]
+        "dnp3" => dnp3::execute(cfg, req).await,
+        #[cfg(feature = "debug-industrial")]
+        "iec104" => iec104::execute(cfg, req).await,
+        #[cfg(feature = "debug-industrial")]
+        "bacnet" => bacnet::execute(cfg, req).await,
+        #[cfg(feature = "debug-industrial")]
+        "opcua" => opcua::execute(cfg, req).await,
+        #[cfg(feature = "debug-media")]
+        "rtp" => rtp::execute(cfg, req).await,
+        #[cfg(feature = "debug-media")]
+        "rtcp" => rtcp::execute(cfg, req).await,
+        #[cfg(feature = "debug-media")]
+        "rtsp" => rtsp::execute(cfg, req).await,
+        #[cfg(feature = "debug-media")]
+        "sip" => sip::execute(cfg, req).await,
+        #[cfg(feature = "debug-media")]
+        "rtmp" => rtmp::execute(cfg, req).await,
+        #[cfg(feature = "debug-http3")]
+        "http3" => http3::execute(cfg, req).await,
         other => Err(format!("protocol `{other}` has no server executor in this build")),
     }
 }

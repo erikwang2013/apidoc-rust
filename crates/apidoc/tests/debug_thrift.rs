@@ -4,6 +4,7 @@
 use apidoc::debug::thrift;
 use apidoc::debug::{execute, DebugRequest, Payload};
 use apidoc::{DebugConfig, DocEndpoint, DocParam};
+use base64::Engine;
 use serde_json::Value;
 use std::collections::BTreeMap;
 use std::time::Duration;
@@ -162,6 +163,65 @@ async fn missing_method_is_reported() {
     .await
     .unwrap_err();
     assert!(err.contains("method"), "{err}");
+}
+
+#[tokio::test]
+async fn missing_endpoint_schema_is_reported() {
+    let err = execute(
+        &cfg(),
+        &req("tcp://127.0.0.1:1".into(), &[("method", "ping")], "{}"),
+        None,
+    )
+    .await
+    .unwrap_err();
+    assert!(err.contains("endpoint"), "{err}");
+}
+
+/// binary 走 T_STRING 线型，但非 UTF-8 字节必须以 base64 无损往返。
+#[tokio::test]
+async fn binary_params_roundtrip_base64_and_preserve_non_utf8() {
+    let raw = [0x00u8, 0xff, 0x80];
+    let encoded = base64::engine::general_purpose::STANDARD.encode(raw);
+    let expected = encoded.clone();
+    let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let addr = listener.local_addr().unwrap();
+    tokio::spawn(async move {
+        let (mut stream, _) = listener.accept().await.unwrap();
+        // message begin 16 + field 3 + len 4 + payload 3 + STOP 1
+        let mut request = vec![0u8; 27];
+        stream.read_exact(&mut request).await.unwrap();
+        assert_eq!(&request[16..19], &[11, 0, 1], "binary uses the T_STRING wire type");
+        assert_eq!(&request[19..23], &3i32.to_be_bytes());
+        assert_eq!(&request[23..26], &raw);
+        assert_eq!(request[26], 0, "struct STOP");
+
+        let mut out = Vec::new();
+        thrift::write_message_begin(&mut out, "ping", 2, 0);
+        thrift::write_field(&mut out, 11, 1);
+        out.extend_from_slice(&3i32.to_be_bytes());
+        out.extend_from_slice(&raw);
+        out.push(0);
+        stream.write_all(&out).await.unwrap();
+    });
+
+    let ep = ep(
+        "ping",
+        vec![param("data", "binary", "1", true)],
+        vec![param("data", "binary", "1", false)],
+    );
+    let res = execute(
+        &cfg(),
+        &req(
+            format!("tcp://{addr}"),
+            &[("transport", "tcp")],
+            &format!(r#"{{"data":"{expected}"}}"#),
+        ),
+        Some(&ep),
+    )
+    .await
+    .unwrap();
+    let v: Value = serde_json::from_str(&res.body.data).unwrap();
+    assert_eq!(v["data"], expected);
 }
 
 async fn read_http_request(stream: &mut TcpStream) {

@@ -189,6 +189,25 @@ function graphqlWsDecode(text) {
   return { type: msg.type, id: msg.id, payload: msg.payload };
 }
 
+// 从 DocEndpoint.events 生成发送示例：out 方向；mock 缺失时按类型回退。
+function mockFromEvents(events, direction) {
+  const out = [];
+  for (const ev of events || []) {
+    if (ev.direction !== direction) continue;
+    const ty = ev.type || 'json';
+    let data;
+    if (ev.mock !== undefined && ev.mock !== null) data = String(ev.mock);
+    else if (ty === 'json') data = '{}';
+    else if (ty === 'binary') data = '00';
+    else data = 'string';
+    out.push({
+      name: ev.name,
+      payload: { encoding: ty === 'binary' ? 'hex' : 'utf8', data },
+    });
+  }
+  return out;
+}
+
 // SSE 增量解析：空行分派，data: 多行拼 \n，支持注释与 CRLF。
 function sseDecode(buffer) {
   const normalized = buffer.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
@@ -222,5 +241,6 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     decodeBytes, encodeBytes, stompEncode, stompDecode, sseDecode,
     socketIoEncode, socketIoDecode, graphqlWsEncode, graphqlWsDecode,
+    mockFromEvents,
   };
 }

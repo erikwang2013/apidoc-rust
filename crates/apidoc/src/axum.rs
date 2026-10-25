@@ -50,6 +50,7 @@ pub fn cors_layer(config: CorsConfig) -> CorsLayer {
 pub fn apidoc_routes(config: ApidocConfig) -> Router {
     // 构建期一次性物化全部文档产物（api.json/export/mock），请求期零重算。
     let core = Arc::new(Core::build(config));
+    let debug_limit = core.debug_body_limit();
     let router = Router::new()
         // UI 页与宠物图标不设守卫（见 route_core::UI/PET）。
         .route("/apidoc", get(|| async { response(route_core::UI) }))
@@ -63,7 +64,10 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
         .route("/apidoc/share", get(share))
         .route("/apidoc/generate", get(generate))
         // P0 服务端调试：POST body 为 DebugRequest；未启用时 route_core 返回 403
-        .route("/apidoc/debug", post(debug))
+        .route(
+            "/apidoc/debug",
+            post(debug).layer(DefaultBodyLimit::max(debug_limit)),
+        )
         // P6 webhook 入站捕获：POST 公开（HMAC 可选），GET 走守卫。
         .route("/apidoc/webhook", get(webhook_list))
         .route(

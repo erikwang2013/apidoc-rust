@@ -36,7 +36,9 @@ pub fn cors_layer(config: CorsConfig) -> Cors {
 /// ui.html 共享自本 crate 根（crates/apidoc/src/ui.html），与 axum 适配器同一份。
 pub fn apidoc_routes(config: ApidocConfig) -> Scope {
     // 构建期一次性物化全部文档产物（api.json/export/mock），请求期零重算。
-    let core = web::Data::new(Arc::new(Core::build(config)));
+    let core_inner = Arc::new(Core::build(config));
+    let debug_limit = core_inner.debug_body_limit();
+    let core = web::Data::new(core_inner);
     let scope = web::scope("/apidoc")
         .app_data(core)
         // UI 页与宠物图标不设守卫（见 route_core::UI/PET）。
@@ -50,8 +52,13 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
         .route("/mock", web::get().to(mock))
         .route("/share", web::get().to(share))
         .route("/generate", web::get().to(generate))
-        // P0 服务端调试：POST body 为 DebugRequest；未启用时 route_core 返回 403
-        .route("/debug", web::post().to(debug))
+        // P0 服务端调试：POST body 为 DebugRequest；未启用时 route_core 返回 403。
+        // 请求体上限与 DebugConfig.max_bytes*2 对齐，避免框架默认值先于 Core 拒绝。
+        .service(
+            web::resource("/debug")
+                .app_data(web::PayloadConfig::new(debug_limit))
+                .route(web::post().to(debug)),
+        )
         // P6 webhook 入站捕获：POST 公开（HMAC 可选），GET 走守卫。
         .route("/webhook", web::get().to(webhook_list))
         .service(

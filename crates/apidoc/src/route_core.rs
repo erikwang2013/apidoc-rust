@@ -286,10 +286,21 @@ impl Core {
             };
             // schema 只从服务端已收集的端点取；客户端只提供 (url, method) 引用。
             let ep = req.endpoint.as_ref().and_then(|r| {
-                self.doc
-                    .endpoints
-                    .iter()
-                    .find(|e| e.url == r.url && e.method == r.method)
+                let mut matches = self.doc.endpoints.iter().filter(|e| {
+                    e.url == r.url
+                        && e.method == r.method
+                        && (r.protocol.is_empty() || e.protocol == r.protocol)
+                });
+                let first = matches.next()?;
+                if matches.next().is_some() {
+                    eprintln!(
+                        "apidoc: ambiguous debug endpoint ref ({} {}, protocol `{}`), schema not resolved",
+                        r.method, r.url, r.protocol
+                    );
+                    None
+                } else {
+                    Some(first)
+                }
             });
             match crate::debug::execute(cfg, &req, ep).await {
                 Ok(out) => R::new(
@@ -313,6 +324,13 @@ impl Core {
                 r#"{"error":"server-side debug is not compiled in (enable feature `debug-http`)"}"#,
             )
         }
+    }
+
+    /// 调试请求体硬上限：`max_bytes` 的 2 倍（base64 膨胀余量），未配置时 2 MiB。
+    pub fn debug_body_limit(&self) -> usize {
+        self.debug_cfg
+            .as_ref()
+            .map_or(2 * 1024 * 1024, |c| c.max_bytes.saturating_mul(2).max(1024))
     }
 
     /// 长连接会话入口的配置：守卫 + 服务端调试开关。失败时直接返回响应。

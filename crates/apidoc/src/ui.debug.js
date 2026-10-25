@@ -366,7 +366,7 @@ function debugForm(ep) {
           body: JSON.stringify({
             kind: ep.protocol || 'http',
             target: fullUrl,
-            endpoint: { url: ep.url, method: ep.method },
+            endpoint: { url: ep.url, method: ep.method, protocol: ep.protocol || 'http' },
             method: preRun.ctx.method || ep.method,
             headers,
             body: payload,
@@ -471,10 +471,8 @@ function debugPanel(ep) {
       section.appendChild(webrtcPanel(ep));
     } else if (ep.protocol === 'hls') {
       section.appendChild(hlsPanel(ep));
-    } else if (ep.protocol && !HTTP_FAMILY.has(ep.protocol)) {
-      // 非 HTTP 族的专用面板（gRPC / MQTT / TCP…）在后续阶段（P2+）接入。
-      section.appendChild(el('p', 'empty', '该协议（' + ep.protocol + '）的调试面板将在 P2+ 提供。'));
     } else {
+      // gRPC/Thrift/Dubbo/TCP/MQTT… 一律走通用服务端表单（Base URL + opts 编辑器）。
       section.appendChild(debugForm(ep));
     }
   };

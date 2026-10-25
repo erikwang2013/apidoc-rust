@@ -169,3 +169,12 @@ async fn missing_service_is_reported() {
     let err = execute(&allow_private(), &req, None).await.unwrap_err();
     assert!(err.contains("service"), "{err}");
 }
+
+#[tokio::test]
+async fn https_target_fails_closed_without_pinned_tls() {
+    let req = grpc_req("https://127.0.0.1:1".into(), &[], "{}");
+    let err = execute(&allow_private(), &req, Some(&grpc_ep("SayHello")))
+        .await
+        .unwrap_err();
+    assert!(err.contains("https") && err.contains("TLS"), "{err}");
+}

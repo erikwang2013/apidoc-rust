@@ -33,8 +33,19 @@ debug-dubbo = ["debug-sockets"]
 debug-iso8583 = ["debug-sockets"]
 # P2 gRPC：tonic 客户端 + 反射/描述符动态消息
 debug-grpc = ["debug-http", "dep:tonic", "dep:prost", "dep:prost-reflect", "dep:tonic-reflection", "dep:tokio-stream"]
-# P2 聚合开关：显式启用全部 P2 服务端执行器；默认构建仍零重型依赖。
-debug-all = ["debug-http", "debug-session", "debug-sockets", "debug-grpc", "debug-thrift", "debug-dubbo", "debug-iso8583"]
+# P3 消息中间件：连接参数只来自请求 opts，不进 api.json
+debug-mqtt = ["debug-http", "dep:rumqttc"]
+debug-amqp = ["debug-http", "dep:lapin", "dep:futures-util"]
+debug-kafka = ["debug-http", "dep:rskafka"]
+debug-xmpp = ["debug-http", "dep:tokio-xmpp", "dep:futures-util"]
+# P4 IoT/工业：CoAP 含 LwM2M；Modbus/DNP3/IEC104/BACnet/OPC UA 手写编解码
+debug-coap = ["debug-http", "dep:coap-lite"]
+debug-industrial = ["debug-http", "dep:tokio-modbus"]
+# P5 媒体/信令：只做握手/包级调试，不转码；HTTP/3 走 QUIC
+debug-media = ["debug-http", "dep:rsip"]
+debug-http3 = ["debug-http", "dep:quinn", "dep:h3", "dep:h3-quinn", "dep:rustls", "dep:rustls-native-certs", "dep:http", "dep:bytes"]
+# 聚合开关：显式启用全部服务端执行器；默认构建仍零重型依赖。
+debug-all = ["debug-http", "debug-session", "debug-sockets", "debug-grpc", "debug-thrift", "debug-dubbo", "debug-iso8583", "debug-mqtt", "debug-amqp", "debug-kafka", "debug-xmpp", "debug-coap", "debug-industrial", "debug-media", "debug-http3"]
 
 [dependencies]
 linkme = "0.3"
@@ -69,12 +80,31 @@ prost = { version = "0.13", optional = true }
 prost-reflect = { version = "0.14", features = ["serde"], optional = true }
 tonic-reflection = { version = "0.12", optional = true }
 tokio-stream = { version = "0.1", features = ["net", "sync"], optional = true }
+# P3 消息中间件（纯 Rust；lapin 2.5+/rskafka 0.6 要 Rust 1.85，锁在 MSRV 内）
+rumqttc = { version = "0.25", default-features = false, features = ["use-rustls"], optional = true }
+lapin = { version = "=2.3.2", default-features = false, features = ["rustls"], optional = true }
+rskafka = { version = "0.5", default-features = false, features = ["compression-gzip"], optional = true }
+tokio-xmpp = { version = "4.0", optional = true }
+# P4 IoT/工业
+coap-lite = { version = "0.13", optional = true }
+tokio-modbus = { version = "0.17", default-features = false, features = ["tcp"], optional = true }
+# P5 媒体/信令（quinn 0.11.11+ 要 Rust 1.85）
+rsip = { version = "0.4", optional = true }
+quinn = { version = "=0.11.9", default-features = false, features = ["runtime-tokio", "rustls-ring"], optional = true }
+h3 = { version = "0.0.8", optional = true }
+h3-quinn = { version = "0.0.10", optional = true }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"], optional = true }
+rustls-native-certs = { version = "0.8", optional = true }
+http = { version = "1", optional = true }
 
 [dev-dependencies]
 apidoc-test-fixtures = { path = "../apidoc-test-fixtures" }
 # axum 集成测试（feature "axum" 时编译）
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tower = { version = "0.5", features = ["util"] }
+# 本地 broker / h3 测试进程（仅测试目标链接，不进默认库依赖）
+rumqttd = { version = "0.20", default-features = false }
+rcgen = "0.13"
 
 [[example]]
 name = "axum_demo"

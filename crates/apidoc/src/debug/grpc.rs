@@ -138,9 +138,16 @@ pub async fn execute(
 }
 
 async fn connect(cfg: &DebugConfig, target: &str) -> Result<Channel, String> {
-    // shortcut: 与 WS 相同，guard 校验后 tonic 会再解析一次 DNS（窄 TOCTOU）。
-    guard::check(cfg, target).await?;
-    Endpoint::from_shared(target.to_string())
+    let checked = guard::check(cfg, target).await?;
+    if target.starts_with("https://") {
+        return Err(
+            "grpc over https requires pinned TLS; not supported in this build (use http:// h2c)"
+                .into(),
+        );
+    }
+    // 直接连 guard 校验过的 IP，避免 tonic 重新解析 DNS。
+    let addr = checked.addrs[0];
+    Endpoint::from_shared(format!("http://{addr}"))
         .map_err(|e| format!("invalid grpc target: {e}"))?
         .connect()
         .await

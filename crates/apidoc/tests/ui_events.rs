@@ -40,6 +40,7 @@ fn ui_has_stream_panel_and_ws_adapter() {
     assert!(ui.contains("MAX_FRAMES = 1000"));
     assert!(ui.contains("registerStreamAdapter"));
     assert!(ui.contains("'websocket'"));
+    assert!(ui.contains("mockFromEvents"), "缺少事件示例下拉");
     assert!(!ui.contains("innerHTML"));
 }
 
@@ -54,7 +55,7 @@ fn ui_dispatches_all_browser_protocol_panels() {
         "'graphql-ws'",
         "webrtcPanel(ep)",
         "hlsPanel(ep)",
-        "P2+",
+        "endpoint: { url: ep.url, method: ep.method, protocol: ep.protocol",
     ] {
         assert!(ui.contains(marker), "missing dispatch marker: {marker}");
     }

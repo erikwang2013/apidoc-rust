@@ -23,8 +23,12 @@ const MAX_CAPACITY: usize = 200;
 /// Total stored bytes per webhook (oldest events are evicted first).
 const MAX_STORE_BYTES: usize = 8 * 1024 * 1024;
 
-// Per-webhook fixed-window throttle for unauthenticated writes.
+// Fixed-window throttles for unauthenticated writes: per webhook id and a
+// registry-wide total so a burst across many ids cannot exhaust memory/CPU.
+// shortcut: the per-id bucket is keyed only by the public id, so a leaked id can
+// still starve its own capture — put a per-IP gateway limit in front when that matters.
 const RATE_LIMIT: u32 = 100;
+const GLOBAL_RATE_LIMIT: u32 = 1000;
 const RATE_WINDOW: Duration = Duration::from_secs(60);
 
 // Header storage bounds (attacker-controlled input).
@@ -86,6 +90,8 @@ struct WebhookRuntime {
 
 pub struct WebhookRegistry {
     hooks: Vec<WebhookRuntime>,
+    /// Cross-id write budget for this registry (unknown ids never reach it).
+    gate: Mutex<RateWindow>,
 }
 
 impl WebhookRuntime {
@@ -111,20 +117,6 @@ impl WebhookRuntime {
             seq: AtomicU64::new(0),
             rate: Mutex::new(RateWindow { start: Instant::now(), count: 0 }),
         }
-    }
-
-    /// Fixed-window throttle; a single webhook id has one shared bucket
-    /// (no per-IP state here — put a gateway rate limit in front for that).
-    fn allow_post(&self) -> bool {
-        let mut w = self.rate.lock().unwrap_or_else(|e| e.into_inner());
-        if w.start.elapsed() >= RATE_WINDOW {
-            *w = RateWindow { start: Instant::now(), count: 0 };
-        }
-        if w.count >= RATE_LIMIT {
-            return false;
-        }
-        w.count += 1;
-        true
     }
 
     fn push(&self, event: StoredEvent) {
@@ -159,7 +151,26 @@ impl WebhookRegistry {
             }
             hooks.push(WebhookRuntime::new(cfg));
         }
-        WebhookRegistry { hooks }
+        WebhookRegistry { hooks, gate: Mutex::new(RateWindow { start: Instant::now(), count: 0 }) }
+    }
+
+    /// Charge a write against both the per-id bucket and the registry-wide cap.
+    /// Lock order is gate → hook.rate; no other path locks both.
+    fn allow_post(&self, hook: &WebhookRuntime) -> bool {
+        let mut gate = self.gate.lock().unwrap_or_else(|e| e.into_inner());
+        let mut window = hook.rate.lock().unwrap_or_else(|e| e.into_inner());
+        if gate.start.elapsed() >= RATE_WINDOW {
+            *gate = RateWindow { start: Instant::now(), count: 0 };
+        }
+        if window.start.elapsed() >= RATE_WINDOW {
+            *window = RateWindow { start: Instant::now(), count: 0 };
+        }
+        if gate.count >= GLOBAL_RATE_LIMIT || window.count >= RATE_LIMIT {
+            return false;
+        }
+        gate.count += 1;
+        window.count += 1;
+        true
     }
 
     /// Public write path. Returns (status, JSON body).
@@ -173,7 +184,7 @@ impl WebhookRegistry {
         let Some(hook) = self.hooks.iter().find(|h| h.cfg.id == id) else {
             return (404, r#"{"error":"unknown webhook"}"#.to_string());
         };
-        if !hook.allow_post() {
+        if !self.allow_post(hook) {
             return (429, r#"{"error":"rate limit exceeded"}"#.to_string());
         }
         if body.len() > hook.cfg.max_body {

@@ -50,11 +50,7 @@ async fn call(
     for (name, value) in headers {
         builder = builder.header(*name, *value);
     }
-    let res = app
-        .clone()
-        .oneshot(builder.body(Body::from(body)).unwrap())
-        .await
-        .unwrap();
+    let res = app.clone().oneshot(builder.body(Body::from(body)).unwrap()).await.unwrap();
     let status = res.status().as_u16();
     let body = to_bytes(res.into_body(), usize::MAX).await.unwrap();
     Resp { status, body: String::from_utf8(body.to_vec()).unwrap() }
@@ -68,22 +64,28 @@ fn sign(body: &[u8]) -> String {
 
 async fn token(app: &Router) -> String {
     let body = serde_json::json!({ "password": PASSWORD }).to_string();
-    let res = call(app, "POST", "/apidoc/auth", &[("content-type", "application/json")], body.into()).await;
+    let res =
+        call(app, "POST", "/apidoc/auth", &[("content-type", "application/json")], body.into())
+            .await;
     assert_eq!(res.status, 200, "login failed: {}", res.body);
     let v: Value = serde_json::from_str(&res.body).unwrap();
     v["token"].as_str().unwrap().to_string()
 }
 
-async fn post_signed(app: &Router, body: &[u8]) -> Resp {
+async fn post_signed_to(app: &Router, id: &str, body: &[u8]) -> Resp {
     let sig = sign(body);
     call(
         app,
         "POST",
-        &format!("/apidoc/webhook/{ID}"),
+        &format!("/apidoc/webhook/{id}"),
         &[("content-type", "application/json"), ("x-apidoc-signature", &sig)],
         body.to_vec(),
     )
     .await
+}
+
+async fn post_signed(app: &Router, body: &[u8]) -> Resp {
+    post_signed_to(app, ID, body).await
 }
 
 #[tokio::test]
@@ -101,14 +103,8 @@ async fn captures_signed_event_and_lists_without_secret() {
     assert!(list.body.contains("stripe"));
     assert!(!list.body.contains(SECRET), "secret must never be serialized");
 
-    let events = call(
-        &app,
-        "GET",
-        &format!("/apidoc/webhook/{ID}?token={token}"),
-        &[],
-        vec![],
-    )
-    .await;
+    let events =
+        call(&app, "GET", &format!("/apidoc/webhook/{ID}?token={token}"), &[], vec![]).await;
     assert_eq!(events.status, 200);
     let v: Value = serde_json::from_str(&events.body).unwrap();
     let e = &v["events"][0];
@@ -124,7 +120,8 @@ async fn stores_binary_body_as_hex() {
     let res = post_signed(&app, &[0xff, 0x00, 0x41]).await;
     assert_eq!(res.status, 202);
     let token = token(&app).await;
-    let events = call(&app, "GET", &format!("/apidoc/webhook/{ID}?token={token}"), &[], vec![]).await;
+    let events =
+        call(&app, "GET", &format!("/apidoc/webhook/{ID}?token={token}"), &[], vec![]).await;
     let v: Value = serde_json::from_str(&events.body).unwrap();
     assert_eq!(v["events"][0]["body"]["encoding"], "hex");
     assert_eq!(v["events"][0]["body"]["data"], "ff0041");
@@ -189,14 +186,9 @@ async fn since_filters_by_sequence() {
     let v: Value = serde_json::from_str(&all.body).unwrap();
     assert_eq!(v["events"].as_array().unwrap().len(), 2);
 
-    let since = call(
-        &app,
-        "GET",
-        &format!("/apidoc/webhook/{ID}?token={token}&since=1"),
-        &[],
-        vec![],
-    )
-    .await;
+    let since =
+        call(&app, "GET", &format!("/apidoc/webhook/{ID}?token={token}&since=1"), &[], vec![])
+            .await;
     let v: Value = serde_json::from_str(&since.body).unwrap();
     let events = v["events"].as_array().unwrap();
     assert_eq!(events.len(), 1, "since=1 must drop the first event: {}", since.body);
@@ -216,6 +208,64 @@ async fn ring_buffer_keeps_only_capacity() {
     assert_eq!(events.len(), 2, "capacity=2 must evict the oldest");
     assert_eq!(events[0]["body"]["data"], "e1");
     assert_eq!(events[1]["body"]["data"], "e2");
+}
+
+#[tokio::test]
+async fn rate_limits_are_isolated_per_webhook_id() {
+    const OTHER: &str = "fedcba9876543210fedcba9876543210";
+    let mut config = cfg();
+    config.webhooks.push(WebhookConfig {
+        id: OTHER.into(),
+        title: "github".into(),
+        secret: Some(SECRET.into()),
+        max_body: 1024,
+        capacity: 2,
+    });
+    let app = app(config);
+    for _ in 0..100 {
+        assert_eq!(post_signed(&app, b"x").await.status, 202);
+    }
+    assert_eq!(post_signed(&app, b"x").await.status, 429, "first id hits its own limit");
+    assert_eq!(post_signed_to(&app, OTHER, b"x").await.status, 202, "other id has its own bucket");
+}
+
+#[tokio::test]
+async fn global_cap_bounds_writes_across_ids() {
+    let ids: Vec<String> = (0..=10).map(|i| format!("{i:032x}")).collect();
+    let config = ApidocConfig {
+        webhooks: ids
+            .iter()
+            .map(|id| WebhookConfig {
+                id: id.clone(),
+                title: "x".into(),
+                secret: None,
+                max_body: 16,
+                capacity: 1,
+            })
+            .collect(),
+        ..Default::default()
+    };
+    let app = app(config);
+    // The global cap is 1000/min, so ten ids × 100 writes exhausts it.
+    for id in &ids[..10] {
+        for _ in 0..100 {
+            let res =
+                call(&app, "POST", &format!("/apidoc/webhook/{id}"), &[], b"x".to_vec()).await;
+            assert_eq!(res.status, 202, "id {id}: {}", res.body);
+        }
+    }
+    let res = call(&app, "POST", &format!("/apidoc/webhook/{}", ids[10]), &[], b"x".to_vec()).await;
+    assert_eq!(res.status, 429, "global cap must bound total writes across ids");
+}
+
+#[tokio::test]
+async fn unknown_ids_do_not_consume_the_write_budget() {
+    let app = app(cfg());
+    for _ in 0..101 {
+        let res = call(&app, "POST", "/apidoc/webhook/nope", &[], b"{}".to_vec()).await;
+        assert_eq!(res.status, 404);
+    }
+    assert_eq!(post_signed(&app, b"x").await.status, 202, "unknown ids must not charge the bucket");
 }
 
 #[tokio::test]

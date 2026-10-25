@@ -457,14 +457,21 @@ async fn http_roundtrip(
     req: &DebugRequest,
     frame: &[u8],
 ) -> Result<Vec<u8>, String> {
-    guard::check(cfg, &req.target).await?;
-    let client = reqwest::Client::builder()
+    let checked = guard::check(cfg, &req.target).await?;
+    let mut builder = reqwest::Client::builder()
         .timeout(Duration::from_millis(cfg.timeout_ms.max(1)))
         .redirect(reqwest::redirect::Policy::none())
-        .no_proxy()
+        .no_proxy();
+    // 钉住已校验的 IP，避免 DNS rebinding 在真正连接时换地址。
+    if checked.host.parse::<std::net::IpAddr>().is_err() {
+        if let Some(addr) = checked.addrs.first() {
+            builder = builder.resolve(&checked.host, *addr);
+        }
+    }
+    let client = builder
         .build()
         .map_err(|e| format!("thrift http client failed: {e}"))?;
-    let response = client
+    let mut response = client
         .post(&req.target)
         .header("Content-Type", "application/x-thrift")
         .body(frame.to_vec())
@@ -474,14 +481,18 @@ async fn http_roundtrip(
     if !response.status().is_success() {
         return Err(format!("thrift http status {}", response.status()));
     }
-    let bytes = response
-        .bytes()
+    let mut bytes = Vec::new();
+    while let Some(chunk) = response
+        .chunk()
         .await
-        .map_err(|e| format!("thrift http read failed: {e}"))?;
-    if bytes.len() > cfg.max_bytes {
-        return Err(format!("response exceeds max_bytes ({})", cfg.max_bytes));
+        .map_err(|e| format!("thrift http read failed: {e}"))?
+    {
+        if bytes.len() + chunk.len() > cfg.max_bytes {
+            return Err(format!("response exceeds max_bytes ({})", cfg.max_bytes));
+        }
+        bytes.extend_from_slice(&chunk);
     }
-    Ok(bytes.to_vec())
+    Ok(bytes)
 }
 
 fn read_u8(input: &mut &[u8]) -> Result<u8, String> {

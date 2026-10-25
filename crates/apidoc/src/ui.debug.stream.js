@@ -50,6 +50,28 @@ function streamPanel(ep, adapterName) {
   const sendBox = el('div');
   sendBox.style.flex = '1';
   sendBox.appendChild(fmt);
+  // 从 ep.events 的 out 方向示例生成下拉，选中即填发送框。
+  const examples = mockFromEvents(ep.events, 'out');
+  if (examples.length) {
+    const sel = document.createElement('select');
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '示例…';
+    sel.appendChild(blank);
+    examples.forEach((ex, i) => {
+      const option = document.createElement('option');
+      option.value = String(i);
+      option.textContent = ex.name;
+      sel.appendChild(option);
+    });
+    sel.onchange = () => {
+      const ex = examples[Number(sel.value)];
+      if (!ex) return;
+      fmt.value = ex.payload.encoding;
+      ta.value = ex.payload.data;
+    };
+    sendBox.appendChild(sel);
+  }
   sendBox.appendChild(ta);
   sendRow.appendChild(sendBox);
   box.appendChild(sendRow);

@@ -165,6 +165,21 @@ fn hessian_roundtrip_and_compact_decode() {
         hessian::decode(&mut &[0x7au8, 0x91, 0x92][..]).unwrap(),
         json!([1, 2])
     );
+
+    // 紧凑 double：0x5b/0x5c 是 0.0/1.0，0x5d/0x5e/0x5f 分别带 1/2/4 字节负载。
+    assert_eq!(hessian::decode(&mut &[0x5bu8][..]).unwrap(), json!(0.0));
+    assert_eq!(hessian::decode(&mut &[0x5cu8][..]).unwrap(), json!(1.0));
+    assert_eq!(
+        hessian::decode(&mut &[0x5du8, 0xfe][..]).unwrap(),
+        json!(-2.0)
+    );
+    assert_eq!(
+        hessian::decode(&mut &[0x5eu8, 0xff, 0xfe][..]).unwrap(),
+        json!(-2.0)
+    );
+    let mut float = vec![0x5fu8];
+    float.extend_from_slice(&1.5f32.to_bits().to_be_bytes());
+    assert_eq!(hessian::decode(&mut &float[..]).unwrap(), json!(1.5));
 }
 
 #[test]
