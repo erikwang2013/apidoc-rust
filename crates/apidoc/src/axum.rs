@@ -77,10 +77,101 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
                 // 未认证写入口：缓冲上限是 DebugConfig 之外的绝对硬顶。
                 .layer(DefaultBodyLimit::max(crate::webhook::MAX_BODY)),
         );
+    // UIC-1: shared contract consumed by apidoc-ui.
+    let router = router
+        .route("/apidoc/ui/v1/capabilities", get(ui_capabilities))
+        .route("/apidoc/ui/v1/config", get(ui_config))
+        .route("/apidoc/ui/v1/menus", post(ui_menus))
+        .route("/apidoc/ui/v1/detail", post(ui_detail))
+        .route(
+            "/apidoc/ui/v1/docMenus",
+            get(ui_doc_menus_get).post(ui_doc_menus_post),
+        )
+        .route("/apidoc/ui/v1/docDetail", post(ui_doc_detail))
+        .route("/apidoc/ui/v1/verifyAuth", post(ui_verify_auth))
+        .route("/apidoc/ui/v1/debugSend", post(ui_debug_send))
+        .route("/apidoc/ui/v1/debugStart", post(ui_debug_start))
+        .route("/apidoc/ui/v1/debugPoll", post(ui_debug_poll))
+        .route("/apidoc/ui/v1/debugStop", post(ui_debug_stop));
     // P2 长连接会话桥：仅在 feature 开启时注册。
     #[cfg(feature = "debug-session")]
     let router = router.route("/apidoc/debug/stream", get(debug_stream));
     router.with_state(core)
+}
+
+fn bearer(headers: &HeaderMap) -> String {
+    headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .map(str::trim)
+        .unwrap_or("")
+        .to_string()
+}
+
+async fn ui_capabilities(State(core): State<Arc<Core>>) -> Response {
+    response(crate::uiapi::capabilities(&core))
+}
+
+async fn ui_config(
+    State(core): State<Arc<Core>>,
+    Query(q): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+) -> Response {
+    response(crate::uiapi::config(&core, &q, &bearer(&headers)))
+}
+
+async fn ui_menus(State(core): State<Arc<Core>>, headers: HeaderMap, body: Bytes) -> Response {
+    response(crate::uiapi::menus(&core, &body, &bearer(&headers)))
+}
+
+async fn ui_detail(State(core): State<Arc<Core>>, headers: HeaderMap, body: Bytes) -> Response {
+    response(crate::uiapi::detail(&core, &body, &bearer(&headers)))
+}
+
+async fn ui_doc_menus_get(
+    State(core): State<Arc<Core>>,
+    Query(q): Query<HashMap<String, String>>,
+    headers: HeaderMap,
+) -> Response {
+    response(crate::uiapi::doc_menus(&core, &q, &bearer(&headers)))
+}
+
+async fn ui_doc_menus_post(
+    State(core): State<Arc<Core>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    let q = serde_json::from_slice::<HashMap<String, String>>(&body).unwrap_or_default();
+    response(crate::uiapi::doc_menus(&core, &q, &bearer(&headers)))
+}
+
+async fn ui_doc_detail(State(core): State<Arc<Core>>, headers: HeaderMap, body: Bytes) -> Response {
+    response(crate::uiapi::doc_detail(&core, &body, &bearer(&headers)))
+}
+
+async fn ui_verify_auth(State(core): State<Arc<Core>>, body: Bytes) -> Response {
+    response(crate::uiapi::verify_auth(&core, &body))
+}
+
+async fn ui_debug_send(State(core): State<Arc<Core>>, headers: HeaderMap, body: Bytes) -> Response {
+    response(crate::uiapi::debug_send(&core, &body, &bearer(&headers)).await)
+}
+
+async fn ui_debug_start(
+    State(core): State<Arc<Core>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    response(crate::uiapi::debug_start(&core, &body, &bearer(&headers)).await)
+}
+
+async fn ui_debug_poll(State(core): State<Arc<Core>>, headers: HeaderMap, body: Bytes) -> Response {
+    response(crate::uiapi::debug_poll(&core, &body, &bearer(&headers)).await)
+}
+
+async fn ui_debug_stop(State(core): State<Arc<Core>>, headers: HeaderMap, body: Bytes) -> Response {
+    response(crate::uiapi::debug_stop(&core, &body, &bearer(&headers)).await)
 }
 
 // 各 handler 一行转发 core：判定与渲染在 route_core（两框架共享同一实现）。

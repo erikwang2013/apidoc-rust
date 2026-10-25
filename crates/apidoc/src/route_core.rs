@@ -170,8 +170,24 @@ impl Core {
         }
     }
 
+    pub(crate) fn doc(&self) -> &ApiDoc {
+        &self.doc
+    }
+
+    pub(crate) fn app_configs(&self) -> &[AppConfig] {
+        &self.apps
+    }
+
+    pub(crate) fn auth_config(&self) -> Option<&AuthConfig> {
+        self.auth_cfg.as_ref()
+    }
+
+    pub(crate) fn debug_config(&self) -> Option<&DebugConfig> {
+        self.debug_cfg.as_ref()
+    }
+
     /// 数据路由守卫，auth 未启用恒放行。
-    fn guard(&self, q: &HashMap<String, String>) -> bool {
+    pub(crate) fn guard(&self, q: &HashMap<String, String>) -> bool {
         auth::auth_guard_ok(
             q.get("token").map(String::as_str).unwrap_or(""),
             q.get("appKey").map(String::as_str),
