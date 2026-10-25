@@ -27,6 +27,10 @@ debug-session = ["debug-http", "dep:async-trait", "dep:tokio-tungstenite", "dep:
 debug-sockets = ["debug-http"]
 # P2 Thrift：手写 TBinaryProtocol（复用 socket 传输）
 debug-thrift = ["debug-sockets"]
+# P2 Dubbo/Hessian2：手写编解码，复用 socket 传输（不接注册中心，P6 再说）
+debug-dubbo = ["debug-sockets"]
+# P2 ISO 8583：手写位图/域编解码，复用 socket 传输
+debug-iso8583 = ["debug-sockets"]
 # P2 gRPC：tonic 客户端 + 反射/描述符动态消息
 debug-grpc = ["debug-http", "dep:tonic", "dep:prost", "dep:prost-reflect", "dep:tonic-reflection", "dep:tokio-stream"]
 
