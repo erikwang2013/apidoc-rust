@@ -16,6 +16,12 @@ mod sockets;
 mod grpc;
 #[cfg(feature = "debug-thrift")]
 pub mod thrift;
+#[cfg(feature = "debug-dubbo")]
+pub mod hessian;
+#[cfg(feature = "debug-dubbo")]
+mod dubbo;
+#[cfg(feature = "debug-iso8583")]
+pub mod iso8583;
 
 use crate::{DebugConfig, DocEndpoint};
 use base64::Engine;
@@ -128,6 +134,10 @@ pub async fn execute(
         "grpc" => grpc::execute(cfg, req, ep).await,
         #[cfg(feature = "debug-thrift")]
         "thrift" => thrift::execute(cfg, req, ep).await,
+        #[cfg(feature = "debug-dubbo")]
+        "dubbo" | "hessian" => dubbo::execute(cfg, req, ep).await,
+        #[cfg(feature = "debug-iso8583")]
+        "iso8583" => iso8583::execute(cfg, req, ep).await,
         other => Err(format!("protocol `{other}` has no server executor in this build")),
     }
 }
