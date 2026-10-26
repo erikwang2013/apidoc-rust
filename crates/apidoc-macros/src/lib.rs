@@ -10,14 +10,16 @@
 mod args;
 mod protocols;
 
-use args::{EventArgs, HeaderArgs, ParamArgs, ProtocolArgs, ProtocolOptsArgs, SuccessArgs};
+use args::{
+    DefinitionArgs, EventArgs, HeaderArgs, ParamArgs, ProtocolArgs, ProtocolOptsArgs, SuccessArgs,
+};
 use proc_macro::TokenStream;
 use proc_macro2::Span;
 use quote::{format_ident, quote, quote_spanned};
 use std::sync::atomic::{AtomicU32, Ordering};
 use syn::parse::ParseStream;
 use syn::punctuated::Punctuated;
-use syn::{parse_macro_input, Ident, Item, ItemFn, LitInt, LitStr, Token};
+use syn::{parse_macro_input, Ident, Item, ItemFn, LitBool, LitInt, LitStr, Token};
 
 const HTTP_METHODS: &[&str] = &["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"];
 
@@ -355,6 +357,55 @@ pub fn event(args: TokenStream, item: TokenStream) -> TokenStream {
         })
     };
     emit_many("event", item_fn, vec![frag])
+}
+
+/// UIC-1 Phase 4: 为端点挂一个外部协议定义文件，例如
+/// `#[apidoc::definition(file = "api/openapi.yaml", operation = "getUser")]`。
+/// 路径相对声明方 crate 的 `CARGO_MANIFEST_DIR`；文件在详情请求时解析。
+#[proc_macro_attribute]
+pub fn definition(args: TokenStream, item: TokenStream) -> TokenStream {
+    let args = parse_macro_input!(args as DefinitionArgs);
+    let Some(file) = args.file.as_ref() else {
+        return syn::Error::new(Span::call_site(), "apidoc::definition requires `file`")
+            .to_compile_error()
+            .into();
+    };
+    if file.value().trim().is_empty() {
+        return syn::Error::new(
+            file.span(),
+            "apidoc::definition requires a non-empty `file`",
+        )
+        .to_compile_error()
+        .into();
+    }
+    let item_fn = match parse_item_fn("definition", item) {
+        Ok(f) => f,
+        Err(e) => return e.to_compile_error().into(),
+    };
+    let empty = || LitStr::new("", Span::call_site());
+    let format = args.format.unwrap_or_else(empty);
+    let operation = args.operation.unwrap_or_else(empty);
+    let message = args.message.unwrap_or_else(empty);
+    let direction = args.direction.unwrap_or_else(empty);
+    let sample = args.sample.unwrap_or_else(empty);
+    let sample_file = args.sample_file.unwrap_or_else(empty);
+    let sample_encoding = args.sample_encoding.unwrap_or_else(empty);
+    let strict = args.strict.as_ref().map_or(true, LitBool::value);
+    let frag = quote! {
+        apidoc::DocFragment::Definition(apidoc::DocDefinition {
+            file: #file,
+            root: env!("CARGO_MANIFEST_DIR"),
+            format: #format,
+            operation: #operation,
+            message: #message,
+            direction: #direction,
+            sample: #sample,
+            sample_file: #sample_file,
+            sample_encoding: #sample_encoding,
+            strict: #strict,
+        })
+    };
+    emit_many("definition", item_fn, vec![frag])
 }
 
 /// title / desc / method / url / group / author / md / ref / app / table:

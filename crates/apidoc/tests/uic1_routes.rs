@@ -23,6 +23,43 @@ fn items() {}
 #[apidoc::event(direction = "out", name = "join", ty = "json", desc = "加入房间")]
 fn chat() {}
 
+#[allow(dead_code)]
+#[apidoc::title("User hook")]
+#[apidoc::url("/hook/user")]
+#[apidoc::method("POST")]
+#[apidoc::protocol("webhook")]
+#[apidoc::definition(
+    file = "tests/fixtures/protocol/json-schema/user.json",
+    sampleFile = "tests/fixtures/protocol/json-schema/user-sample.json"
+)]
+fn user_hook() {}
+
+#[allow(dead_code)]
+#[apidoc::title("Broken hook")]
+#[apidoc::url("/hook/broken")]
+#[apidoc::method("POST")]
+#[apidoc::protocol("webhook")]
+#[apidoc::definition(file = "tests/fixtures/protocol/json-schema/invalid.json")]
+#[apidoc::definition(file = "../apidoc-macros/Cargo.toml")]
+#[apidoc::definition(
+    file = "tests/fixtures/protocol/json-schema/user.json",
+    format = "bogus"
+)]
+#[apidoc::definition(file = "tests/fixtures/protocol/json-schema/traversal.json")]
+fn broken_hook() {}
+
+#[allow(dead_code)]
+#[apidoc::title("Auto hook")]
+#[apidoc::url("/hook/auto")]
+#[apidoc::method("POST")]
+#[apidoc::protocol("webhook")]
+#[apidoc::definition(
+    file = "tests/fixtures/protocol/openapi/api.yaml",
+    operation = "getUser",
+    sample = r#"{"id":1,"name":"a"}"#
+)]
+fn auto_hook() {}
+
 fn app() -> axum::Router {
     apidoc_routes(ApidocConfig {
         title: "Demo".into(),
@@ -57,12 +94,41 @@ async fn login(app: &axum::Router) -> String {
     body["data"]["token"].as_str().unwrap().to_string()
 }
 
+async fn detail_by_url(app: &axum::Router, token: &str, url: &str) -> Value {
+    let (status, menus) = send(
+        app,
+        "POST",
+        "/apidoc/ui/v1/menus",
+        r#"{"appKey":"default"}"#,
+        token,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{menus}");
+    let children = menus["data"]["data"][0]["children"].as_array().expect("children");
+    let menu_key = children
+        .iter()
+        .find(|item| item["url"] == url)
+        .and_then(|item| item["menuKey"].as_str())
+        .unwrap_or_else(|| panic!("menuKey for {url}"));
+    let (status, detail) = send(
+        app,
+        "POST",
+        "/apidoc/ui/v1/detail",
+        &json!({"appKey":"default","path":menu_key}).to_string(),
+        token,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK, "{detail}");
+    detail
+}
+
 #[tokio::test]
 async fn capabilities_are_public() {
     let (status, body) = send(&app(), "GET", "/apidoc/ui/v1/capabilities", "", "").await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["data"]["contract"], "1.0");
     assert_eq!(body["data"]["backend"], "rust");
+    assert_eq!(body["data"]["features"]["protocolDefinitions"], true);
 }
 
 #[tokio::test]
@@ -116,6 +182,91 @@ async fn auth_menus_and_detail() {
     assert_eq!(status, StatusCode::OK, "{ws}");
     assert_eq!(ws["data"]["debug"]["mode"], "browser-websocket");
     assert!(ws["data"]["definitions"].as_array().is_some_and(|d| !d.is_empty()));
+}
+
+#[tokio::test]
+async fn protocol_definitions_are_parsed_and_aggregated() {
+    let app = app();
+    let token = login(&app).await;
+
+    let success = detail_by_url(&app, &token, "/hook/user").await;
+    let definitions = success["data"]["definitions"]
+        .as_array()
+        .expect("definitions");
+    assert_eq!(definitions.len(), 1, "{success}");
+    let definition = &definitions[0];
+    assert_eq!(definition["format"], "json-schema");
+    assert_eq!(
+        definition["source"],
+        "tests/fixtures/protocol/json-schema/user.json"
+    );
+    assert_eq!(definition["operation"], "");
+    assert_eq!(definition["meta"], json!({}));
+    assert_eq!(definition["messages"][0]["name"], "User");
+    assert_eq!(definition["messages"][0]["direction"], "request");
+    assert_eq!(definition["messages"][0]["fields"][0]["name"], "id");
+    assert_eq!(definition["messages"][0]["sampleValidation"]["ok"], true);
+    assert_eq!(
+        definition["validation"],
+        json!({"ok": true, "errors": [], "warnings": []})
+    );
+    assert_eq!(
+        success["data"]["validation"],
+        json!({"ok": true, "errors": [], "warnings": []})
+    );
+
+    let auto = detail_by_url(&app, &token, "/hook/auto").await;
+    let auto_definition = &auto["data"]["definitions"][0];
+    assert_eq!(auto_definition["format"], "openapi", "{auto}");
+    assert_eq!(auto_definition["operation"], "getUser");
+    assert_eq!(auto["data"]["validation"]["ok"], true);
+
+    let broken = detail_by_url(&app, &token, "/hook/broken").await;
+    let definitions = broken["data"]["definitions"]
+        .as_array()
+        .expect("definitions");
+    assert_eq!(definitions.len(), 4, "{broken}");
+    let parse_error = &definitions[0]["validation"]["errors"][0];
+    assert_eq!(
+        parse_error,
+        &json!({
+            "path": "",
+            "line": 0,
+            "column": 0,
+            "severity": "error",
+            "message": "JSON parse error: Syntax error",
+        })
+    );
+    assert_eq!(definitions[1]["format"], "json-schema");
+    assert_eq!(definitions[1]["source"], "../apidoc-macros/Cargo.toml");
+    assert_eq!(
+        definitions[1]["validation"]["errors"][0]["message"],
+        "definition file not found or outside allowed roots"
+    );
+    assert_eq!(definitions[2]["format"], "bogus");
+    assert_eq!(
+        definitions[2]["validation"]["errors"][0]["message"],
+        "unsupported definition format: bogus"
+    );
+    assert!(
+        definitions[3]["validation"]["errors"]
+            .as_array()
+            .expect("traversal errors")
+            .iter()
+            .any(|error| error["message"]
+                .as_str()
+                .is_some_and(|message| message.starts_with("unable to resolve $ref:"))),
+        "{}",
+        definitions[3]
+    );
+    assert_eq!(broken["data"]["validation"]["ok"], false);
+    assert_eq!(
+        broken["data"]["validation"]["errors"]
+            .as_array()
+            .expect("aggregated errors")
+            .len(),
+        4
+    );
 }
 
 #[tokio::test]

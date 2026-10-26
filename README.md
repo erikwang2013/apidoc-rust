@@ -501,6 +501,27 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 脚本报错只在调试结果区提示，不中断请求（前置失败照常发请求，后置失败照常展示原始响应）。
 
+### 13. 前端 UI：原生 / Vue 静态包（UIC-1 Phase 5）
+
+默认 `/apidoc` 提供 crate 内嵌的原生 UI（`UiMode::Native`），已有部署无需任何改动。要改用 apidoc-ui 的同一份 Vue 构建（三端共用，见 `npm run package:ui`）：
+
+```rust
+use apidoc::{ApidocConfig, UiMode};
+
+let cfg = ApidocConfig {
+    title: "我的 API".into(),
+    ui: UiMode::Vue,
+    ui_path: Some("/srv/apidoc".into()), // dist/uic1-ui/ 内容：index.html + config.js + assets/
+    ..Default::default()
+};
+```
+
+- 发布包默认走 Vue：`ApidocConfig::release("我的 API", "/srv/apidoc")` 等价于上面的显式配置；**库默认仍是 `native`**。
+- Vue 模式下 `GET /apidoc` 返回 307 到 `/apidoc/`（构建产物用 `./assets/...` 相对路径，缺尾斜杠会解析到站点根），`/apidoc/`、`config.js`、`assets/*` 从 `ui_path` 读取，无扩展名的未知路径回退 `index.html`（SPA 兜底）。
+- API 路由优先级不变：`/apidoc/api.json`、`/apidoc/export`、`/apidoc/ui/v1/*`、鉴权、调试、webhook 仍先于静态文件匹配；未知 API 子路径返回 404，不落到 SPA 壳。
+- 安全：路径限定在 `ui_path` 内，`..`、编码绕过与符号链接逃逸一律 404；目录不列清单；`ui_path` 不存在或缺 `index.html` 时启动即报错（fail closed）。`ui` / `ui_path` 只用于服务端，不写入 api.json。
+- 回滚：改回 `ui: UiMode::Native` 并重启，原生 UI 与全部旧路由保持原样。
+
 ## 开发计划
 
 | 阶段 | 内容 | 状态 |
@@ -514,6 +535,7 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 | M6a | 密码鉴权（HMAC-SHA256 签名令牌 + 密码遮罩，应用密码优先） | ✅ 已完成 |
 | M6b | 多应用多版本（apps 配置树 + app 注解 + UI 选择器） | ✅ 已完成 |
 | v2 | 数据表字段引用 + 文档缓存 + 分享链接 + 代码生成器 + 调试事件 | ✅ 已完成 |
+| UIC-1 Phase 5 | Vue 静态 UI（`ui` / `ui_path`，发布包默认 Vue，原生 UI 保留） | ✅ 已完成 |
 
 ## 多语言文档
 

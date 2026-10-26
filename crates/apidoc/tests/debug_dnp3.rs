@@ -54,7 +54,8 @@ async fn integrity_poll_decodes_golden_response() {
         );
         stream
             .write_all(&hex_decode(
-                "0564174400000100ec4ec0c0811e01000001012a00000001f9ff4c3cffff3a99",
+                // app: C0 81 + IIN 00 00 + G30V1 objects {0: 42, 1: -7}
+                "0564194400000100e9bfc0c08100001e01000001012a000000010c86f9ffffff0d6e",
             ))
             .await
             .unwrap();

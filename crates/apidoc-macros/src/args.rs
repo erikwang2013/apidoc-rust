@@ -3,7 +3,7 @@
 //! file under 500 lines; parsers are pure data extraction, no expansion logic.
 
 use syn::parse::{Parse, ParseStream};
-use syn::{braced, bracketed, Ident, LitStr, Token};
+use syn::{braced, bracketed, Ident, LitBool, LitStr, Token};
 
 /// 通用 key=value 循环：每轮解析 `key = "value"` 交给 `apply`，支持尾逗号。
 /// success/error/header 等纯键值参数共用。
@@ -93,6 +93,69 @@ impl Parse for ProtocolOptsArgs {
             Ok(())
         })?;
         Ok(ProtocolOptsArgs { opts })
+    }
+}
+
+/// Parsed keyword arguments of `definition`. `strict` is the only boolean;
+/// everything else is kept as written so the runtime can decide what to do.
+pub struct DefinitionArgs {
+    pub file: Option<LitStr>,
+    pub format: Option<LitStr>,
+    pub operation: Option<LitStr>,
+    pub message: Option<LitStr>,
+    pub direction: Option<LitStr>,
+    pub sample: Option<LitStr>,
+    pub sample_file: Option<LitStr>,
+    pub sample_encoding: Option<LitStr>,
+    pub strict: Option<LitBool>,
+}
+
+impl Parse for DefinitionArgs {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        let mut out = DefinitionArgs {
+            file: None,
+            format: None,
+            operation: None,
+            message: None,
+            direction: None,
+            sample: None,
+            sample_file: None,
+            sample_encoding: None,
+            strict: None,
+        };
+        while !input.is_empty() {
+            let key: Ident = input.parse()?;
+            input.parse::<Token![=]>()?;
+            match key.to_string().as_str() {
+                "strict" => out.strict = Some(input.parse()?),
+                other => {
+                    let value: LitStr = input.parse()?;
+                    match other {
+                        "file" => out.file = Some(value),
+                        "format" => out.format = Some(value),
+                        "operation" => out.operation = Some(value),
+                        "message" => out.message = Some(value),
+                        "direction" => out.direction = Some(value),
+                        "sample" => out.sample = Some(value),
+                        "sampleFile" | "sample_file" => out.sample_file = Some(value),
+                        "sampleEncoding" | "sample_encoding" => out.sample_encoding = Some(value),
+                        _ => {
+                            return Err(syn::Error::new(
+                                key.span(),
+                                format!(
+                                    "unknown argument `{other}`; expected file, format, operation, message, direction, sample, sampleFile, sampleEncoding or strict"
+                                ),
+                            ));
+                        }
+                    }
+                }
+            }
+            if input.is_empty() {
+                break;
+            }
+            input.parse::<Token![,]>()?;
+        }
+        Ok(out)
     }
 }
 
