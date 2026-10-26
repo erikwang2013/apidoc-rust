@@ -23,7 +23,7 @@ Toolkit für die Generierung von API-Dokumentation und die Entwicklung von Schni
 
 ## 📖Projektvorstellung
 
-Apidoc ist eine Rust-Plugin-Bibliothek, die durch die Auswertung von **Rust-Prozessmakros (proc-macro)** automatisch API-Dokumentation erzeugt und mit axum, actix-web und weiteren gängigen Frameworks kompatibel ist. Neben der automatischen Dokumentationserzeugung vereint sie Online-Schnittstellen-Debugging, Mock-Debug-Daten, Json/TypeScript-Codegenerierung, einen Schnittstellen-Generator und einen Code-Generator und deckt damit den gesamten Ablauf von Entwicklung, Debugging und Auslieferung der Schnittstellen ab — mit dem Ziel, die Effizienz der API-Entwicklung zu steigern.
+Apidoc ist eine Rust-Plugin-Bibliothek, die durch die Auswertung von **Rust-Prozessmakros (proc-macro)** automatisch API-Dokumentation erzeugt und mit axum, actix-web und weiteren gängigen Frameworks kompatibel ist. Neben der automatischen Dokumentationserzeugung vereint sie Online-Schnittstellen-Debugging, Mock-Debug-Daten, Json/TypeScript-Codegenerierung, einen Schnittstellen-Generator und einen Code-Generator und deckt damit den gesamten Ablauf von Entwicklung, Debugging und Auslieferung der Schnittstellen ab — mit dem Ziel, die Effizienz der API-Entwicklung zu steigern. Seit 2.2.0 stellt sie außerdem den **UIC-1-Backend-Vertrag** bereit, der direkt vom apidoc-ui-Vue-Build konsumiert wird; die eingebettete native UI bleibt erhalten, und per Konfiguration lässt sich zwischen beiden wählen.
 
 Der Umsetzungsansatz von apidoc-rust:
 
@@ -34,21 +34,23 @@ Der Umsetzungsansatz von apidoc-rust:
 ### ✨Projektbeschreibung
 
 - **Sofort einsatzbereit**: Ohne aufwendige Konfiguration — nach der Installation genügt es, die Annotationen gemäß der Dokumentation zu schreiben, und die API-Dokumentation wird automatisch erzeugt.
-- **Müheloses Schreiben**: Unterstützung für allgemeine Definitionen (definitions) und `ref`-Verweise auf Felder — mit wenigen Annotationen ist eine vollständige Felddefinition fertig.
+- **Müheloses Schreiben**: `ref`- / `table`-Feldverweise und neun externe Definitionsformate (OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC, XML-RPC) werden über `#[apidoc::definition]` unterstützt; mit wenigen Annotationen ist eine vollständige Felddefinition fertig.
 - **Online-Debugging**: Schnittstellen direkt auf der Dokumentationsseite debuggen, mit globalen Parametern, Mock-Daten und Debug-Events.
+- **Mehrprotokoll-Debugging**: 45 Protokoll-Annotationen (RPC, Messaging, Industrie, Medien, IoT und mehr) mit Browser-Direktverbindung und serverseitigem Relay; Annotationen erzeugen sowohl Protokolldokumentation als auch ein Debug-Panel.
+- **UIC-1-Vertrag**: `/apidoc/ui/v1/*` bietet capabilities / config / menus / detail / docs / debug / share / cache / generator / export, sodass ein apidoc-ui-Vue-Build PHP, Go und Rust bedient. Die statische Vue-UI wird über `ui` / `ui_path` aktiviert (Release-Pakete standardmäßig Vue, Bibliotheksstandard bleibt die eingebettete native UI).
 - **Mehrere Apps/Versionen**: Projekte mit einer App, mehreren Apps oder mehreren Versionen sind konfigurierbar; die Schnittstellen werden nach App/Version gruppiert angezeigt und umgeschaltet.
 - **Gruppen/Tags**: Schnittstellen unterstützen mehrstufige Gruppen und Tag-Markierungen.
 - **Markdown-Dokumentation**: Die `md`-Annotation bindet Markdown als Dokumentationsseite ein.
 - **Json/TypeScript-Generierung**: Für jede Schnittstelle werden automatisch Json-Request/Response-Beispiele und TypeScript-Typdefinitionen erzeugt — direkt einsetzbar im Frontend.
 - **Code-Generator**: Konfiguration + Vorlagen erzeugen den Business-Code und die Frontend-Api-Dateien.
 - **Schnittstellen-Sharing**: Freigabelinks für ausgewählte Apps/Schnittstellen generieren und `swagger.json` exportieren.
-- **Sicherer Zugriff**: Unterstützung für ein globales Passwort und unabhängige Passwörter je App/Version; Dokumente werden zur Build-Zeit materialisiert, lokale Antworten bleiben unter 10 ms p99.
+- **Sicherer Zugriff**: globales Passwort und unabhängige Passwörter je App/Version; serverseitiges Debugging ist standardmäßig aus und erzwingt den SSRF-Guard sowie Größen-/Frame-/Timeout-Obergrenzen; Definitionsdateien und industrielle Protokolle haben harte Grenzen; Dokumente werden zur Build-Zeit materialisiert, lokale Antworten bleiben unter 10 ms p99.
 
 ## Funktionen
 
 ### Umgesetzt (M1-M3)
 
-- **Annotationen als Dokumentation**: sieben Attributmakros `title` / `desc` / `method` / `url` / `param` / `query` / `returned`, jeweils als eigene Annotation; Parameter unterstützen `required` / `default` / `desc` / `mock` / `children`-Verschachtelung
+- **Annotationen als Dokumentation**: sieben Kern-Attributmakros `title` / `desc` / `method` / `url` / `param` / `query` / `returned` sowie `tag` / `group` / `header` / `table` und 45 Protokoll-Annotationen; Parameter unterstützen `required` / `default` / `desc` / `mock` / `children` / `field`-Verschachtelung
 - **Validierung zur Kompilierzeit**: url muss mit `/` beginnen, method-Whitelist, param name ist Pflicht usw.; ungültige Annotationen führen zur Kompilierzeit zu Fehlern (präzise Span)
 - **Automatische Sammlung**: statische Registrierung über linkme `distributed_slice`, keine manuelle Interface-Liste nötig; `DocRegistry::collect()` führt nach id zusammen und stellt die Deklarationsreihenfolge nach seq wieder her, automatische Sammlung über crates hinweg
 - **api.json-Ausgabe**: serde serialisiert das einheitliche Dokumentationsdatenmodell (config + endpoints); die Feldnamen werden zwischen Modell und Exportern geteilt
@@ -60,13 +62,13 @@ Der Umsetzungsansatz von apidoc-rust:
 - **Online-Debugging**: Die Dokumentationsseite enthält ein eingebettetes „Online-Debugging"-Panel — Base URL wird mit `location.origin` vorbefüllt für die direkte Cross-Origin-Verbindung zum Zielservice, Parameterformular wird nach Mock-Regeln vorbefüllt, `{name}` / `:name`-Platzhalter im Routenpfad werden ersetzt, GET/HEAD-Parameter wandern in die Query, andere Methoden werden als JSON-Body zusammengesetzt, Anfrage-Header bearbeitbar + eigene Header, Antwortanzeige (Status / Dauer / pretty JSON), gelber Hinweis bei CORS-Fehler
 - **Mock-Engine** (`crates/apidoc/src/mock.rs`, abhängig von der fake-crate, 15 Regeln: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). Regelpriorität: `mock="fake:xxx"` läuft über die fake-Regeltabelle (unbekannte Namen fallen auf Standardwerte zurück) → andere nicht-leere mock-Werte werden unverändert ausgegeben (z. B. `mock="1"`, `mock="erik"`) → ohne mock automatisch nach `ty` erzeugt (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); children werden rekursiv verschachtelt, arrays haben fest 2 Einträge
 - **Mock-Endpunkt**: Der axum-Adapter erhält `GET /apidoc/mock?url=&method=` — exakte Übereinstimmung von url + method, sonst 404; das Debug-Panel blendet `not_debug`-Endpunkte standardmäßig aus, sie erscheinen erst nach dem Anhaken von „not_debug-Schnittstellen anzeigen"
-- **Direkte CORS-Verbindung**: Online-Debugging verbindet der Browser direkt mit dem Zielendpunkt; der `cors_layer` des Adapters erlaubt dies (serverseitiger Reverse-Proxy bleibt v2)
+- **Direkte CORS-Verbindung**: Online-Debugging verbindet den Browser direkt mit dem Zielendpunkt; der `cors_layer` des Adapters erlaubt dies; das serverseitige Relay liefern die P2–P5-Executoren
 
 ### Umgesetzt (M5)
 
-- **Export in vier Formaten** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0); das Kern-Crate stellt `export::markdown::render` / `export::typescript::render` / `export::swagger::render` bereit
-- **Export-Route**: der Adapter erhält `GET /apidoc/export?format=md|ts|swagger` — unbekannte Formate liefern 400; Content-Type jeweils `text/markdown` / `application/typescript` / `application/json`
-- **markdown**: gruppiertes Verzeichnis + Parametertabellen + Antwortblöcke; **typescript**: erzeugt `{Name}Params` / `{Name}Result`-Typen im Namensraum je group, nicht gruppierte Schnittstellen landen in `defaultGroup` (`default` ist ein TS-Schlüsselwort); **swagger**: `info.version` stammt aus der Cargo-Paketversion
+- **Export in vier Formaten** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0) / AsyncAPI 2.6 (P6); das Kern-Crate stellt `export::markdown::render` / `export::typescript::render` / `export::swagger::render` / `export::asyncapi::render` bereit
+- **Export-Route**: der Adapter erhält `GET /apidoc/export?format=md|ts|swagger|asyncapi` — unbekannte Formate liefern 400; Content-Type jeweils `text/markdown` / `application/typescript` / `application/json`
+- **markdown**: gruppiertes Verzeichnis + Parametertabellen + Antwortblöcke; **typescript**: erzeugt `{Name}Params` / `{Name}Result`-Typen im Namensraum je group, nicht gruppierte Schnittstellen landen in `defaultGroup` (`default` ist ein TS-Schlüsselwort); **swagger**: `info.version` bevorzugt `ApidocConfig.version` und fällt auf die Cargo-Paketversion zurück (aktuell 2.2.0)
 - **actix-web-Adapter** (`crates/apidoc/src/actix.rs`): funktional 1:1 zum axum-Adapter — `apidoc_routes(ApidocConfig) -> Scope` bindet /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export ein, `cors_layer(CorsConfig)` erlaubt Cross-Origin
 - **UI gemeinsam genutzt**: Die Dokumentations-UI (`src/ui.html`) wurde in das Kern-Crate verlagert und als `pub const UI_HTML` exportiert; beide Adapter verweisen auf dieselbe Kopie (sicher fürs Veröffentlichen)
 
@@ -84,6 +86,14 @@ Der Umsetzungsansatz von apidoc-rust:
 - **Code-Generator**: `GET /apidoc/generate?template=<name>` → gerenderter Text (unbekanntes Template — 404); eingebaut sind `api.ts` (Frontend-Api-Datei), `handler.rs` (Rust-Schnittstellengerüst) und `schema.sql` (CREATE-TABLE-Anweisungen aus `tables`); ein gleichnamiges Template in `ApidocConfig.codegen` überschreibt das eingebaute. Die Template-Syntax kennt nur zwei Konstrukte: `{{variable}}` (bleibt unverändert, wenn nicht definiert) und `{{#each list}}…{{/each}}` (verschachtelbar, z. B. `tables` × `fields`)
 - **Debug-Events**: Das Online-Debugging-Panel erhält ausklappbare „Vor-Skript / Nach-Skript"-Bereiche (in localStorage persistiert) — das Vor-Skript läuft vor der Anfrage über `new Function('ctx', code)` und kann `ctx.url/method/headers/body` ändern oder ein Objekt für eine flache Zusammenführung zurückgeben; das Nach-Skript läuft nach der Antwort, kann `status/ms/text/url/method/ep` lesen und durch die Rückgabe eines Strings den angezeigten Antworttext ersetzen; Skriptfehler werden nur im Ergebnisbereich gemeldet und brechen die Anfrage nicht ab
 
+### Umgesetzt (v2.2 · UIC-1)
+
+- **UIC-1-Backend-Vertrag (Contract 1.0)**: `/apidoc/ui/v1/*` bietet capabilities / config / menus / detail / docMenus / docDetail / verifyAuth / Debug-Sitzungen / Freigabe-Datensätze / Cache / Code-Vorlagen / Vollexport. `capabilities` meldet nur, was dieser Build tatsächlich kompiliert hat, sodass die UI nicht verfügbare Einträge ausblenden kann. Rust meldet `share.actions=false`, `cache.mode=build`, Generator `forms=false` / `templates=true` und ausschließlich unäres Relay (`relay-unary`).
+- **Neun externe Definitionsformate**: `#[apidoc::definition(file = "...", operation = "...")]` parst OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC und XML-RPC in ein einheitliches `{format, source, operation, meta, messages, validation}`-Payload; `/apidoc/ui/v1/detail` liefert `definitions` mit Diagnosen je Eintrag (`path` / `line` / `column` / `severity` / `message`). Definitionen gelangen nie in api.json, native UI und Altausgabe bleiben unverändert.
+- **Statische Vue-UI**: `ui: UiMode::Vue` + `ui_path` liefert den apidoc-ui-Build `dist/uic1-ui/`; `ApidocConfig::release(title, ui_path)` ist der Einstiegspunkt für Release-Pakete (der Bibliotheksstandard bleibt die eingebettete native UI). Enthält SPA-Fallback, `config.js` / `assets/*`, Schutz vor Pfadausbrüchen und Symlinks sowie fail-closed-Start, wenn `ui_path` oder `index.html` fehlt.
+- **Vollständige Relay-Fähigkeitsmeldung**: `capabilities.debug.relay` listet nur die in diesem Build kompilierten Executoren; `debug-all` aggregiert alle 30 Protokoll-IDs, sodass die UI nie einen Executor anbietet, der mit „not compiled“ scheitert.
+- **Industrieprotokoll-Fixes und Ressourcenlimits**: DNP3 parst Objekt-Header nach IIN und begrenzt jede Antwort auf 10.000 Punkte; IEC 60870-5-104 begrenzt jede Antwort auf 10.000 Zeilen; BACnet/IP sendet eine gültige ReadProperty-Anfrage; ein u16-Überlauf bei der DNP3-Punktzahl ist behoben.
+
 ## Mehrprotokoll-Dokumentation und -Debugging (P1–P6)
 
 ![apidoc-rust Mehrprotokoll-Debug-Architektur](../images/multiprotocol-en.svg)
@@ -92,7 +102,28 @@ Der Umsetzungsansatz von apidoc-rust:
 - **Direkt im Browser** (ohne Rust-Abhängigkeit): SOAP, GraphQL (inkl. Subscriptions), JSON-RPC, XML-RPC, OData, MCP, A2A, Webhooks, WebSocket (Text/Binär), SSE, Socket.IO, STOMP (inkl. Binär), WebRTC/DataChannel, HLS.
 - **Serverseitige Executoren** (feature-gated): HTTP/2, HTTP/3, gRPC, Thrift, Dubbo/Hessian2, ISO 8583, TCP/UDP/Raw/Unix, MQTT, AMQP, Kafka, XMPP, STOMP/TCP, CoAP, LwM2M, Modbus, DNP3, IEC 104, BACnet/IP, OPC UA, RTP/RTCP/RTSP/SIP/RTMP. `debug-all` aktiviert alle gemeinsam.
 - **P6**: Webhook-Capture, AsyncAPI-2.6-Export, `.proto`/`.thrift`-Import über die CLI `apidoc-idl`, Dubbo-Nacos-Registry, Mock-Beispiele aus Events.
-- **Sicherheit**: serverseitiges Debugging ist standardmäßig aus und verlangt globale Authentifizierung; der SSRF-Guard löst jede IP auf, prüft sie und pinnt Verbindungen; Redirects/Proxys und Cloud-Metadaten sind gesperrt; Größe/Frames/Timeout sind begrenzt; Protokolle ohne gepinntes TLS schlagen fail-closed fehl.
+- **UIC-1-Relay-Fähigkeiten**: `GET /apidoc/ui/v1/capabilities` meldet unter `features.debug.relay` nur die in diesem Build kompilierten Executoren. Rust ist unär (`modes` enthält `relay-unary`, nicht `relay-stream`); ein `debug-all`-Build meldet alle 30 Protokoll-IDs:
+
+| feature | Relay-Protokoll-IDs |
+|---|---|
+| `debug-http` | `http` `http2` |
+| `debug-session` | `websocket` |
+| `debug-grpc` | `grpc` |
+| `debug-thrift` | `thrift` |
+| `debug-dubbo` | `dubbo` `hessian` |
+| `debug-iso8583` | `iso8583` |
+| `debug-mqtt` | `mqtt` |
+| `debug-amqp` | `amqp` |
+| `debug-kafka` | `kafka` |
+| `debug-xmpp` | `xmpp` |
+| `debug-sockets` | `stomp` `tcp` `udp` `raw` `unix` |
+| `debug-coap` | `coap` `lwm2m` |
+| `debug-industrial` | `modbus` `dnp3` `iec104` `bacnet` `opcua` |
+| `debug-media` | `rtp` `rtcp` `rtsp` `sip` `rtmp` |
+| `debug-http3` | `http3` |
+
+Außer `websocket` sind Streaming-Executoren noch nicht an Relay-Sitzungen angebunden; Kafka / AMQP / XMPP und ähnliche Protokolle sammeln eine unäre Antwort. `debug-all` aggregiert nur die obigen Features.
+- **Sicherheit**: serverseitiges Debugging ist standardmäßig aus und verlangt globale Authentifizierung; der SSRF-Guard löst jede IP auf, prüft sie und pinnt Verbindungen; Redirects/Proxys und Cloud-Metadaten sind gesperrt; Größe/Frames/Timeout sind begrenzt; DNP3-Antworten sind auf 10.000 Punkte und IEC 104 auf 10.000 Zeilen begrenzt (darüber harter Fehler), damit kleine Frames die geparste Ausgabe nicht aufblähen; Protokolle ohne gepinntes TLS schlagen fail-closed fehl.
 - **Performance**: Dokumente, Exporte, Codegen und Mock-Bodies werden zur Build-Zeit materialisiert; lokale apidoc-Routen bleiben unter 10 ms p99 (`tests/latency.rs`).
 
 ## Architektur
@@ -115,21 +146,26 @@ apidoc-rust/
 ├── VERSION                    # Projektversion (v2.2.0)
 ├── crates/
 │   ├── apidoc/                # Laufzeitkern (frameworkunabhängig)
-│   │   ├── src/lib.rs         # Datenmodell + DocRegistry-Aggregation + api.json + UI_HTML
+│   │   ├── src/lib.rs         # Datenmodell + DocRegistry-Aggregation + api.json + UI_HTML + UiMode
 │   │   ├── src/auth.rs        # M6a-Passwort-Authentifizierung (HMAC-Token-Ausstellung/-Prüfung + Routenwächter + Backoff)
-│   │   ├── src/export/        # M5-Exporte: markdown / typescript / swagger
-│   │   ├── src/ui.html        # gemeinsame Dokumentations-UI (vom Kern-Crate exportiert, beide Adapter verweisen darauf)
-│   │   ├── tests/             # Integrationstests (Makroexpansion/Aggregation/Serialisierung/über crates hinweg)
-│   │   └── examples/demo.rs   # Beispiel: Annotationen + Ausgabe von api.json
-│   ├── apidoc-macros/         # proc-macro: 65+ Attributmakros (inkl. 45 Protokoll-Aliassen)
-│   │   └── src/lib.rs         # Makrodefinitionen + Parameterparsing + Validierung zur Kompilierzeit
-
-│   ├── apidoc-test-fixtures/  # Test-Fixtures für die Registrierung über crates hinweg
-
+│   │   ├── src/uiapi.rs       # UIC-1-Vertrag: capabilities / menus / detail / docs / Verwaltungsrouten
+│   │   ├── src/protocol_defs/ # neun externe Definitionsformate (OpenAPI/AsyncAPI/GraphQL/proto/…)
+│   │   ├── src/export/        # Exporte: markdown / typescript / swagger / asyncapi + Codegen
+│   │   ├── src/debug/         # feature-gated serverseitige Executoren (http / grpc / sockets / mqtt / industrial / media / …)
+│   │   ├── src/axum.rs        # axum-Adapter (Docs/Debug/Stream/Webhook/UIC-1/statische UI + CORS)
+│   │   ├── src/actix.rs       # actix-web-Adapter (feature `actix`, 1:1 zu axum)
+│   │   ├── src/ui.html        # eingebettete native UI; der statische Vue-Build wird über ui/ui_path ausgeliefert
+│   │   ├── tests/             # Integrationstests (Makros/Aggregation/Serialisierung/UIC-1/Definitionen/Latenz)
+│   │   └── examples/demo.rs   # Beispiel: Annotationen + api.json-Ausgabe
+│   ├── apidoc-macros/         # proc-macro: 24 Basis-Annotationen + 45 Protokoll-Aliasse
+│   │   └── src/lib.rs         # Makrodefinitionen + Argumentparsing + Validierung zur Kompilierzeit
+│   ├── apidoc-idl/            # eigenständige CLI `.proto` / `.thrift` → apidoc-Annotation
+│   └── apidoc-test-fixtures/  # Test-Fixtures für die Registrierung über crates hinweg
+├── contract/                  # UIC-1 Contract 1.0: Schema + Backend-übergreifende Fixtures
 ├── .github/
 │   └── workflows/release.yml  # Release-Workflow (liest VERSION, erstellt inkrementell tag+release)
 └── docs/
-    ├── images/                # Architektur-/Funktions-/Lebenszyklusdiagramme (SVG)
+    ├── images/                # Architektur-/Funktions-/Lebenszyklus-/Mehrprotokoll-/Social-Preview-Assets
     └── i18n/                  # Mehrsprachige Dokumentation (12 Sprachen)
 ```
 
@@ -428,6 +464,58 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 Skriptfehler werden nur im Debug-Ergebnisbereich gemeldet und brechen die Anfrage nicht ab (bei fehlgeschlagenem Vor-Skript wird die Anfrage wie gewohnt gesendet, bei fehlgeschlagenem Nach-Skript die Originalantwort wie gewohnt angezeigt).
 
+### 13. UI: Native / statischer Vue-Build (UIC-1 Phase 5)
+
+Standardmäßig liefert `/apidoc` die eingebettete native UI (`UiMode::Native`), bestehende Deployments brauchen also keine Änderung. Der Vue-Build konsumiert den UIC-1-Vertrag aus Abschnitt 14 und wird mit PHP und Go geteilt (apidoc-ui `npm run package:ui`):
+
+```rust
+use apidoc::{ApidocConfig, UiMode};
+
+let cfg = ApidocConfig {
+    title: "Meine API".into(),
+    ui: UiMode::Vue,
+    ui_path: Some("/srv/apidoc".into()), // Inhalt von dist/uic1-ui/: index.html + config.js + assets/
+    ..Default::default()
+};
+```
+
+- Release-Pakete verwenden standardmäßig Vue: `ApidocConfig::release("Meine API", "/srv/apidoc")` entspricht der obigen expliziten Konfiguration; **der Bibliotheksstandard bleibt `native`**.
+- Im Vue-Modus liefert `GET /apidoc` eine 307-Umleitung nach `/apidoc/` (der Build nutzt relative `./assets/...`-URLs), `/apidoc/`, `config.js` und `assets/*` werden aus `ui_path` gelesen, und unbekannte Pfade ohne Erweiterung fallen auf `index.html` zurück (SPA-Fallback).
+- API-Routen behalten Vorrang: `/apidoc/api.json`, `/apidoc/export`, `/apidoc/ui/v1/*`, Auth-, Debug- und Webhook-Routen matchen weiterhin vor statischen Dateien; unbekannte API-Unterpfade liefern 404 statt der SPA-Hülle.
+- Sicherheit: Pfade bleiben auf `ui_path` beschränkt; `..`, Encoding-Bypässe und Symlink-Ausbrüche liefern 404, Verzeichnisse werden nie gelistet, und ein fehlendes `ui_path` / `index.html` scheitert beim Start (fail closed). `ui` / `ui_path` sind nur serverseitig und werden nie in api.json serialisiert.
+- Rollback: `ui: UiMode::Native` setzen und neu starten; native UI und alle Alt-Routen bleiben unverändert.
+
+### 14. UIC-1-Vertrag · externe Protokolldefinitionen
+
+`/apidoc/ui/v1/*` ist der stabile, von apidoc-ui konsumierte Vertrag (Contract 1.0); erfolgreiche Antworten sind `{code:0,message:"ok",data}`:
+
+| Route | Zweck |
+|---|---|
+| `GET /apidoc/ui/v1/capabilities` | Backend-Fähigkeiten: contract / backend / version / features (inkl. der kompilierten Relay-Protokollliste) |
+| `GET /apidoc/ui/v1/config` | UI-Initialisierungskonfiguration (Titel, App-Baum, Auth-Schalter usw.) |
+| `POST /apidoc/ui/v1/menus` · `detail` | Endpunktkatalog und -details, inkl. `definitions` und `validation` |
+| `GET/POST /apidoc/ui/v1/docMenus` · `POST docDetail` | Markdown-Dokumentationskatalog und -inhalt |
+| `POST /apidoc/ui/v1/verifyAuth` | Globales / App- / Freigabe-Token prüfen |
+| `POST /apidoc/ui/v1/debugSend` · `debugStart` · `debugPoll` · `debugStop` | Debugging per Browser-Direktverbindung und über Server-Relay |
+| `POST /apidoc/ui/v1/addApiShare` · `getApiShareList` · `getApiShareDetail` · `deleteApiShare` · `handleApiShareAction` | CRUD für Freigabe-Datensätze (Rust `share.actions=false`; keine deklarativen Aktionen) |
+| `POST /apidoc/ui/v1/cache/clear` · `cache/warm` | Cache-Verwaltung (Rust `cache.mode=build`) |
+| `POST /apidoc/ui/v1/renderCodeTemplate` · `exportAllData` | Rendern von Code-Vorlagen und Volldatenexport (die UI erzeugt md / pdf / openapi / postman / asyncapi / typescript) |
+
+Externe Definitionen werden mit `#[apidoc::definition]` an einen Handler gehängt:
+
+```rust
+#[apidoc::title("Benutzer abrufen")]
+#[apidoc::url("/api/user/info")]
+#[apidoc::method("GET")]
+#[apidoc::definition(file = "api/openapi.yaml", operation = "getUser")]
+fn get_user_info() -> String { unimplemented!() }
+```
+
+- **Neun Formate**: OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC und XML-RPC. Wird `format` weggelassen, wird es aus Erweiterung/Inhalt erkannt; es kann auch explizit gesetzt werden.
+- **Optionale Argumente**: `operation` (Operation auswählen), `message` / `direction` (Nachricht auswählen), `sample` / `sample_file` / `sample_encoding` (Validierungsbeispiel) und `strict` (Standard `true`: nicht unterstützte Konstrukte sind Fehler).
+- **Ausgabe**: ein einheitliches `{format, source, operation, meta, messages, validation}`-Payload; Diagnosen tragen `path / line / column / severity / message`. Definitionen erscheinen nur im UIC-1-Detail, nie in api.json.
+- **Grenzen**: Pfade sind relativ zu `CARGO_MANIFEST_DIR` des deklarierenden Crates, und ein Symlink-Realpath muss im Crate-Root bleiben; jede Datei ist auf 2 MiB / 50.000 Zeilen begrenzt, mit höchstens 64 Importen und Importtiefe 32.
+
 ## Entwicklungsplan
 
 | Phase | Inhalt | Status |
@@ -441,6 +529,9 @@ Skriptfehler werden nur im Debug-Ergebnisbereich gemeldet und brechen die Anfrag
 | M6a | Passwort-Authentifizierung (HMAC-SHA256-signiertes Token + Passwort-Overlay, App-Passwort hat Vorrang) | ✅ Abgeschlossen |
 | M6b | Mehrere Anwendungen und Versionen (apps-Konfigurationsbaum + app-Annotation + UI-Auswahl) | ✅ Abgeschlossen |
 | v2 | Feldreferenzen auf Datenbanktabellen + Dokumentations-Cache + Teilen-Links + Code-Generator + Debug-Events | ✅ Abgeschlossen |
+| UIC-1 Phase 0–2 | Contract 1.0: capabilities / menus / detail / docs / debug / share / cache / generator / export, semantisch über alle Backends abgestimmt | ✅ Abgeschlossen |
+| UIC-1 Phase 3–4 | vollständige Relay-Fähigkeitsmeldung + neun externe Definitionsparser an UIC-Detail angebunden | ✅ Abgeschlossen |
+| UIC-1 Phase 5 | statische Vue-UI (`ui` / `ui_path`; Release-Pakete standardmäßig Vue, native UI bleibt erhalten) | ✅ Abgeschlossen |
 
 ## Mehrsprachige Dokumentation
 
