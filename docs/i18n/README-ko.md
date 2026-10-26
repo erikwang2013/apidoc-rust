@@ -112,7 +112,7 @@ apidoc-rust의 구현 방향:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 설정(resolver 2)
-├── VERSION                    # 프로젝트 버전(v2.1.0)
+├── VERSION                    # 프로젝트 버전(v2.2.0)
 ├── crates/
 │   ├── apidoc/                # 런타임 코어(프레임워크 무관)
 │   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML
@@ -139,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.1"        # 또는 path = "crates/apidoc"
+apidoc-rust = "2.2"        # 또는 path = "crates/apidoc"
 
 serde_json = "1"      # api.json 출력용
 linkme = "0.3"        # 필수: 매크로가 생성한 등록 코드가 이를 참조합니다
@@ -268,7 +268,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 - **markdown**: 프로젝트 Wiki / 릴리스 노트에 붙여넣기 적합, 그룹별 목차 출력, 각 인터페이스에 파라미터 테이블과 응답 블록 포함;
 - **typescript**: 프론트엔드가 바로 타입 정의로 붙여넣기 가능; 그룹 없는 인터페이스는 `defaultGroup` 네임스페이스에 포함(`default`는 TS 예약어라 식별자로 사용 불가);
-- **swagger**: `info.version`은 `ApidocConfig.version`(문서화된 API 버전)에서 가져오고, 미설정 시 apidoc-rust 패키지 버전(현재 2.1.0)으로 폴백; path 파라미터는 URL 템플릿 기준이므로 Swagger UI나 코드 생성기에 바로 가져올 수 있습니다.
+- **swagger**: `info.version`은 `ApidocConfig.version`(문서화된 API 버전)에서 가져오고, 미설정 시 apidoc-rust 패키지 버전(현재 2.2.0)으로 폴백; path 파라미터는 URL 템플릿 기준이므로 Swagger UI나 코드 생성기에 바로 가져올 수 있습니다.
 - **asyncapi**: WebSocket, SSE, MQTT, Kafka, STOMP 등 이벤트 엔드포인트의 channel/operation/message 생성(AsyncAPI 2.6).
 
 ### 7. actix-web 어댑터
@@ -277,7 +277,7 @@ Web 프레임워크로 actix-web을 사용할 때 `features = ["actix"]` 연결(
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.1", features = ["actix"] }
+apidoc-rust = { version = "2.2", features = ["actix"] }
 ```
 
 ```rust

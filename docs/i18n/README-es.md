@@ -112,7 +112,7 @@ Enfoque de implementación de apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # configuración del workspace (resolver 2)
-├── VERSION                    # versión del proyecto (v2.1.0)
+├── VERSION                    # versión del proyecto (v2.2.0)
 ├── crates/
 │   ├── apidoc/                # núcleo en tiempo de ejecución (independiente del framework)
 │   │   ├── src/lib.rs         # modelo de datos + agregación DocRegistry + api.json + UI_HTML
@@ -139,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.1"        # o path = "crates/apidoc"
+apidoc-rust = "2.2"        # o path = "crates/apidoc"
 
 serde_json = "1"      # para generar api.json
 linkme = "0.3"        # obligatorio: el código de registro generado por la macro lo referencia
@@ -268,7 +268,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 - **markdown**: ideal para pegar en el Wiki del proyecto / notas de versión, índice por grupos, cada interfaz con tabla de parámetros y bloque de respuesta;
 - **typescript**: el front puede pegar directamente las definiciones de tipos; las interfaces sin grupo caen en el namespace `defaultGroup` (`default` es palabra reservada de TS, no puede usarse como identificador);
-- **swagger**: `info.version` toma `ApidocConfig.version` (la versión documentada de la API) y, si no está, recurre a la versión del paquete apidoc-rust (actualmente 2.1.0); los parámetros de ruta provienen de la plantilla de URL, por lo que la especificación se importa directamente en Swagger UI o en un generador de código.
+- **swagger**: `info.version` toma `ApidocConfig.version` (la versión documentada de la API) y, si no está, recurre a la versión del paquete apidoc-rust (actualmente 2.2.0); los parámetros de ruta provienen de la plantilla de URL, por lo que la especificación se importa directamente en Swagger UI o en un generador de código.
 - **asyncapi**: canales/operaciones/mensajes para WebSocket, SSE, MQTT, Kafka, STOMP y otros endpoints de eventos (AsyncAPI 2.6).
 
 ### 7. Adaptador actix-web
@@ -277,7 +277,7 @@ Si el framework Web es actix-web, conecte `features = ["actix"]` (funcionalidad 
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.1", features = ["actix"] }
+apidoc-rust = { version = "2.2", features = ["actix"] }
 ```
 
 ```rust

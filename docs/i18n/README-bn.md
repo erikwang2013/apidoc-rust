@@ -112,7 +112,7 @@ apidoc-rust-এর বাস্তবায়ন দৃষ্টিভঙ্গ
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace কনফিগারেশন (resolver 2)
-├── VERSION                    # প্রজেক্ট ভার্সন (v2.1.0)
+├── VERSION                    # প্রজেক্ট ভার্সন (v2.2.0)
 ├── crates/
 │   ├── apidoc/                # রানটাইম কোর (ফ্রেমওয়ার্ক-নিরপেক্ষ)
 │   │   ├── src/lib.rs         # ডেটা মডেল + DocRegistry অ্যাগ্রিগেশন + api.json + UI_HTML
@@ -139,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.1"        # অথবা path = "crates/apidoc"
+apidoc-rust = "2.2"        # অথবা path = "crates/apidoc"
 
 serde_json = "1"      # api.json আউটপুটের জন্য
 linkme = "0.3"        # প্রয়োজনীয়: ম্যাক্রো-জেনারেটেড রেজিস্ট্রেশন কোড এটিকে রেফার করে
@@ -268,7 +268,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 - **markdown**: প্রজেক্ট Wiki / রিলিজ নোটে পেস্ট করার উপযুক্ত, গ্রুপ অনুযায়ী ডিরেক্টরি আউটপুট, প্রতিটি ইন্টারফেসে প্যারামিটার টেবিল ও রেসপন্স ব্লক;
 - **typescript**: ফ্রন্টএন্ড সরাসরি টাইপ ডেফিনিশন হিসেবে পেস্ট করতে পারে; গ্রুপবিহীন ইন্টারফেস `defaultGroup` নেমস্পেসে পড়ে (`default` TS রিজার্ভড শব্দ, আইডেন্টিফায়ার হিসেবে ব্যবহার করা যাবে না);
-- **swagger**: `info.version` `ApidocConfig.version` (ডকুমেন্টেড API ভার্সন) থেকে নেওয়া, কনফিগ না থাকলে apidoc-rust প্যাকেজ ভার্সনে ফলব্যাক (বর্তমানে 2.1.0); path প্যারামিটার URL টেমপ্লেট অনুযায়ী আসে, তাই স্পেকটি সরাসরি Swagger UI বা কোড জেনারেটরে ইমপোর্ট করা যায়।
+- **swagger**: `info.version` `ApidocConfig.version` (ডকুমেন্টেড API ভার্সন) থেকে নেওয়া, কনফিগ না থাকলে apidoc-rust প্যাকেজ ভার্সনে ফলব্যাক (বর্তমানে 2.2.0); path প্যারামিটার URL টেমপ্লেট অনুযায়ী আসে, তাই স্পেকটি সরাসরি Swagger UI বা কোড জেনারেটরে ইমপোর্ট করা যায়।
 - **asyncapi**: WebSocket, SSE, MQTT, Kafka, STOMP ইত্যাদি ইভেন্ট এন্ডপয়েন্টের জন্য channel/operation/message (AsyncAPI 2.6)।
 
 ### ৭. actix-web অ্যাডাপ্টার
@@ -277,7 +277,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.1", features = ["actix"] }
+apidoc-rust = { version = "2.2", features = ["actix"] }
 ```
 
 ```rust

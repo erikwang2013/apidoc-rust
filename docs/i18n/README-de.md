@@ -112,7 +112,7 @@ Der Umsetzungsansatz von apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Workspace-Konfiguration (resolver 2)
-├── VERSION                    # Projektversion (v2.1.0)
+├── VERSION                    # Projektversion (v2.2.0)
 ├── crates/
 │   ├── apidoc/                # Laufzeitkern (frameworkunabhängig)
 │   │   ├── src/lib.rs         # Datenmodell + DocRegistry-Aggregation + api.json + UI_HTML
@@ -139,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.1"        # oder path = "crates/apidoc"
+apidoc-rust = "2.2"        # oder path = "crates/apidoc"
 
 serde_json = "1"      # für die Ausgabe von api.json
 linkme = "0.3"        # erforderlich: der makro-erzeugte Registrierungscode verweist darauf
@@ -268,7 +268,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 - **markdown**: geeignet zum Einfügen in Projekt-Wiki / Release-Notizen, Ausgabe eines Verzeichnisses nach Gruppen, jede Schnittstelle mit Parametertabelle und Antwortblock;
 - **typescript**: das Frontend kann es direkt als Typdefinitionen einfügen; nicht gruppierte Schnittstellen landen im Namensraum `defaultGroup` (`default` ist ein TS-Schlüsselwort und kann kein Bezeichner sein);
-- **swagger**: `info.version` stammt aus `ApidocConfig.version` (der dokumentierten API-Version), ersatzweise aus der apidoc-rust-Paketversion (aktuell 2.1.0); Pfadparameter stammen aus dem URL-Template, die Spezifikation ist daher direkt in Swagger UI oder Code-Generatoren importierbar.
+- **swagger**: `info.version` stammt aus `ApidocConfig.version` (der dokumentierten API-Version), ersatzweise aus der apidoc-rust-Paketversion (aktuell 2.2.0); Pfadparameter stammen aus dem URL-Template, die Spezifikation ist daher direkt in Swagger UI oder Code-Generatoren importierbar.
 - **asyncapi**: Kanäle/Operationen/Nachrichten für WebSocket-, SSE-, MQTT-, Kafka-, STOMP- und andere Event-Endpunkte (AsyncAPI 2.6).
 
 ### 7. actix-web-Adapter
@@ -277,7 +277,7 @@ Bei Verwendung von actix-web `features = ["actix"]` einbinden (funktional 1:1 zu
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.1", features = ["actix"] }
+apidoc-rust = { version = "2.2", features = ["actix"] }
 ```
 
 ```rust

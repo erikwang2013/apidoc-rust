@@ -60,7 +60,7 @@ getrandom = "0.2"
 serde_json = "1"
 # 协议定义 XML 解析：0.42 要 Rust 1.86，锁在 workspace MSRV 1.82 内
 quick-xml = { version = "0.37", default-features = false }
-apidoc-macros = { path = "../apidoc-macros", version = "2.1.0" }
+apidoc-macros = { path = "../apidoc-macros", version = "2.2.0" }
 # 以下 optional：默认构建不拉任何框架/faker 依赖
 fake = { version = "3", features = ["chrono", "uuid"], optional = true }
 bytes = { version = "1", optional = true }

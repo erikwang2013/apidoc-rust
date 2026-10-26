@@ -112,7 +112,7 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 ```
 apidoc-rust/
 ├── Cargo.toml                 # إعداد workspace (resolver 2)
-├── VERSION                    # إصدار المشروع (v2.1.0)
+├── VERSION                    # إصدار المشروع (v2.2.0)
 ├── crates/
 │   ├── apidoc/                # النواة في زمن التشغيل (مستقلة عن الإطار)
 │   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json + UI_HTML
@@ -139,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.1"        # أو path = "crates/apidoc"
+apidoc-rust = "2.2"        # أو path = "crates/apidoc"
 
 serde_json = "1"      # لاستخدام إخراج api.json
 linkme = "0.3"        # مطلوب: كود التسجيل الناتج عن الماكرو يشير إليه
@@ -268,7 +268,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 - **markdown**: مناسب للصقه في Wiki المشروع / ملاحظات الإصدار، يخرج فهرسًا مجمّعًا حسب المجموعة، وكل واجهة مع جدول معاملات وكتلة استجابة؛
 - **typescript**: الواجهة الأمامية يمكنها لصقه مباشرة كتعريفات أنواع؛ الواجهات غير المجمّعة تقع في نطاق `defaultGroup` (`default` كلمة محجوزة في TS، لا يمكن استخدامها كمعرّف)؛
-- **swagger**: `info.version` مأخوذ من `ApidocConfig.version` (إصدار الـ API الموثَّق)، وإذا لم يُعيَّن يرجع إلى إصدار حزمة apidoc-rust (حاليًا 2.1.0)؛ ومعاملات المسار مأخوذة من قالب URL، فيُستورد الملف مباشرة إلى Swagger UI أو مولّدات الكود.
+- **swagger**: `info.version` مأخوذ من `ApidocConfig.version` (إصدار الـ API الموثَّق)، وإذا لم يُعيَّن يرجع إلى إصدار حزمة apidoc-rust (حاليًا 2.2.0)؛ ومعاملات المسار مأخوذة من قالب URL، فيُستورد الملف مباشرة إلى Swagger UI أو مولّدات الكود.
 - **asyncapi**: قنوات/عمليات/رسائل لنقاط نهاية الأحداث مثل WebSocket وSSE وMQTT وKafka وSTOMP (AsyncAPI 2.6).
 
 ### 7. محول actix-web
@@ -277,7 +277,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.1", features = ["actix"] }
+apidoc-rust = { version = "2.2", features = ["actix"] }
 ```
 
 ```rust

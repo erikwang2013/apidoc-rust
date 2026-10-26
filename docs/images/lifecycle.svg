@@ -10,7 +10,7 @@
   <rect width="940" height="500" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="500" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 文档生命周期（M1–M6 + P1–P6 多协议调试）</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 文档生命周期（M1–M6 + P1–P6 + UIC-1）</text>
 
   <!-- 步骤 1 -->
   <circle cx="85" cy="150" r="34" fill="#b58900"/>
@@ -56,9 +56,9 @@
   <circle cx="545" cy="150" r="34" fill="#27ae60"/>
   <text x="545" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
   <text x="545" y="215" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">api.json</text>
-  <text x="545" y="235" text-anchor="middle" font-size="12" fill="#555">统一文档模型 + apps</text>
+  <text x="545" y="235" text-anchor="middle" font-size="12" fill="#555">+ UIC-1 契约</text>
   <text x="545" y="252" text-anchor="middle" font-size="11" fill="#555" font-family="monospace">config · endpoints</text>
-  <text x="545" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1·M6</text>
+  <text x="545" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1·M6·UIC-1</text>
 
   <!-- 转折箭头 5 → 6 -->
   <line x1="579" y1="150" x2="856" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
@@ -86,10 +86,10 @@
   <!-- 步骤 8 已实现 -->
   <circle cx="660" cy="310" r="34" fill="#16a085"/>
   <text x="660" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">8</text>
-  <text x="660" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI 调试面板</text>
-  <text x="660" y="395" text-anchor="middle" font-size="12" fill="#555">目录 + 调试</text>
-  <text x="660" y="412" text-anchor="middle" font-size="12" fill="#555">Mock / CORS</text>
-  <text x="660" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+  <text x="660" y="375" text-anchor="middle" font-size="14" font-weight="bold" fill="#333">UI：原生 / Vue</text>
+  <text x="660" y="395" text-anchor="middle" font-size="12" fill="#555">菜单 · 详情 · 文档</text>
+  <text x="660" y="412" text-anchor="middle" font-size="12" fill="#555">定义 · 调试</text>
+  <text x="660" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4·UIC-1</text>
 
   <line x1="620" y1="310" x2="585" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -113,6 +113,6 @@
 
   <!-- 图例 -->
   <text x="470" y="455" text-anchor="middle" font-size="13" fill="#333">阶段标注：M1 注解/收集/聚合/输出 · M2 适配器与 UI · M4 调试面板/Mock/CORS · M5 导出 · M6 鉴权/多应用</text>
-  <text x="470" y="473" text-anchor="middle" font-size="13" fill="#333">P1–P6 多协议：协议注解 · 浏览器直连 · 服务端执行器 · Webhook 捕获 · AsyncAPI · IDL 导入 · Nacos（全部已实现）</text>
+  <text x="470" y="473" text-anchor="middle" font-size="13" fill="#333">P1–P6 + UIC-1：协议注解 · 浏览器直连 · 服务端中继 · 九格式定义 · Vue 静态 UI · Webhook · AsyncAPI · IDL · Nacos</text>
   <text x="700" y="492" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

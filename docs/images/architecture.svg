@@ -7,32 +7,32 @@
   <rect width="940" height="860" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="860" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 总体架构（M1–M6 + P1–P6 多协议）</text>
-  <text x="470" y="60" text-anchor="middle" font-size="13" fill="#555">注解 → 文档模型 → 适配器 → 浏览器直连 / 服务端代发 → 导出与集成</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 总体架构（M1–M6 + P1–P6 + UIC-1）</text>
+  <text x="470" y="60" text-anchor="middle" font-size="13" fill="#555">注解 → 文档模型 → UIC-1 契约 / 适配器 → 浏览器直连 / 服务端中继 → 导出与集成</text>
 
   <!-- 用户代码层 -->
   <rect x="60" y="78" width="820" height="74" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
   <text x="80" y="104" font-size="16" font-weight="bold" fill="#5f4b00">用户代码层</text>
   <text x="80" y="126" font-size="12.5" fill="#333" font-family="monospace">#[apidoc::title] #[apidoc::method] #[apidoc::param] #[apidoc::returned]</text>
-  <text x="80" y="144" font-size="12.5" fill="#333" font-family="monospace">#[apidoc::grpc(...)] #[apidoc::websocket(...)] #[apidoc::mqtt(...)] #[apidoc::event(...)]</text>
+  <text x="80" y="144" font-size="12.5" fill="#333" font-family="monospace">#[apidoc::grpc(...)] #[apidoc::websocket(...)] #[apidoc::event(...)] #[apidoc::definition(...)]</text>
 
   <!-- 编译期 -->
   <rect x="60" y="164" width="820" height="86" rx="8" fill="#e8e4f8" stroke="#6c5ce7" stroke-width="2"/>
   <text x="80" y="190" font-size="16" font-weight="bold" fill="#3d2f9e">编译期 · apidoc-macros（proc-macro）</text>
-  <text x="80" y="212" font-size="12.5" fill="#333">20 个基础注解 + 45 个协议别名；kind / 参数 / 字段号编译期校验，非法注解直接报错</text>
+  <text x="80" y="212" font-size="12.5" fill="#333">24 个基础注解 + 45 个协议别名（含 definition）；kind / 参数 / 字段号编译期校验</text>
   <text x="80" y="230" font-size="12.5" fill="#555">linkme distributed_slice 生成 DocFragmentEntry，跨 crate 自动收集，零运行成本</text>
 
   <!-- 运行期核心 -->
   <rect x="60" y="264" width="820" height="86" rx="8" fill="#eaf4fd" stroke="#2980b9" stroke-width="2"/>
   <text x="80" y="290" font-size="16" font-weight="bold" fill="#1a5276">运行期核心 · apidoc（框架无关）</text>
-  <text x="80" y="312" font-size="12.5" fill="#333">DocRegistry::collect() 按 id 合并片段、按 seq 恢复声明顺序 → api.json 数据模型</text>
-  <text x="80" y="330" font-size="12.5" fill="#555">HMAC 鉴权 · 多应用树 · 协议注册表 · Webhook 捕获 · Mock 与四种导出全部构建期物化</text>
+  <text x="80" y="312" font-size="12.5" fill="#333">DocRegistry::collect() 按 id 合并片段、按 seq 恢复声明顺序 → api.json / UIC-1 detail</text>
+  <text x="80" y="330" font-size="12.5" fill="#555">HMAC 鉴权 · 多应用 · 协议注册表 · 九格式定义解析 · 导出 / Mock 构建期物化</text>
 
   <!-- 适配器层 -->
   <rect x="60" y="364" width="820" height="74" rx="8" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
-  <text x="80" y="390" font-size="16" font-weight="bold" fill="#1e8449">适配器层 · axum / actix-web（功能 1:1）</text>
+  <text x="80" y="390" font-size="16" font-weight="bold" fill="#1e8449">适配器层 · axum / actix-web · 内嵌原生 UI / Vue 静态包</text>
   <text x="80" y="412" font-size="12.5" fill="#333" font-family="monospace">/apidoc · api.json · export · mock · auth · share · generate</text>
-  <text x="80" y="430" font-size="12.5" fill="#333" font-family="monospace">/apidoc/debug · /apidoc/debug/stream · /apidoc/webhook/:id · CORS</text>
+  <text x="80" y="430" font-size="12.5" fill="#333" font-family="monospace">/apidoc/debug · /apidoc/ui/v1/* · /apidoc/webhook/:id · CORS</text>
 
   <!-- 调试能力：浏览器直连 -->
   <rect x="60" y="452" width="400" height="154" rx="8" fill="#eaf7ef" stroke="#27ae60" stroke-width="2"/>
@@ -57,13 +57,13 @@
   <rect x="60" y="616" width="820" height="76" rx="8" fill="#fdeeee" stroke="#dc2626" stroke-width="2"/>
   <text x="80" y="642" font-size="16" font-weight="bold" fill="#991b1b">安全与运行边界</text>
   <text x="80" y="664" font-size="12.5" fill="#333">DebugConfig 默认关闭；开启需全局鉴权；SSRF 守卫逐 IP 校验并钉住连接，云元数据永久拒绝</text>
-  <text x="80" y="682" font-size="12.5" fill="#333">禁重定向/代理/CONNECT；max_bytes / max_frames / timeout 封顶；无 pinned TLS 的协议 fail closed</text>
+  <text x="80" y="682" font-size="12.5" fill="#333">禁重定向/代理/CONNECT；大小/帧数/超时封顶；DNP3/IEC104 各 10,000 上限 · 无 pinned TLS fail closed</text>
 
   <!-- 导出与集成 -->
   <rect x="60" y="702" width="820" height="74" rx="8" fill="#fdf6e3" stroke="#b58900" stroke-width="2"/>
   <text x="80" y="728" font-size="16" font-weight="bold" fill="#5f4b00">导出与集成</text>
-  <text x="80" y="750" font-size="12.5" fill="#333">md / ts / swagger(OpenAPI 3.0) / asyncapi(2.6) · 代码生成 · Mock · 分享链接</text>
-  <text x="80" y="768" font-size="12.5" fill="#555">apidoc-idl：.proto / .thrift 导入 · Dubbo Nacos 注册中心 · Webhook 事件捕获</text>
+  <text x="80" y="750" font-size="12.5" fill="#333">md / ts / swagger(OpenAPI 3.0) / asyncapi(2.6) · 代码生成 · Mock · 分享链接 · UIC-1 导出</text>
+  <text x="80" y="768" font-size="12.5" fill="#555">UIC-1 九格式定义 · Vue 静态 UI · 全量 relay · apidoc-idl 导入 · Nacos · Webhook</text>
 
   <!-- workspace -->
   <rect x="60" y="786" width="820" height="26" rx="8" fill="#fdfefe" stroke="#95a5a6" stroke-width="2"/>
@@ -71,7 +71,7 @@
 
   <!-- 图例 -->
   <rect x="60" y="826" width="22" height="12" fill="#27ae60"/>
-  <text x="90" y="837" font-size="12.5" fill="#333">已实现（M1–M6 + P1–P6）</text>
+  <text x="90" y="837" font-size="12.5" fill="#333">已实现（M1–M6 + P1–P6 + UIC-1）</text>
   <text x="330" y="837" font-size="12.5" fill="#555">服务端调试默认关闭 · 浏览器直连零依赖 · 详情见 multiprotocol.svg</text>
   <text x="700" y="850" font-size="12" fill="#888">watermark: https://erik.xyz</text>
 </svg>

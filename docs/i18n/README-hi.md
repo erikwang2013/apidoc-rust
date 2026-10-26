@@ -112,7 +112,7 @@ apidoc-rust का कार्यान्वयन दृष्टिकोण
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace कॉन्फ़िगरेशन (resolver 2)
-├── VERSION                    # परियोजना संस्करण (v2.1.0)
+├── VERSION                    # परियोजना संस्करण (v2.2.0)
 ├── crates/
 │   ├── apidoc/                # रनटाइम कोर (फ्रेमवर्क-स्वतंत्र)
 │   │   ├── src/lib.rs         # डेटा मॉडल + DocRegistry एकत्रीकरण + api.json + UI_HTML
@@ -139,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.1"        # या path = "crates/apidoc"
+apidoc-rust = "2.2"        # या path = "crates/apidoc"
 
 serde_json = "1"      # api.json आउटपुट के लिए
 linkme = "0.3"        # आवश्यक: मैक्रो-जनित रजिस्ट्रेशन कोड इसे संदर्भित करता है
@@ -268,7 +268,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 - **markdown**: प्रोजेक्ट Wiki / रिलीज़ नोट्स में चिपकाने के लिए उपयुक्त, समूह के अनुसार कैटलॉग, प्रत्येक इंटरफ़ेस में पैरामीटर तालिका और रिस्पॉन्स ब्लॉक;
 - **typescript**: फ्रंटएंड सीधे टाइप परिभाषाओं के रूप में चिपका सकता है; बिना समूह वाले इंटरफ़ेस `defaultGroup` namespace में जाते हैं (`default` TS का आरक्षित शब्द है, पहचानकर्ता नहीं बन सकता);
-- **swagger**: `info.version` `ApidocConfig.version` (दस्तावेज़ीकृत API संस्करण) से लिया जाता है, अनसेट होने पर apidoc-rust पैकेज संस्करण (वर्तमान में 2.1.0) पर गिरता है; path पैरामीटर URL टेम्पलेट से आते हैं, इसलिए सीधे Swagger UI या कोड जनरेटर में आयात किया जा सकता है।
+- **swagger**: `info.version` `ApidocConfig.version` (दस्तावेज़ीकृत API संस्करण) से लिया जाता है, अनसेट होने पर apidoc-rust पैकेज संस्करण (वर्तमान में 2.2.0) पर गिरता है; path पैरामीटर URL टेम्पलेट से आते हैं, इसलिए सीधे Swagger UI या कोड जनरेटर में आयात किया जा सकता है।
 - **asyncapi**: WebSocket, SSE, MQTT, Kafka, STOMP आदि इवेंट endpoints के लिए channel/operation/message (AsyncAPI 2.6)।
 
 ### 7. actix-web अडैप्टर
@@ -277,7 +277,7 @@ Web फ्रेमवर्क actix-web होने पर `features = ["acti
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.1", features = ["actix"] }
+apidoc-rust = { version = "2.2", features = ["actix"] }
 ```
 
 ```rust
