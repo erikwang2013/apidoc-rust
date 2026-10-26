@@ -7,6 +7,7 @@ mod debug;
 mod share;
 
 use std::collections::{BTreeMap, HashMap};
+use std::path::{Path, PathBuf};
 
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine;
@@ -14,8 +15,9 @@ use bytes::Bytes;
 use serde::Deserialize;
 use serde_json::{json, Value};
 
+use crate::protocol_defs::{self, Diagnostic, Limits, Options, Resolver, Validation};
 use crate::route_core::{Core, R};
-use crate::{auth as crate_auth, protocol, AppDoc, DocEndpoint, DocParam};
+use crate::{auth as crate_auth, protocol, AppDoc, DocDefinition, DocEndpoint, DocParam};
 
 const CONTRACT: &str = "1.0";
 
@@ -525,6 +527,7 @@ fn detail_data(core: &Core, ep: &DocEndpoint, app_key: &str) -> Value {
     let (mode, debuggable, reason) = debug_mode(kind, spec, debug_enabled);
     let address = channel_address(ep);
     let (fields, defaults) = debug_fields(ep, &address);
+    let (definitions, validation) = definitions(ep);
     json!({
         "name": ep.title,
         "title": ep.title,
@@ -572,8 +575,8 @@ fn detail_data(core: &Core, ep: &DocEndpoint, app_key: &str) -> Value {
             "responseEncoding": if spec.is_some_and(|s| s.http_compatible) { "json" } else { "text" },
             "hints": "",
         },
-        "definitions": definitions(ep),
-        "validation": {"ok": true, "errors": [], "warnings": []},
+        "definitions": definitions,
+        "validation": validation,
     })
 }
 
@@ -698,7 +701,226 @@ fn debug_fields(ep: &DocEndpoint, address: &str) -> (Vec<Value>, BTreeMap<String
     (fields, defaults)
 }
 
-fn definitions(ep: &DocEndpoint) -> Vec<Value> {
+/// 端点定义 + 所有定义的诊断聚合。无 `#[apidoc::definition]` 时保持注解内联
+/// 输出（事件协议）或空列表，与 Phase 4 之前一致。
+fn definitions(ep: &DocEndpoint) -> (Vec<Value>, Validation) {
+    if ep.definitions.is_empty() {
+        return (
+            event_definitions(ep),
+            Validation {
+                ok: true,
+                errors: Vec::new(),
+                warnings: Vec::new(),
+            },
+        );
+    }
+    let mut rendered = Vec::with_capacity(ep.definitions.len());
+    let mut validation = Validation {
+        ok: true,
+        errors: Vec::new(),
+        warnings: Vec::new(),
+    };
+    for declaration in &ep.definitions {
+        let (definition, item) = render_definition(ep, declaration);
+        rendered.push(definition);
+        validation.errors.extend(item.errors);
+        validation.warnings.extend(item.warnings);
+    }
+    validation.ok = validation.errors.is_empty();
+    (rendered, validation)
+}
+
+fn render_definition(ep: &DocEndpoint, declaration: &DocDefinition) -> (Value, Validation) {
+    let limits = Limits::default();
+    let root = std::fs::canonicalize(declaration.root).ok();
+    let resolved = root
+        .as_deref()
+        .and_then(|root| resolve_definition_file(root, declaration.file));
+    let Some(path) = resolved else {
+        let format = if declaration.format.is_empty() {
+            let fallback = default_definition_format(&ep.protocol);
+            if fallback.is_empty() {
+                "auto"
+            } else {
+                fallback
+            }
+            .to_string()
+        } else {
+            declaration.format.to_string()
+        };
+        return failed_definition(
+            format,
+            declaration.file,
+            "",
+            diagnostic("definition file not found or outside allowed roots"),
+        );
+    };
+
+    let mut options = Options {
+        operation: declaration.operation.to_string(),
+        message: declaration.message.to_string(),
+        direction: declaration.direction.to_string(),
+        sample: declaration.sample.to_string(),
+        sample_encoding: declaration.sample_encoding.to_string(),
+        strict: declaration.strict,
+    };
+    let mut sample_errors = Vec::new();
+    if !declaration.sample_file.is_empty() {
+        let sample = root
+            .as_deref()
+            .and_then(|root| resolve_definition_file(root, declaration.sample_file));
+        match sample {
+            Some(sample) => match read_limited(&sample, &limits) {
+                Ok(content) => options.sample = content,
+                Err(error) => sample_errors.push(error),
+            },
+            None => {
+                sample_errors.push(diagnostic("sample file not found or outside allowed roots"))
+            }
+        }
+    }
+
+    let content = match read_limited(&path, &limits) {
+        Ok(content) => content,
+        Err(error) => {
+            // PHP 在读取失败后仍按「空内容」检测格式，再回落到协议默认格式。
+            let mut format = declaration.format.to_string();
+            if format.is_empty() {
+                format = protocol_defs::detect(declaration.file, "");
+                if format.is_empty() {
+                    format = default_definition_format(&ep.protocol).to_string();
+                }
+            }
+            sample_errors.push(error);
+            let validation = Validation {
+                ok: false,
+                errors: sample_errors,
+                warnings: Vec::new(),
+            };
+            return failed_definition_with(
+                format,
+                declaration.file,
+                declaration.operation,
+                validation,
+            );
+        }
+    };
+
+    let mut format = declaration.format.to_string();
+    if format.is_empty() {
+        format = protocol_defs::detect(declaration.file, &content);
+        if format.is_empty() {
+            format = default_definition_format(&ep.protocol).to_string();
+        }
+    }
+    let source = path.to_string_lossy().to_string();
+    let mut resolver = DefinitionResolver {
+        root: root.expect("resolved definition implies a canonical root"),
+    };
+    let mut definition =
+        protocol_defs::parse(&format, &source, &content, options, limits, &mut resolver);
+    // 对外 source 是注解里的声明路径；内部 canonical path 只用于解析导入。
+    definition.source = declaration.file.to_string();
+    if !sample_errors.is_empty() {
+        sample_errors.extend(definition.validation.errors);
+        definition.validation.errors = sample_errors;
+        definition.validation.ok = false;
+    }
+    let validation = definition.validation.clone();
+    let value = serde_json::to_value(definition).expect("definition must serialize");
+    (value, validation)
+}
+
+fn failed_definition(
+    format: String,
+    source: &str,
+    operation: &str,
+    error: Diagnostic,
+) -> (Value, Validation) {
+    let validation = Validation {
+        ok: false,
+        errors: vec![error],
+        warnings: Vec::new(),
+    };
+    failed_definition_with(format, source, operation, validation)
+}
+
+fn failed_definition_with(
+    format: String,
+    source: &str,
+    operation: &str,
+    validation: Validation,
+) -> (Value, Validation) {
+    let definition = protocol_defs::Definition {
+        format,
+        source: source.to_string(),
+        operation: operation.to_string(),
+        meta: json!({}),
+        messages: Vec::new(),
+        validation: validation.clone(),
+    };
+    let value = serde_json::to_value(definition).expect("definition must serialize");
+    (value, validation)
+}
+
+fn diagnostic(message: &str) -> Diagnostic {
+    Diagnostic {
+        path: String::new(),
+        line: 0,
+        column: 0,
+        severity: "error".to_string(),
+        message: message.to_string(),
+    }
+}
+
+/// 注解路径相对声明方 crate 根；软链 realpath 后必须仍在根内。
+fn resolve_definition_file(root: &Path, file: &str) -> Option<PathBuf> {
+    let resolved = std::fs::canonicalize(root.join(file)).ok()?;
+    (resolved.starts_with(root) && resolved.is_file()).then_some(resolved)
+}
+
+struct DefinitionResolver {
+    root: PathBuf,
+}
+
+impl Resolver for DefinitionResolver {
+    fn read(&mut self, path: &str) -> Option<(String, String)> {
+        let resolved = resolve_definition_file(&self.root, path)?;
+        let content = std::fs::read_to_string(&resolved).ok()?;
+        Some((resolved.to_string_lossy().to_string(), content))
+    }
+}
+
+/// 与 `ProtocolContext::read` 同序：先 stat/字节上限，再读取，最后行数上限。
+fn read_limited(path: &Path, limits: &Limits) -> Result<String, Diagnostic> {
+    let metadata = std::fs::metadata(path).map_err(|_| diagnostic("unable to stat file"))?;
+    if metadata.len() > limits.max_file_bytes as u64 {
+        return Err(diagnostic("file exceeds max_file_bytes"));
+    }
+    let content = std::fs::read_to_string(path).map_err(|_| diagnostic("unable to read file"))?;
+    if content.bytes().filter(|b| *b == b'\n').count() + 1 > limits.max_lines {
+        return Err(diagnostic("file exceeds max_lines"));
+    }
+    Ok(content)
+}
+
+/// PHP `ProtocolCatalog::$formats` 的 Rust 协议 id 映射。
+fn default_definition_format(kind: &str) -> &'static str {
+    match kind {
+        "soap" => "wsdl",
+        "graphql" => "graphql",
+        "grpc" | "dubbo" => "proto",
+        "thrift" => "thrift",
+        "hessian" => "hessian",
+        "jsonrpc" => "json-rpc",
+        "xmlrpc" => "xml-rpc",
+        "webhook" | "mcp" | "a2a" => "json-schema",
+        "odata" => "edmx",
+        _ => "",
+    }
+}
+
+fn event_definitions(ep: &DocEndpoint) -> Vec<Value> {
     if ep.events.is_empty() {
         return Vec::new();
     }
