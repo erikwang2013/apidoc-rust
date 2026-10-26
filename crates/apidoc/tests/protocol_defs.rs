@@ -429,3 +429,222 @@ fn xml_doctype_is_rejected() {
     );
     assert_error(&definition.validation, "DOCTYPE is not allowed");
 }
+
+struct InlineResolver {
+    content: String,
+}
+
+impl Resolver for InlineResolver {
+    fn read(&mut self, path: &str) -> Option<(String, String)> {
+        Some((path.to_string(), self.content.clone()))
+    }
+}
+
+struct UnreadableResolver;
+
+impl Resolver for UnreadableResolver {
+    fn read(&mut self, _path: &str) -> Option<(String, String)> {
+        None
+    }
+
+    fn failure(&mut self) -> Option<String> {
+        Some("unable to read file".to_string())
+    }
+}
+
+#[test]
+fn unreadable_imports_report_the_read_failure() {
+    let definition = parse(
+        "json-schema",
+        "x.json",
+        r#"{"$ref":"big.json#/X"}"#,
+        Options::default(),
+        Limits::default(),
+        &mut UnreadableResolver,
+    );
+    let messages = definition
+        .validation
+        .errors
+        .iter()
+        .map(|error| error.message.as_str())
+        .collect::<Vec<_>>();
+    assert!(messages.contains(&"unable to read file"), "{messages:?}");
+    assert!(
+        messages.contains(&"unable to parse $ref: big.json#/X"),
+        "{messages:?}"
+    );
+    assert!(
+        !messages
+            .iter()
+            .any(|message| message.starts_with("unable to resolve $ref:")),
+        "{messages:?}"
+    );
+}
+
+#[test]
+fn imported_files_obey_byte_and_line_limits() {
+    let root = r#"{"$ref":"big.json#"}"#;
+    let imported = r#"{"X":{"type":"object","properties":{"a":{"type":"string"}}}}"#;
+
+    let by_bytes = parse(
+        "json-schema",
+        "x.json",
+        root,
+        Options::default(),
+        Limits {
+            max_file_bytes: 32,
+            ..Limits::default()
+        },
+        &mut InlineResolver {
+            content: imported.to_string(),
+        },
+    );
+    assert_error(&by_bytes.validation, "file exceeds max_file_bytes");
+
+    let by_lines = parse(
+        "json-schema",
+        "x.json",
+        root,
+        Options::default(),
+        Limits {
+            max_lines: 1,
+            ..Limits::default()
+        },
+        &mut InlineResolver {
+            content: "{\n}\n".to_string(),
+        },
+    );
+    assert_error(&by_lines.validation, "file exceeds max_lines");
+}
+
+#[test]
+fn yaml_security_limits_are_rejected() {
+    let cases = [
+        (
+            "openapi: 3.0.0\ninfo: &x {title: x}\npaths: {}\n",
+            "YAML: anchors, aliases and tags are not supported",
+        ),
+        (
+            "openapi: 3.0.0\n\tinfo: {title: x}\npaths: {}\n",
+            "YAML: tab indentation is not supported",
+        ),
+        (
+            "openapi: 3.0.0\n---\npaths: {}\n",
+            "YAML: multi-document YAML is not supported",
+        ),
+    ];
+    for (content, message) in cases {
+        let definition = parse(
+            "openapi",
+            "x.yaml",
+            content,
+            Options::default(),
+            Limits::default(),
+            &mut Fixtures,
+        );
+        assert_error(&definition.validation, message);
+    }
+}
+
+#[test]
+fn deeply_nested_documents_are_rejected_without_panicking() {
+    let yaml = format!(
+        "openapi: 3.0.0\ninfo: {{title: x, version: \"1\"}}\npaths: {{}}\nx: {}{}\n",
+        "[".repeat(300),
+        "]".repeat(300)
+    );
+    let yaml_definition = parse(
+        "openapi",
+        "x.yaml",
+        &yaml,
+        Options::default(),
+        Limits::default(),
+        &mut Fixtures,
+    );
+    assert_error(&yaml_definition.validation, "YAML: nesting limit reached");
+
+    let json = format!("{}{}", "[".repeat(300), "]".repeat(300));
+    let json_definition = parse(
+        "json-schema",
+        "x.json",
+        &json,
+        Options::default(),
+        Limits::default(),
+        &mut Fixtures,
+    );
+    assert!(!json_definition.validation.ok);
+    assert!(
+        json_definition.validation.errors[0]
+            .message
+            .starts_with("JSON parse error:"),
+        "{:?}",
+        json_definition.validation.errors
+    );
+
+    let xml = format!(
+        "<edmx:Edmx xmlns:edmx=\"http://docs.oasis-open.org/odata/ns/edmx\">{}{}</edmx:Edmx>",
+        "<a>".repeat(300),
+        "</a>".repeat(300)
+    );
+    let xml_definition = parse(
+        "edmx",
+        "x.xml",
+        &xml,
+        Options::default(),
+        Limits::default(),
+        &mut Fixtures,
+    );
+    assert_error(
+        &xml_definition.validation,
+        "XML parse error: XML nesting limit exceeded",
+    );
+}
+
+#[test]
+fn lone_flow_collections_do_not_panic() {
+    for content in [
+        "openapi: 3.0.0\ninfo: {title: x, version: \"1\"}\npaths: {}\ntype: [\n",
+        "openapi: 3.0.0\ninfo: {title: x, version: \"1\"}\npaths: {}\ntype: {\n",
+    ] {
+        let definition = parse(
+            "openapi",
+            "x.yaml",
+            content,
+            Options::default(),
+            Limits::default(),
+            &mut Fixtures,
+        );
+        assert_error(&definition.validation, "OpenAPI paths are missing");
+    }
+}
+
+#[test]
+fn json_schema_message_selects_defs_and_reports_missing() {
+    let content = r#"{"$defs":{"User":{"type":"object","properties":{"id":{"type":"integer"}}}}}"#;
+    let selected = parse(
+        "json-schema",
+        "x.json",
+        content,
+        Options {
+            message: "User".to_string(),
+            ..Options::default()
+        },
+        Limits::default(),
+        &mut Fixtures,
+    );
+    assert_eq!(selected.messages[0]["name"], "User");
+    assert_eq!(field(&selected.messages[0], 0)["name"], "id");
+
+    let missing = parse(
+        "json-schema",
+        "x.json",
+        content,
+        Options {
+            message: "Nope".to_string(),
+            ..Options::default()
+        },
+        Limits::default(),
+        &mut Fixtures,
+    );
+    assert_error(&missing.validation, "message not found: Nope");
+}

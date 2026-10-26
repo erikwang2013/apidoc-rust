@@ -77,6 +77,12 @@ pub struct Validation {
 /// its own limits); the parser records the PHP-compatible diagnostic.
 pub trait Resolver {
     fn read(&mut self, path: &str) -> Option<(String, String)>;
+
+    /// Detail for the last `read` refusal when the path was valid but the file
+    /// could not be loaded (size cap, IO, encoding). Cleared by every `read`.
+    fn failure(&mut self) -> Option<String> {
+        None
+    }
 }
 
 pub struct NoResolver;
@@ -249,7 +255,12 @@ impl<'a> Context<'a> {
             None => ".",
         };
         let candidate = normalize_path(&format!("{dir}/{import_path}"))?;
-        let (key, content) = self.resolver.read(&candidate)?;
+        let Some((key, content)) = self.resolver.read(&candidate) else {
+            if let Some(message) = self.resolver.failure() {
+                self.error(&message, 0, 0);
+            }
+            return None;
+        };
         self.contents.insert(key.clone(), content);
         Some(key)
     }

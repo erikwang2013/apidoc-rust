@@ -319,8 +319,16 @@ fn parse_scalar(value: &str, line: usize, depth: usize) -> Result<Node> {
     Ok(Node::Str(value.to_string()))
 }
 
+/// PHP `substr($value, 1, -1)`: truncated input yields "" instead of panicking.
+fn inline_inner(value: &str) -> &str {
+    value
+        .get(1..value.len().saturating_sub(1))
+        .unwrap_or("")
+        .trim()
+}
+
 fn parse_inline_list(value: &str, line: usize, depth: usize) -> Result<Node> {
-    let inner = value[1..value.len() - 1].trim();
+    let inner = inline_inner(value);
     if inner.is_empty() {
         return Ok(Node::array());
     }
@@ -332,7 +340,7 @@ fn parse_inline_list(value: &str, line: usize, depth: usize) -> Result<Node> {
 }
 
 fn parse_inline_map(value: &str, line: usize, depth: usize) -> Result<Node> {
-    let inner = value[1..value.len() - 1].trim();
+    let inner = inline_inner(value);
     if inner.is_empty() {
         return Ok(Node::object());
     }

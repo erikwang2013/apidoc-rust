@@ -282,6 +282,14 @@ fn select_v3(document: &Node, wanted: &str, ctx: &mut Context<'_>) -> Option<Sel
 }
 
 fn v3_messages(id: &str, operation: &Node, document: &Node, ctx: &mut Context<'_>) -> Selection {
+    // PHP resolves the channel ref only for its diagnostic side effects.
+    if let Some(channel_ref) = operation
+        .get("channel")
+        .and_then(|channel| channel.get("$ref"))
+        .and_then(Node::as_str)
+    {
+        let _ = schema::resolve(channel_ref, document, ctx, Loader::JsonOrYaml);
+    }
     let mut messages = Vec::new();
     let mut roots = Vec::new();
     let mut files = Vec::new();
@@ -291,16 +299,22 @@ fn v3_messages(id: &str, operation: &Node, document: &Node, ctx: &mut Context<'_
     {
         for (_, message_ref) in schema::entries(message_refs) {
             let mut message_ref = Some(message_ref);
-            let message_root = document.clone();
-            let message_file = ctx.file().to_string();
+            let mut message_root = document.clone();
+            let mut message_file = ctx.file().to_string();
             if let Some(refstr) = message_ref
                 .as_ref()
                 .and_then(|node| node.get("$ref"))
                 .and_then(Node::as_str)
                 .map(str::to_string)
             {
-                message_ref = schema::resolve(&refstr, document, ctx, Loader::JsonOrYaml)
-                    .map(|resolved| resolved.node);
+                if let Some(resolved) = schema::resolve(&refstr, document, ctx, Loader::JsonOrYaml)
+                {
+                    message_ref = Some(resolved.node);
+                    message_root = resolved.root;
+                    message_file = resolved.file;
+                } else {
+                    message_ref = None;
+                }
             }
             if let Some(message) = message_ref.filter(Node::is_array_like) {
                 messages.push(message);

@@ -50,7 +50,11 @@ pub fn resolve(refstr: &str, root: &Node, ctx: &mut Context, loader: Loader) -> 
     let mut root = root.clone();
     let mut resolved_file = ctx.file().to_string();
     if !file.is_empty() {
-        let realpath = ctx.resolve(&file)?;
+        let errors_before = ctx.errors().len();
+        let Some(realpath) = ctx.resolve(&file) else {
+            ref_error(ctx, errors_before, refstr);
+            return None;
+        };
         resolved_file = realpath.clone();
         if let Some(document) = ctx.document(&realpath) {
             root = document.clone();
@@ -194,8 +198,9 @@ fn expand_ref(
     };
     let mut realpath = String::new();
     let key = if !file.is_empty() {
+        let errors_before = ctx.errors().len();
         let Some(resolved) = ctx.resolve(&file) else {
-            ctx.error(&format!("unable to resolve $ref: {refstr}"), 0, 0);
+            ref_error(ctx, errors_before, refstr);
             return Node::merge(siblings, &empty_stub());
         };
         realpath = resolved;
@@ -250,6 +255,17 @@ fn expand_ref(
     let expanded = expand_node(&target, &document_root, ctx, loader, state, depth + 1);
     state.stack.pop();
     Node::merge(siblings, &expanded)
+}
+
+/// A read failure was already recorded by `Context::resolve`; PHP reports that
+/// as "unable to parse", not "unable to resolve".
+fn ref_error(ctx: &mut Context, errors_before: usize, refstr: &str) {
+    let action = if ctx.errors().len() > errors_before {
+        "parse"
+    } else {
+        "resolve"
+    };
+    ctx.error(&format!("unable to {action} $ref: {refstr}"), 0, 0);
 }
 
 fn split(refstr: &str, ctx: &mut Context) -> Option<(String, String)> {

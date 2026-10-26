@@ -816,6 +816,7 @@ fn render_definition(ep: &DocEndpoint, declaration: &DocDefinition) -> (Value, V
     let source = path.to_string_lossy().to_string();
     let mut resolver = DefinitionResolver {
         root: root.expect("resolved definition implies a canonical root"),
+        failure: None,
     };
     let mut definition =
         protocol_defs::parse(&format, &source, &content, options, limits, &mut resolver);
@@ -881,13 +882,26 @@ fn resolve_definition_file(root: &Path, file: &str) -> Option<PathBuf> {
 
 struct DefinitionResolver {
     root: PathBuf,
+    failure: Option<String>,
 }
 
 impl Resolver for DefinitionResolver {
     fn read(&mut self, path: &str) -> Option<(String, String)> {
+        self.failure = None;
         let resolved = resolve_definition_file(&self.root, path)?;
-        let content = std::fs::read_to_string(&resolved).ok()?;
+        // Stat before reading so an oversized import is never allocated.
+        let content = match read_limited(&resolved, &Limits::default()) {
+            Ok(content) => content,
+            Err(error) => {
+                self.failure = Some(error.message);
+                return None;
+            }
+        };
         Some((resolved.to_string_lossy().to_string(), content))
+    }
+
+    fn failure(&mut self) -> Option<String> {
+        self.failure.take()
     }
 }
 

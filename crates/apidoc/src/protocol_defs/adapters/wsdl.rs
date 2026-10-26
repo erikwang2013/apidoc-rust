@@ -363,8 +363,11 @@ fn message_fields(
                         .into_iter()
                         .map(|field| field.to_json()),
                 );
+                continue;
             }
-        } else if !type_name.is_empty() {
+        }
+        // PHP falls through to `type` when `element` is missing or unresolved.
+        if !type_name.is_empty() {
             let name = part
                 .get("name")
                 .map(Node::scalar_string)

@@ -158,7 +158,8 @@ impl Node {
             Node::Bool(true) => "1".to_string(),
             Node::Bool(false) => String::new(),
             Node::Int(n) => n.to_string(),
-            Node::Float(f) => format_float(*f),
+            // PHP (string)3.0 is "3"; version_string keeps the ".0" for OpenAPI.
+            Node::Float(f) => format!("{f}"),
             Node::Str(s) => s.clone(),
             Node::Array(_) => "Array".to_string(),
             Node::Object(_) => "Array".to_string(),

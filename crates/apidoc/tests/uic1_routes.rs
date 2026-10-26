@@ -45,6 +45,7 @@ fn user_hook() {}
     file = "tests/fixtures/protocol/json-schema/user.json",
     format = "bogus"
 )]
+#[apidoc::definition(file = "tests/fixtures/protocol/json-schema/traversal.json")]
 fn broken_hook() {}
 
 #[allow(dead_code)]
@@ -224,7 +225,7 @@ async fn protocol_definitions_are_parsed_and_aggregated() {
     let definitions = broken["data"]["definitions"]
         .as_array()
         .expect("definitions");
-    assert_eq!(definitions.len(), 3, "{broken}");
+    assert_eq!(definitions.len(), 4, "{broken}");
     let parse_error = &definitions[0]["validation"]["errors"][0];
     assert_eq!(
         parse_error,
@@ -247,13 +248,24 @@ async fn protocol_definitions_are_parsed_and_aggregated() {
         definitions[2]["validation"]["errors"][0]["message"],
         "unsupported definition format: bogus"
     );
+    assert!(
+        definitions[3]["validation"]["errors"]
+            .as_array()
+            .expect("traversal errors")
+            .iter()
+            .any(|error| error["message"]
+                .as_str()
+                .is_some_and(|message| message.starts_with("unable to resolve $ref:"))),
+        "{}",
+        definitions[3]
+    );
     assert_eq!(broken["data"]["validation"]["ok"], false);
     assert_eq!(
         broken["data"]["validation"]["errors"]
             .as_array()
             .expect("aggregated errors")
             .len(),
-        3
+        4
     );
 }
 

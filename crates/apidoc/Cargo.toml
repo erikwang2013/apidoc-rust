@@ -113,3 +113,8 @@ rcgen = "0.13"
 [[example]]
 name = "axum_demo"
 required-features = ["axum"]
+
+# 该套件依赖 axum 路由；显式声明后默认 gate 会报告跳过而不是静默 0 tests。
+[[test]]
+name = "uic1_routes"
+required-features = ["axum"]

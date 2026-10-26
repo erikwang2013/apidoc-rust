@@ -31,10 +31,14 @@ struct Operation {
 impl Operation {
     fn display_name(&self) -> String {
         if self.operation_id.is_empty() {
-            format!("{} {}", self.method.to_uppercase(), self.path)
+            self.signature()
         } else {
             self.operation_id.clone()
         }
+    }
+
+    fn signature(&self) -> String {
+        format!("{} {}", self.method.to_uppercase(), self.path)
     }
 }
 
@@ -309,7 +313,8 @@ fn select<'a>(operations: &'a [Operation], wanted: &str, ctx: &mut Context<'_>) 
             if !operation.operation_id.is_empty() && operation.operation_id == wanted {
                 return operation;
             }
-            if operation.display_name().eq_ignore_ascii_case(wanted) {
+            // PHP only case-folds the "METHOD path" signature, never operationId.
+            if operation.signature().eq_ignore_ascii_case(wanted) {
                 return operation;
             }
         }

@@ -184,9 +184,9 @@ pub fn load(xml: &str) -> Result<XmlDoc, XmlError> {
         ));
     }
     let root = root.ok_or_else(|| XmlError {
-        message: "XML parse error: Document is empty".to_string(),
-        line: 1,
-        column: 1,
+        message: "DOMDocument::loadXML(): Argument #1 ($source) must not be empty".to_string(),
+        line: 0,
+        column: 0,
     })?;
     Ok(XmlDoc { root })
 }
