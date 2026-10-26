@@ -112,7 +112,7 @@ Apidoc — это Rust-библиотека-плагин, которая авт�
 ```
 apidoc-rust/
 ├── Cargo.toml                 # конфигурация workspace (resolver 2)
-├── VERSION                    # версия проекта (v2.1.0)
+├── VERSION                    # версия проекта (v2.2.0)
 ├── crates/
 │   ├── apidoc/                # ядро рантайма (не зависит от фреймворка)
 │   │   ├── src/lib.rs         # модель данных + агрегация DocRegistry + api.json + UI_HTML
@@ -139,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.1"        # или path = "crates/apidoc"
+apidoc-rust = "2.2"        # или path = "crates/apidoc"
 
 serde_json = "1"      # для вывода api.json
 linkme = "0.3"        # обязательно: генерируемый макросом код регистрации ссылается на него
@@ -268,7 +268,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 - **markdown**: удобно вставлять в Wiki проекта / заметки к релизу; по группам выводится оглавление, у каждого интерфейса таблица параметров и блок ответа;
 - **typescript**: фронтенд может вставить это как определения типов; неструппированные интерфейсы попадают в пространство имён `defaultGroup` (`default` — зарезервированное слово TS, не может быть идентификатором);
-- **swagger**: `info.version` берётся из `ApidocConfig.version` (версия документируемого API); если она не задана — из версии пакета apidoc-rust (сейчас 2.1.0); параметры пути берутся из шаблона URL, поэтому спецификацию можно сразу импортировать в Swagger UI или генераторы кода.
+- **swagger**: `info.version` берётся из `ApidocConfig.version` (версия документируемого API); если она не задана — из версии пакета apidoc-rust (сейчас 2.2.0); параметры пути берутся из шаблона URL, поэтому спецификацию можно сразу импортировать в Swagger UI или генераторы кода.
 - **asyncapi**: каналы/операции/сообщения для WebSocket, SSE, MQTT, Kafka, STOMP и других событийных endpoint'ов (AsyncAPI 2.6).
 
 ### 7. Адаптер actix-web
@@ -277,7 +277,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.1", features = ["actix"] }
+apidoc-rust = { version = "2.2", features = ["actix"] }
 ```
 
 ```rust

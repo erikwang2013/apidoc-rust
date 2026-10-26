@@ -7,7 +7,7 @@
   <rect width="940" height="815" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="815" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 项目功能（M1–M6 + 多协议调试）</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust 项目功能（M1–M6 + P1–P6 + UIC-1）</text>
 
   <!-- 卡片 1 -->
   <rect x="40" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -17,7 +17,7 @@
   <text x="60" y="130" font-size="13" fill="#333">M1 七宏：title / desc / method / url / param / query / returned</text>
   <text x="60" y="150" font-size="13" fill="#333">M3 新增 12 个：tag / group / author / header / route_param /</text>
   <text x="60" y="170" font-size="12" fill="#333">response_status / success / error / not_debug / md / sort / ref</text>
-  <text x="60" y="190" font-size="13" fill="#333">参数支持 required / default / desc / mock / children 嵌套</text>
+  <text x="60" y="190" font-size="13" fill="#333">参数 required/default/desc/mock/children · 九格式定义</text>
 
   <!-- 卡片 2 -->
   <rect x="480" y="70" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -42,9 +42,9 @@
   <rect x="740" y="210" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="815" y="226" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已实现 M2</text>
   <text x="500" y="256" font-size="17" font-weight="bold" fill="#1e8449">axum / actix 适配器 + 文档 UI</text>
-  <text x="500" y="280" font-size="13" fill="#333">apidoc-axum：/apidoc（UI）· /apidoc/api.json · /apidoc/mock</text>
-  <text x="500" y="300" font-size="13" fill="#333">apidoc-actix：薄封装，4 路由含 /apidoc/export（M5）</text>
-  <text x="500" y="320" font-size="13" fill="#333">内嵌文档 UI 调试面板（Html 静态页，零外部依赖）</text>
+  <text x="500" y="280" font-size="13" fill="#333">/apidoc/ui/v1/* · api.json · export · mock · auth</text>
+  <text x="500" y="300" font-size="13" fill="#333">actix：与 axum 1:1 · debug/stream/webhook</text>
+  <text x="500" y="320" font-size="13" fill="#333">原生 UI 保留 · ui/ui_path 切换 Vue 静态包</text>
 
   <!-- 卡片 5 -->
   <rect x="40" y="370" width="420" height="130" rx="10" fill="#eafaf1" stroke="#27ae60" stroke-width="2"/>
@@ -84,14 +84,14 @@
   <text x="500" y="620" font-size="13" fill="#333">UI 顶部应用/版本选择器 · token 按 appKey 分存 localStorage</text>
   <text x="500" y="640" font-size="13" fill="#333">未挂 app 的接口落默认应用 · 未配置时与 M5 字节级一致</text>
 
-  <!-- 卡片 9：多协议 / 集成 -->
+  <!-- 卡片 9：多协议 / UIC-1 / 集成 -->
   <rect x="40" y="670" width="860" height="120" rx="10" fill="#fdfefe" stroke="#27ae60" stroke-width="2"/>
   <rect x="740" y="660" width="150" height="24" rx="12" fill="#27ae60"/>
   <text x="815" y="676" text-anchor="middle" font-size="13" fill="#fff" font-weight="bold">已完成</text>
-  <text x="60" y="706" font-size="17" font-weight="bold" fill="#566573">多协议 / 集成</text>
-  <text x="60" y="730" font-size="13" fill="#333">协议注解 · 浏览器直连 · 服务端执行器 · Webhook · AsyncAPI</text>
-  <text x="60" y="750" font-size="13" fill="#333">默认构建零重型依赖 · 每个协议族独立 feature</text>
-  <text x="60" y="770" font-size="13" fill="#333">M1–M6 + P1–P6 全部完成（含密码鉴权 · 多应用多版本）</text>
+  <text x="60" y="706" font-size="17" font-weight="bold" fill="#566573">多协议 / UIC-1 / 集成</text>
+  <text x="60" y="730" font-size="13" fill="#333">UIC-1 契约：menus / detail / docs / debug / share / cache / generator / export</text>
+  <text x="60" y="750" font-size="13" fill="#333">九格式外部定义 · Vue 静态 UI（发布默认）· 全量 relay 能力（debug-all 30 个）</text>
+  <text x="60" y="770" font-size="13" fill="#333">DNP3/IEC104 资源上限 · 默认构建零重型依赖 · M1–M6 + P1–P6 + UIC-1 全部完成</text>
 
   <text x="470" y="805" text-anchor="middle" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

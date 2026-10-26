@@ -112,7 +112,7 @@ apidoc-rust の実装方針：
 ```
 apidoc-rust/
 ├── Cargo.toml                 # workspace 設定（resolver 2）
-├── VERSION                    # プロジェクトバージョン（v2.1.0）
+├── VERSION                    # プロジェクトバージョン（v2.2.0）
 ├── crates/
 │   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
 │   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML
@@ -139,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.1"        # または path = "crates/apidoc"
+apidoc-rust = "2.2"        # または path = "crates/apidoc"
 
 serde_json = "1"      # api.json 出力用
 linkme = "0.3"        # 必須：マクロが生成する登録コードがこれを参照します
@@ -268,7 +268,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 - **markdown**：プロジェクト Wiki / リリースノートに貼り付けるのに適しており、グループごとにディレクトリを出力し、各インターフェースにパラメータ表とレスポンスブロック付き；
 - **typescript**：フロントエンドがそのまま型定義として貼り付け可能；未グループのインターフェースは `defaultGroup` 名前空間に入る（`default` は TS の予約語のため識別子にできない）；
-- **swagger**：`info.version` は `ApidocConfig.version`（ドキュメント化された API バージョン）から取得し、未設定時は apidoc-rust のパッケージバージョン（現在 2.1.0）にフォールバック；path パラメータは URL テンプレートに基づくため、そのまま Swagger UI やコードジェネレータにインポート可能。
+- **swagger**：`info.version` は `ApidocConfig.version`（ドキュメント化された API バージョン）から取得し、未設定時は apidoc-rust のパッケージバージョン（現在 2.2.0）にフォールバック；path パラメータは URL テンプレートに基づくため、そのまま Swagger UI やコードジェネレータにインポート可能。
 - **asyncapi**：WebSocket、SSE、MQTT、Kafka、STOMP などのイベントエンドポイント向けの channel/operation/message を出力（AsyncAPI 2.6）。
 
 ### 7. actix-web アダプタ
@@ -277,7 +277,7 @@ Web フレームワークに actix-web を使う場合は `features = ["actix"]`
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.1", features = ["actix"] }
+apidoc-rust = { version = "2.2", features = ["actix"] }
 ```
 
 ```rust

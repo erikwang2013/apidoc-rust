@@ -3,7 +3,7 @@ resolver = "2"
 members = ["crates/apidoc", "crates/apidoc-macros", "crates/apidoc-test-fixtures", "crates/apidoc-idl"]
 
 [workspace.package]
-version = "2.1.0"
+version = "2.2.0"
 edition = "2021"
 # 实际门槛：宏用 Option::is_none_or（1.82 稳定）；不声明的话更旧的工具链
 # 只会从宏展开里报一堆 E0658，看不出是版本问题。

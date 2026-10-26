@@ -112,7 +112,7 @@ Pendekatan implementasi apidoc-rust:
 ```
 apidoc-rust/
 ├── Cargo.toml                 # Konfigurasi workspace (resolver 2)
-├── VERSION                    # Versi proyek (v2.1.0)
+├── VERSION                    # Versi proyek (v2.2.0)
 ├── crates/
 │   ├── apidoc/                # Inti runtime (independen kerangka kerja)
 │   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json + UI_HTML
@@ -139,7 +139,7 @@ apidoc-rust/
 
 ```toml
 [dependencies]
-apidoc-rust = "2.1"        # atau path = "crates/apidoc"
+apidoc-rust = "2.2"        # atau path = "crates/apidoc"
 
 serde_json = "1"      # untuk output api.json
 linkme = "0.3"        # wajib: kode registrasi hasil makro merujuknya
@@ -268,7 +268,7 @@ GET /apidoc/export?format=asyncapi  # AsyncAPI 2.6 event/streaming spec (applica
 
 - **markdown**: cocok ditempel ke Wiki proyek / catatan rilis, mengeluarkan direktori per grup, setiap antarmuka dengan tabel parameter dan blok respons;
 - **typescript**: frontend bisa langsung ditempel sebagai definisi tipe; antarmuka tanpa group masuk ke namespace `defaultGroup` (`default` kata cadangan TS, tidak bisa dijadikan pengenal);
-- **swagger**: `info.version` diambil dari `ApidocConfig.version` (versi API yang didokumentasikan); jika tidak diisi, memakai versi paket apidoc-rust (saat ini 2.1.0); parameter path diambil dari template URL, sehingga spesifikasinya bisa langsung diimpor ke Swagger UI atau generator kode.
+- **swagger**: `info.version` diambil dari `ApidocConfig.version` (versi API yang didokumentasikan); jika tidak diisi, memakai versi paket apidoc-rust (saat ini 2.2.0); parameter path diambil dari template URL, sehingga spesifikasinya bisa langsung diimpor ke Swagger UI atau generator kode.
 - **asyncapi**: channel/operation/message untuk endpoint event seperti WebSocket, SSE, MQTT, Kafka, STOMP (AsyncAPI 2.6).
 
 ### 7. Adaptor actix-web
@@ -277,7 +277,7 @@ Saat kerangka web memakai actix-web, pasang `features = ["actix"]` (fungsionalit
 
 ```toml
 [dependencies]
-apidoc-rust = { version = "2.1", features = ["actix"] }
+apidoc-rust = { version = "2.2", features = ["actix"] }
 ```
 
 ```rust
