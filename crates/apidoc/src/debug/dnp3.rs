@@ -22,6 +22,7 @@ use codec::{encode_link_frame, parse_objects, read_link_frame};
 
 const DEFAULT_PORT: u16 = 20_000;
 const MAX_FRAMES: usize = 1000;
+const MAX_POINTS: usize = 10000;
 
 pub async fn execute(cfg: &DebugConfig, req: &DebugRequest) -> Result<DebugResponse, String> {
     let started = Instant::now();
@@ -149,7 +150,11 @@ async fn collect_points(
             return Err("truncated dnp3 read response (missing IIN)".into());
         }
         // [app control][function 0x81][IIN1][IIN2][object headers...]
-        points.extend(parse_objects(&app[4..])?);
+        let parsed = parse_objects(&app[4..])?;
+        if points.len() + parsed.len() > MAX_POINTS {
+            return Err(format!("dnp3 response exceeds {MAX_POINTS} points"));
+        }
+        points.extend(parsed);
         app.clear();
         frames += 1;
     }

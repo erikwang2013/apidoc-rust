@@ -119,6 +119,8 @@ pub(crate) fn crc16(data: &[u8]) -> u16 {
     crc ^ 0xFFFF
 }
 
+const MAX_POINTS: usize = 10000;
+
 pub(crate) fn parse_objects(mut data: &[u8]) -> Result<Vec<Value>, String> {
     let mut points = Vec::new();
     while !data.is_empty() {
@@ -142,10 +144,16 @@ pub(crate) fn parse_objects(mut data: &[u8]) -> Result<Vec<Value>, String> {
             if prefix != 0 {
                 return Err("dnp3 index-prefixed packed bit fields are not supported".into());
             }
+            if points.len() + count as usize > MAX_POINTS {
+                return Err(format!("dnp3 response exceeds {MAX_POINTS} points"));
+            }
             let (used, packed) = read_packed(group, variation, data, start, count)?;
             points.extend(packed);
             data = &data[used..];
             continue;
+        }
+        if points.len() + count as usize > MAX_POINTS {
+            return Err(format!("dnp3 response exceeds {MAX_POINTS} points"));
         }
         for offset in 0..count {
             let index = match prefix {
@@ -209,7 +217,7 @@ fn read_range(data: &[u8], qualifier: u8) -> Result<(u32, u32, &[u8]), String> {
             if stop < start {
                 return Err("dnp3 range stop < start".into());
             }
-            Ok((start as u32, (stop - start + 1) as u32, &data[4..]))
+            Ok((start as u32, (u32::from(stop) - u32::from(start) + 1), &data[4..]))
         }
         2 => {
             let start = take_u32_raw(data, 0)?;
@@ -217,7 +225,7 @@ fn read_range(data: &[u8], qualifier: u8) -> Result<(u32, u32, &[u8]), String> {
             if stop < start {
                 return Err("dnp3 range stop < start".into());
             }
-            Ok((start, stop - start + 1, &data[8..]))
+            Ok((start, (stop - start).saturating_add(1), &data[8..]))
         }
         7 => Ok((0, take_u8_raw(data, 0)? as u32, &data[1..])),
         8 => Ok((0, take_u16_raw(data, 0)? as u32, &data[2..])),
@@ -370,6 +378,13 @@ mod tests {
         let user_data = [0xC0, 0xC0, 0x01, 0x3C, 0x01, 0x06];
         let frame = encode_link_frame(0xC4, 1, 0, &user_data).unwrap();
         assert_eq!(hex(&frame), "05640bc4010000004de9c0c0013c0106ff50");
+    }
+
+    #[test]
+    fn caps_response_points() {
+        let data = [0x01, 0x01, 0x10, 0x00, 0x00, 0xff, 0xff];
+        let err = parse_objects(&data).unwrap_err();
+        assert!(err.contains("exceeds 10000 points"), "{err}");
     }
 
     #[test]

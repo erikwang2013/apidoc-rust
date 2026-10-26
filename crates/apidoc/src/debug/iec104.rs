@@ -15,6 +15,7 @@ use tokio::net::TcpStream;
 
 const DEFAULT_PORT: u16 = 2404;
 const MAX_FRAMES: usize = 1000;
+const MAX_ROWS: usize = 10000;
 const MAX_APDU: usize = 253;
 
 pub async fn execute(cfg: &DebugConfig, req: &DebugRequest) -> Result<DebugResponse, String> {
@@ -202,6 +203,9 @@ fn parse_asdus(mut data: &[u8]) -> Result<Vec<Value>, String> {
             };
             let (value, used) = value_of(type_id, data)?;
             data = data.get(used..).ok_or("truncated iec104 value")?;
+            if rows.len() >= MAX_ROWS {
+                return Err(format!("iec104 response exceeds {MAX_ROWS} rows"));
+            }
             rows.push(json!({
                 "type_id": type_id,
                 "cause": cause,
@@ -314,6 +318,16 @@ mod tests {
         assert_eq!(rows[0]["ioa"], 1);
         assert_eq!(rows[0]["value"], 10.0);
         assert_eq!(rows[1]["cause"], 10);
+    }
+
+    #[test]
+    fn caps_response_rows() {
+        let mut data = Vec::new();
+        for _ in 0..80 {
+            data.extend_from_slice(&[102, 0xff, 0x14, 0, 1, 0, 1, 0, 0]);
+        }
+        let err = parse_asdus(&data).unwrap_err();
+        assert!(err.contains("exceeds 10000 rows"), "{err}");
     }
 
     #[test]
