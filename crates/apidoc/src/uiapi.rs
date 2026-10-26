@@ -283,10 +283,15 @@ fn executor_compiled(kind: &str) -> bool {
 }
 
 fn relay_protocols() -> Vec<&'static str> {
-    ["http", "websocket", "grpc", "thrift", "dubbo", "iso8583", "mqtt", "tcp", "udp", "unix"]
-        .into_iter()
-        .filter(|kind| executor_compiled(kind))
-        .collect()
+    [
+        "http", "http2", "http3", "websocket", "grpc", "thrift", "dubbo",
+        "hessian", "iso8583", "mqtt", "stomp", "amqp", "kafka", "xmpp", "tcp", "udp", "raw",
+        "unix", "coap", "lwm2m", "modbus", "dnp3", "iec104", "bacnet", "opcua", "rtp", "rtcp",
+        "rtsp", "sip", "rtmp",
+    ]
+    .into_iter()
+    .filter(|kind| executor_compiled(kind))
+    .collect()
 }
 
 fn capabilities_data(core: &Core) -> Value {
