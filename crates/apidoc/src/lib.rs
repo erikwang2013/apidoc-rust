@@ -129,6 +129,8 @@ pub enum DocFragment {
     Protocol(DocProtocol),
     // P0: 长连接/流式协议的消息定义（WebSocket 帧、MQTT 消息、SSE 事件…）。
     Event(DocEvent),
+    // UIC-1 Phase 4: 外部协议定义文件（OpenAPI / GraphQL / proto …）。
+    Definition(DocDefinition),
 }
 
 /// `#[apidoc::protocol("grpc", target = "...", service = "...")]` 的原始载荷。
@@ -136,6 +138,24 @@ pub enum DocFragment {
 pub struct DocProtocol {
     pub kind: &'static str,
     pub opts: &'static [(&'static str, &'static str)],
+}
+
+/// `#[apidoc::definition(file = "...", operation = "...")]` 的原始载荷。
+/// `root` 是声明方 crate 的 `CARGO_MANIFEST_DIR`，运行时按它解析文件；
+/// 保持 `&'static str` 让片段注册仍是静态表。
+#[derive(Clone)]
+pub struct DocDefinition {
+    pub file: &'static str,
+    pub root: &'static str,
+    pub format: &'static str,
+    pub operation: &'static str,
+    pub message: &'static str,
+    pub direction: &'static str,
+    pub sample: &'static str,
+    pub sample_file: &'static str,
+    pub sample_encoding: &'static str,
+    /// PHP 默认 strict=true：不支持的语法按错误处理。
+    pub strict: bool,
 }
 
 /// 长连接/流式协议的一条消息定义。
@@ -234,6 +254,9 @@ pub struct DocEndpoint {
     pub protocol_opts: BTreeMap<String, String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub events: Vec<DocEvent>,
+    // UIC-1 Phase 4 外部定义：仅 UIC-1 detail 使用，不进 api.json。
+    #[serde(skip)]
+    pub definitions: Vec<DocDefinition>,
     // 多应用归属（#[apidoc::app] 注解），仅 collect 用，不进任何序列化输出。
     #[serde(skip)]
     pub app_key: String,
@@ -273,6 +296,7 @@ impl Default for DocEndpoint {
             protocol: "http".to_string(),
             protocol_opts: BTreeMap::new(),
             events: Vec::new(),
+            definitions: Vec::new(),
             app_key: String::new(),
         }
     }
@@ -524,6 +548,7 @@ impl DocRegistry {
                     }
                 }
                 DocFragment::Event(e) => ep.events.push(e.clone()),
+                DocFragment::Definition(d) => ep.definitions.push(d.clone()),
             }
         }
         (ids, endpoints)
