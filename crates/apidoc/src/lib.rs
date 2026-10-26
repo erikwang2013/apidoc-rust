@@ -75,6 +75,9 @@ use std::sync::{Mutex, OnceLock};
 
 pub mod protocol;
 
+/// UIC-1 Phase 4: pure external protocol definition parsers (no transports).
+pub mod protocol_defs;
+
 #[cfg(feature = "debug-http")]
 pub mod debug;
 
