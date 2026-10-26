@@ -7,34 +7,120 @@ use crate::auth::{self, AuthConfig};
 use crate::mock::{generate_mock, mock_specs};
 use crate::webhook::WebhookRegistry;
 use crate::{codegen, export, share};
-use crate::{ApiDoc, ApidocConfig, AppConfig, DebugConfig, DocRegistry};
+use crate::{ApiDoc, ApidocConfig, AppConfig, DebugConfig, DocRegistry, UiMode};
 use bytes::Bytes;
 use std::collections::{BTreeMap, HashMap};
+use std::path::{Path, PathBuf};
 
-/// 统一响应形状：状态码 + Content-Type + body，两个适配器各自映射为框架响应。
-/// `ct: None` = 不设 Content-Type（对齐现状：share/generate 的 400 与 generate 的
-/// 404 是无头空响应）。body 用 `Bytes`：UI 页 / pet.svg 是 `from_static`（零拷贝），
-/// 构建期物化的 JSON / 导出产物克隆是引用计数自增——请求期不再复制整份文档。
+/// 统一响应形状：状态码 + Content-Type + body（+ 可选 Location），两个适配器各自
+/// 映射为框架响应。`ct: None` = 不设 Content-Type（对齐现状：share/generate 的 400
+/// 与 generate 的 404 是无头空响应）。body 用 `Bytes`：UI 页 / pet.svg 是
+/// `from_static`（零拷贝），构建期物化的 JSON / 导出产物克隆是引用计数自增——
+/// 请求期不再复制整份文档。
 pub struct R {
     pub status: u16,
     pub ct: Option<&'static str>,
     pub body: Bytes,
+    /// 重定向 Location（`/apidoc` → `/apidoc/`；其余响应为 None）。
+    pub location: Option<&'static str>,
 }
 
 impl R {
     fn new(status: u16, ct: &'static str, body: impl Into<Bytes>) -> R {
-        R { status, ct: Some(ct), body: body.into() }
+        R { status, ct: Some(ct), body: body.into(), location: None }
     }
 
     /// 无 Content-Type 的空响应（现状 share/generate 400 与 generate 404 的形状）。
     fn empty(status: u16) -> R {
-        R { status, ct: None, body: Bytes::new() }
+        R { status, ct: None, body: Bytes::new(), location: None }
+    }
+
+    fn redirect(location: &'static str) -> R {
+        R { status: 307, ct: None, body: Bytes::new(), location: Some(location) }
     }
 }
 
 /// UI 页与宠物图标（favicon + 页头 logo）：UI 内容的一部分，不设守卫。
-pub const UI: R = R { status: 200, ct: Some("text/html; charset=utf-8"), body: Bytes::from_static(crate::UI_HTML.as_bytes()) };
-pub const PET: R = R { status: 200, ct: Some("image/svg+xml"), body: Bytes::from_static(crate::PET_SVG.as_bytes()) };
+pub const UI: R = R { status: 200, ct: Some("text/html; charset=utf-8"), body: Bytes::from_static(crate::UI_HTML.as_bytes()), location: None };
+pub const PET: R = R { status: 200, ct: Some("image/svg+xml"), body: Bytes::from_static(crate::PET_SVG.as_bytes()), location: None };
+
+/// Vue 构建产物的请求级读取；`path` 是 `/apidoc/` 之后的部分。
+/// - API 命名空间不返回 SPA 壳（未知子路径保持 404 语义）；
+/// - 无扩展名的未知路径回退 `index.html`（UI 用 hash 路由，深链刷新不依赖后端）；
+/// - 带扩展名却缺失的资源宁可 404，避免把打包缺文件掩盖成一张 HTML。
+fn serve_static(root: &Path, path: &str) -> R {
+    let rel = path.trim_matches('/');
+    if rel.is_empty() {
+        return read_confined(root, "index.html");
+    }
+    let first = rel.split('/').next().unwrap_or("");
+    if matches!(
+        first,
+        "ui" | "debug" | "webhook" | "auth" | "api.json" | "export" | "mock" | "share" | "generate"
+    ) {
+        return R::empty(404);
+    }
+    match resolve_under(root, rel) {
+        Some(file) => read_file(&file),
+        None if !rel.rsplit('/').next().unwrap_or("").contains('.') => read_confined(root, "index.html"),
+        None => R::empty(404),
+    }
+}
+
+/// 把 URL 相对路径解析为 root 内的真实文件。
+/// 拒绝 `..`、反斜杠、NUL 与 `%`（框架已解码一次，残留 `%` 只可能来自双重编码），
+/// canonicalize 后再做组件前缀校验 —— 符号链接逃逸同样被拒。
+fn resolve_under(root: &Path, rel: &str) -> Option<PathBuf> {
+    let mut path = root.to_path_buf();
+    for seg in rel.split('/') {
+        if seg.is_empty() || seg == "." {
+            continue;
+        }
+        if seg == ".." || seg.contains(['\\', '%', '\0']) {
+            return None;
+        }
+        path.push(seg);
+    }
+    let canon = std::fs::canonicalize(&path).ok()?;
+    (canon.starts_with(root) && canon.is_file()).then_some(canon)
+}
+
+fn read_confined(root: &Path, rel: &str) -> R {
+    match resolve_under(root, rel) {
+        Some(file) => read_file(&file),
+        None => R::empty(404),
+    }
+}
+
+fn read_file(path: &Path) -> R {
+    match std::fs::read(path) {
+        Ok(bytes) => R::new(200, content_type(path), bytes),
+        Err(_) => R::empty(404),
+    }
+}
+
+fn content_type(path: &Path) -> &'static str {
+    match path.extension().and_then(|e| e.to_str()).unwrap_or("").to_ascii_lowercase().as_str() {
+        "html" | "htm" => "text/html; charset=utf-8",
+        "js" | "mjs" => "text/javascript; charset=utf-8",
+        "css" => "text/css; charset=utf-8",
+        "json" | "map" => "application/json",
+        "svg" => "image/svg+xml",
+        "png" => "image/png",
+        "jpg" | "jpeg" => "image/jpeg",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "ico" => "image/x-icon",
+        "woff2" => "font/woff2",
+        "woff" => "font/woff",
+        "ttf" => "font/ttf",
+        "otf" => "font/otf",
+        "wasm" => "application/wasm",
+        "webmanifest" => "application/manifest+json",
+        "txt" => "text/plain; charset=utf-8",
+        _ => "application/octet-stream",
+    }
+}
 
 /// CORS 策略（为 M4 在线调试跨域直连目标接口做准备）。
 ///
@@ -75,10 +161,32 @@ pub struct Core {
     apps: Vec<AppConfig>,
     /// P6 webhook 入站捕获：有界存储 + 未认证写入限流。
     webhooks: WebhookRegistry,
+    /// UIC-1 Phase 5：Vue 构建目录（构建期 canonicalize）。None = 内嵌原生 UI。
+    ui_root: Option<PathBuf>,
 }
 
 impl Core {
     pub fn build(config: ApidocConfig) -> Core {
+        // Vue 模式必须在构建期失败关闭：目录不存在 / 缺 index.html 时启动即报错，
+        // 不能等到第一个请求才 404。canonicalize 一次后所有请求都以它为根做前缀校验。
+        let ui_root = match config.ui {
+            UiMode::Native => None,
+            UiMode::Vue => {
+                let path = config.ui_path.as_deref().unwrap_or_else(|| {
+                    panic!("apidoc: ui = UiMode::Vue requires ui_path pointing at the packaged Vue UI build")
+                });
+                let root = std::fs::canonicalize(path).unwrap_or_else(|e| {
+                    panic!("apidoc: ui_path `{}` is not accessible: {e}", path.display())
+                });
+                assert!(root.is_dir(), "apidoc: ui_path `{}` is not a directory", root.display());
+                assert!(
+                    resolve_under(&root, "index.html").is_some(),
+                    "apidoc: ui_path `{}` has no index.html; point it at the apidoc-ui build (dist/uic1-ui contents)",
+                    root.display()
+                );
+                Some(root)
+            }
+        };
         let doc = DocRegistry::collect_doc(config);
         // 构建期序列化一次：ApiDoc 无 Clone（核心约束），且请求期不能借出捕获的
         // 自身引用 —— api.json / 三份导出全部预物化为 Bytes 是唯一干净解。
@@ -167,11 +275,35 @@ impl Core {
             debug_cfg,
             apps,
             webhooks,
+            ui_root,
         }
     }
 
     pub(crate) fn doc(&self) -> &ApiDoc {
         &self.doc
+    }
+
+    /// Vue 构建目录；None 时 `/apidoc` 继续走内嵌原生 UI。
+    pub(crate) fn ui_root(&self) -> Option<&Path> {
+        self.ui_root.as_deref()
+    }
+
+    /// `/apidoc` 的响应：Vue 模式重定向到 `/apidoc/`（构建产物用 `./assets/...`
+    /// 相对路径，缺尾斜杠会被解析到站点根），原生模式返回内嵌 UI。
+    pub(crate) fn ui_root_response(&self) -> R {
+        if self.ui_root.is_some() {
+            R::redirect("/apidoc/")
+        } else {
+            UI
+        }
+    }
+
+    /// `/apidoc/` 与 `/apidoc/<path>`：只从 ui_root 读取（未启用时 404）。
+    pub(crate) fn serve_ui(&self, path: &str) -> R {
+        match self.ui_root.as_deref() {
+            Some(root) => serve_static(root, path),
+            None => R::empty(404),
+        }
     }
 
     pub(crate) fn app_configs(&self) -> &[AppConfig] {

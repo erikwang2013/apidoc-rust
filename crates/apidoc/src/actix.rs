@@ -38,12 +38,13 @@ pub fn cors_layer(config: CorsConfig) -> Cors {
 pub fn apidoc_routes(config: ApidocConfig) -> Scope {
     // 构建期一次性物化全部文档产物（api.json/export/mock），请求期零重算。
     let core_inner = Arc::new(Core::build(config));
+    let vue_ui = core_inner.ui_root().is_some();
     let debug_limit = core_inner.debug_body_limit();
     let core = web::Data::new(core_inner);
     let scope = web::scope("/apidoc")
         .app_data(core)
         // UI 页与宠物图标不设守卫（见 route_core::UI/PET）。
-        .route("", web::get().to(|| async { response(route_core::UI) }))
+        .route("", web::get().to(ui_root))
         .route("/pet.svg", web::get().to(|| async { response(route_core::PET) }))
         // 登录用 POST：密码走 body，不进 URL/日志（GET 的 ?password= 已废弃）
         .route("/auth", web::post().to(auth))
@@ -103,7 +104,28 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
         .route("/ui/v1/exportAllData", web::post().to(ui_export_all_data));
     #[cfg(feature = "debug-session")]
     let scope = scope.route("/debug/stream", web::get().to(debug_stream));
-    scope
+    // UIC-1 Phase 5: Vue 静态 UI。只在 vue 模式注册；actix 按注册顺序匹配，
+    // catch-all 必须最后注册，已声明的 API 路由优先。
+    if vue_ui {
+        scope
+            .route("/", web::get().to(ui_index))
+            .route("/{path:.*}", web::get().to(ui_file))
+    } else {
+        scope
+    }
+}
+
+/// `/apidoc`：原生 UI，或 Vue 模式重定向到 `/apidoc/`（相对资源路径需要尾斜杠）。
+async fn ui_root(core: web::Data<Arc<Core>>) -> HttpResponse {
+    response(core.ui_root_response())
+}
+
+async fn ui_index(core: web::Data<Arc<Core>>) -> HttpResponse {
+    response(core.serve_ui(""))
+}
+
+async fn ui_file(core: web::Data<Arc<Core>>, path: web::Path<String>) -> HttpResponse {
+    response(core.serve_ui(&path))
 }
 
 fn bearer(req: &HttpRequest) -> String {
@@ -385,6 +407,9 @@ fn response(r: R) -> HttpResponse {
         HttpResponse::build(actix_web::http::StatusCode::from_u16(r.status).expect("valid status"));
     if let Some(ct) = r.ct {
         builder.content_type(ct);
+    }
+    if let Some(location) = r.location {
+        builder.insert_header(("Location", location));
     }
     // 这些响应里带着 /apidoc/auth 的凭据与 token，任何一层缓存都不该留存
     builder.insert_header(("Cache-Control", "no-store"));

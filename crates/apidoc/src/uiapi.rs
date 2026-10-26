@@ -54,6 +54,7 @@ fn response(value: Value) -> R {
         status: 200,
         ct: Some("application/json"),
         body: Bytes::from(value.to_string()),
+        location: None,
     }
 }
 
@@ -66,6 +67,7 @@ fn error(status: u16, code: i64, message: &str) -> R {
         status,
         ct: Some("application/json"),
         body: Bytes::from(json!({"code": code, "message": message}).to_string()),
+        location: None,
     }
 }
 

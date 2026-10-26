@@ -50,10 +50,11 @@ pub fn cors_layer(config: CorsConfig) -> CorsLayer {
 pub fn apidoc_routes(config: ApidocConfig) -> Router {
     // 构建期一次性物化全部文档产物（api.json/export/mock），请求期零重算。
     let core = Arc::new(Core::build(config));
+    let vue_ui = core.ui_root().is_some();
     let debug_limit = core.debug_body_limit();
     let router = Router::new()
         // UI 页与宠物图标不设守卫（见 route_core::UI/PET）。
-        .route("/apidoc", get(|| async { response(route_core::UI) }))
+        .route("/apidoc", get(ui_root))
         .route("/apidoc/pet.svg", get(|| async { response(route_core::PET) }))
         // 登录用 POST：密码走 body，不进 URL/日志（GET 的 ?password= 已废弃）
         .route("/apidoc/auth", post(auth))
@@ -111,7 +112,29 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
     // P2 长连接会话桥：仅在 feature 开启时注册。
     #[cfg(feature = "debug-session")]
     let router = router.route("/apidoc/debug/stream", get(debug_stream));
+    // UIC-1 Phase 5: Vue 静态 UI。只在 vue 模式注册，原生模式路由表保持原样；
+    // matchit 静态路径优先于 `{*path}`，所以 API 路由始终先命中。
+    let router = if vue_ui {
+        router
+            .route("/apidoc/", get(ui_index))
+            .route("/apidoc/{*path}", get(ui_file))
+    } else {
+        router
+    };
     router.with_state(core)
+}
+
+/// `/apidoc`：原生 UI，或 Vue 模式重定向到 `/apidoc/`（相对资源路径需要尾斜杠）。
+async fn ui_root(State(core): State<Arc<Core>>) -> Response {
+    response(core.ui_root_response())
+}
+
+async fn ui_index(State(core): State<Arc<Core>>) -> Response {
+    response(core.serve_ui(""))
+}
+
+async fn ui_file(State(core): State<Arc<Core>>, Path(path): Path<String>) -> Response {
+    response(core.serve_ui(&path))
 }
 
 fn bearer(headers: &HeaderMap) -> String {
@@ -374,6 +397,9 @@ fn response(r: R) -> Response {
     *res.status_mut() = StatusCode::from_u16(r.status).expect("valid status");
     if let Some(ct) = r.ct {
         res.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static(ct));
+    }
+    if let Some(location) = r.location {
+        res.headers_mut().insert(header::LOCATION, HeaderValue::from_static(location));
     }
     // 这些响应里带着 /apidoc/auth 的凭据与 token，任何一层缓存都不该留存
     res.headers_mut().insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));

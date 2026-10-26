@@ -428,6 +428,27 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 Script errors are only reported in the debug result area and never abort the request (a failing pre-script still sends the request, a failing post-script still shows the raw response).
 
+### 13. UI: Native / Vue Static Build (UIC-1 Phase 5)
+
+By default `/apidoc` serves the embedded native UI (`UiMode::Native`), so existing deployments need no changes. To serve the same Vue build used by apidoc-ui (shared across PHP/Go/Rust, see `npm run package:ui`):
+
+```rust
+use apidoc::{ApidocConfig, UiMode};
+
+let cfg = ApidocConfig {
+    title: "My API".into(),
+    ui: UiMode::Vue,
+    ui_path: Some("/srv/apidoc".into()), // contents of dist/uic1-ui/: index.html + config.js + assets/
+    ..Default::default()
+};
+```
+
+- Release packages default to Vue: `ApidocConfig::release("My API", "/srv/apidoc")` is equivalent to the explicit config above; **the library default stays `native`**.
+- In Vue mode `GET /apidoc` returns a 307 redirect to `/apidoc/` (the build uses relative `./assets/...` URLs), `/apidoc/`, `config.js` and `assets/*` are read from `ui_path`, and extension-less unknown paths fall back to `index.html` (SPA fallback).
+- API routes keep priority: `/apidoc/api.json`, `/apidoc/export`, `/apidoc/ui/v1/*`, auth, debug and webhook routes still match before static files; unknown API subpaths return 404 instead of the SPA shell.
+- Security: paths are confined to `ui_path`; `..`, encoding bypasses and symlink escapes return 404, directories are never listed, and a missing `ui_path` / `index.html` fails at startup (fail closed). `ui` / `ui_path` are server-only and never serialized into api.json.
+- Rollback: set `ui: UiMode::Native` and restart; the native UI and all legacy routes are unchanged.
+
 ## Roadmap
 
 | Phase | Content | Status |
@@ -441,6 +462,7 @@ Script errors are only reported in the debug result area and never abort the req
 | M6a | password authentication (HMAC-SHA256 signed token + password overlay, app password takes precedence) | ✅ Done |
 | M6b | multi-app multi-version (apps config tree + app annotation + UI selector) | ✅ Done |
 | v2 | data-table field references + documentation caching + share links + code generator + debug events | ✅ Done |
+| UIC-1 Phase 5 | Vue static UI (`ui` / `ui_path`; release packages default to Vue, native UI kept) | ✅ Done |
 
 ## Multilingual Documentation
 
