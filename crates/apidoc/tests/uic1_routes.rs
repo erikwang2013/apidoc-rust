@@ -210,17 +210,17 @@ async fn native_debug_requires_global_token() {
     assert_eq!(status, StatusCode::FORBIDDEN);
 }
 
-// M2: shareKey 在 Phase 1 未实现，必须明确 501，而不是静默签发普通令牌。
+// 未知分享必须 404，不能回落到全局密码悄悄签发普通令牌。
 #[tokio::test]
-async fn verify_auth_rejects_share_key_with_501() {
+async fn verify_auth_rejects_unknown_share_key() {
     let (status, body) = send(
         &app(),
         "POST",
         "/apidoc/ui/v1/verifyAuth",
-        r#"{"password":"pw","shareKey":"share-1"}"#,
+        r#"{"password":"pw","shareKey":"no-such-share"}"#,
         "",
     )
     .await;
-    assert_eq!(status, StatusCode::NOT_IMPLEMENTED);
-    assert_eq!(body["code"], 501);
+    assert_eq!(status, StatusCode::NOT_FOUND);
+    assert_eq!(body["code"], 404);
 }

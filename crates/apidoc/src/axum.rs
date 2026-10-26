@@ -92,7 +92,22 @@ pub fn apidoc_routes(config: ApidocConfig) -> Router {
         .route("/apidoc/ui/v1/debugSend", post(ui_debug_send))
         .route("/apidoc/ui/v1/debugStart", post(ui_debug_start))
         .route("/apidoc/ui/v1/debugPoll", post(ui_debug_poll))
-        .route("/apidoc/ui/v1/debugStop", post(ui_debug_stop));
+        .route("/apidoc/ui/v1/debugStop", post(ui_debug_stop))
+        .route("/apidoc/ui/v1/addApiShare", post(ui_add_api_share))
+        .route("/apidoc/ui/v1/getApiShareList", post(ui_get_api_share_list))
+        .route(
+            "/apidoc/ui/v1/getApiShareDetail",
+            post(ui_get_api_share_detail),
+        )
+        .route("/apidoc/ui/v1/deleteApiShare", post(ui_delete_api_share))
+        .route(
+            "/apidoc/ui/v1/handleApiShareAction",
+            post(ui_handle_api_share_action),
+        )
+        .route("/apidoc/ui/v1/cache/clear", post(ui_cache_clear))
+        .route("/apidoc/ui/v1/cache/warm", post(ui_cache_warm))
+        .route("/apidoc/ui/v1/renderCodeTemplate", post(ui_render_code_template))
+        .route("/apidoc/ui/v1/exportAllData", post(ui_export_all_data));
     // P2 长连接会话桥：仅在 feature 开启时注册。
     #[cfg(feature = "debug-session")]
     let router = router.route("/apidoc/debug/stream", get(debug_stream));
@@ -172,6 +187,70 @@ async fn ui_debug_poll(State(core): State<Arc<Core>>, headers: HeaderMap, body: 
 
 async fn ui_debug_stop(State(core): State<Arc<Core>>, headers: HeaderMap, body: Bytes) -> Response {
     response(crate::uiapi::debug_stop(&core, &body, &bearer(&headers)).await)
+}
+
+async fn ui_add_api_share(
+    State(core): State<Arc<Core>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    response(crate::uiapi::add_api_share(&core, &body, &bearer(&headers)))
+}
+
+async fn ui_get_api_share_list(
+    State(core): State<Arc<Core>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    response(crate::uiapi::get_api_share_list(&core, &body, &bearer(&headers)))
+}
+
+async fn ui_get_api_share_detail(
+    State(core): State<Arc<Core>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    response(crate::uiapi::get_api_share_detail(&core, &body, &bearer(&headers)))
+}
+
+async fn ui_delete_api_share(
+    State(core): State<Arc<Core>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    response(crate::uiapi::delete_api_share(&core, &body, &bearer(&headers)))
+}
+
+async fn ui_handle_api_share_action(
+    State(core): State<Arc<Core>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    response(crate::uiapi::handle_api_share_action(&core, &body, &bearer(&headers)))
+}
+
+async fn ui_cache_clear(State(core): State<Arc<Core>>, headers: HeaderMap) -> Response {
+    response(crate::uiapi::cache_manage(&core, &bearer(&headers)))
+}
+
+async fn ui_cache_warm(State(core): State<Arc<Core>>, headers: HeaderMap) -> Response {
+    response(crate::uiapi::cache_manage(&core, &bearer(&headers)))
+}
+
+async fn ui_render_code_template(
+    State(core): State<Arc<Core>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    response(crate::uiapi::render_code_template(&core, &body, &bearer(&headers)))
+}
+
+async fn ui_export_all_data(
+    State(core): State<Arc<Core>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Response {
+    response(crate::uiapi::export_all_data(&core, &body, &bearer(&headers)))
 }
 
 // 各 handler 一行转发 core：判定与渲染在 route_core（两框架共享同一实现）。

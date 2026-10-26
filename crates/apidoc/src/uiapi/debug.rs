@@ -14,7 +14,7 @@ use crate::route_core::{Core, R};
 #[cfg(feature = "debug-http")]
 use crate::DocEndpoint;
 
-use super::{body_json, endpoint_app_key, error, find_endpoint, guard, ok, unauthorized};
+use super::{body_json, endpoint_app_key, error, find_endpoint, ok};
 
 /// 客户端输入。注意没有 `target`：转发目标只能来自服务端端点配置
 /// （`protocol_opts["target"]` 或 `ep.url`），客户端不可改 host/port。
@@ -33,6 +33,8 @@ struct UiDebugInput {
 struct UiDebugBody {
     #[serde(rename = "appKey", default)]
     app_key: String,
+    #[serde(rename = "shareKey", default)]
+    share_key: String,
     #[serde(default)]
     path: String,
     #[serde(default)]
@@ -45,6 +47,36 @@ struct SessionBody {
     session_id: String,
     #[serde(rename = "appKey", default)]
     app_key: String,
+    #[serde(rename = "shareKey", default)]
+    share_key: String,
+}
+
+/// 单条客户端消息上限（与契约 §5.5 的 1 MiB 一致）。
+const MAX_MESSAGE_BYTES: usize = 1_048_576;
+
+fn payload_too_large(input: &UiDebugInput) -> bool {
+    input
+        .payload
+        .as_ref()
+        .is_some_and(|payload| payload.len() > MAX_MESSAGE_BYTES)
+}
+
+/// 分享请求的端点级校验：分享必须覆盖该端点；无 shareKey 时走普通 app/global 守卫。
+fn check_scope(
+    core: &Core,
+    token: &str,
+    app_key: &str,
+    path: &str,
+    body: &UiDebugBody,
+) -> Result<(), R> {
+    let share = super::access(core, token, app_key, &body.share_key)?;
+    if share
+        .as_ref()
+        .is_some_and(|record| !record.api_allowed(app_key, path))
+    {
+        return Err(error(404, 404, "action not found"));
+    }
+    Ok(())
 }
 
 fn normalize_encoding(value: &str) -> &'static str {
@@ -126,8 +158,11 @@ pub async fn debug_send(core: &Core, body: &[u8], token: &str) -> R {
     if !input.app_key.is_empty() && input.app_key != app_key {
         return error(404, 404, "action not found");
     }
-    if !guard(core, token, app_key) {
-        return unauthorized();
+    if let Err(res) = check_scope(core, token, app_key, &input.path, &input) {
+        return res;
+    }
+    if payload_too_large(&input.input) {
+        return error(413, 413, "message too large");
     }
     #[cfg(feature = "debug-http")]
     {
@@ -163,12 +198,66 @@ pub async fn debug_send(core: &Core, body: &[u8], token: &str) -> R {
 }
 
 #[cfg(feature = "debug-session")]
+const MAX_SESSIONS: usize = 4;
+#[cfg(feature = "debug-session")]
+const SESSION_TTL: std::time::Duration = std::time::Duration::from_secs(60);
+/// 每个会话最多回传给客户端的消息条数（对齐原生流会话的 MAX_FRAMES）。
+#[cfg(feature = "debug-session")]
+const FRAME_CAP: usize = 1000;
+
+#[cfg(feature = "debug-session")]
 struct Session {
     rx: tokio::sync::mpsc::Receiver<String>,
     handle: Option<Box<dyn crate::debug::session::StreamSession>>,
+    /// 最近一次 start/poll 时刻；超过 TTL 没有轮询即回收。
     created: std::time::Instant,
     /// 创建会话的端点所属应用；poll/stop 只认这个作用域，不认客户端 appKey。
     app_key: String,
+    /// 创建会话的分享作用域（空 = 普通应用/全局会话）；poll/stop 必须匹配。
+    share_key: String,
+    /// 已回传的消息数；达到 FRAME_CAP 即关闭会话。
+    frames: usize,
+}
+
+#[cfg(feature = "debug-session")]
+fn purge_expired(
+    all: &mut std::collections::HashMap<String, Session>,
+    now: std::time::Instant,
+) {
+    // shortcut: 过期会话直接 drop，不优雅 close；执行器会话在 drop 时释放上游连接。
+    // `created` 在每次 poll 刷新，所以 TTL 是"空闲"而非"总时长"。
+    all.retain(|_, session| now.duration_since(session.created) <= SESSION_TTL);
+}
+
+#[cfg(feature = "debug-session")]
+fn can_start(all: &std::collections::HashMap<String, Session>) -> bool {
+    all.len() < MAX_SESSIONS
+}
+
+/// 会话作用域的鉴权：分享会话只认同一分享的令牌；普通会话走 app/global 守卫。
+#[cfg(feature = "debug-session")]
+fn session_auth_ok(
+    core: &Core,
+    token: &str,
+    app_key: &str,
+    session_share_key: &str,
+    client_share_key: &str,
+) -> Result<(), R> {
+    if session_share_key.is_empty() {
+        return if super::guard(core, token, app_key) {
+            Ok(())
+        } else {
+            Err(super::unauthorized())
+        };
+    }
+    if client_share_key != session_share_key {
+        return Err(super::unauthorized());
+    }
+    match super::share_scope(core, token, session_share_key) {
+        Ok(Some(_)) => Ok(()),
+        Ok(None) => Err(super::unauthorized()),
+        Err(res) => Err(res),
+    }
 }
 
 #[cfg(feature = "debug-session")]
@@ -198,8 +287,11 @@ pub async fn debug_start(core: &Core, body: &[u8], token: &str) -> R {
     if !input.app_key.is_empty() && input.app_key != app_key {
         return error(404, 404, "action not found");
     }
-    if !guard(core, token, app_key) {
-        return unauthorized();
+    if let Err(res) = check_scope(core, token, app_key, &input.path, &input) {
+        return res;
+    }
+    if payload_too_large(&input.input) {
+        return error(413, 413, "message too large");
     }
     #[cfg(all(feature = "debug-http", feature = "debug-session"))]
     {
@@ -209,15 +301,24 @@ pub async fn debug_start(core: &Core, body: &[u8], token: &str) -> R {
         let request = build_request(ep, &input.input);
         let (tx, rx) = tokio::sync::mpsc::channel::<String>(32);
         match crate::debug::stream_dispatch(cfg, &request, Some(ep), tx).await {
-            Ok(handle) => {
+            Ok(mut handle) => {
                 let id = session_id();
-                sessions().lock().await.insert(
+                let mut all = sessions().lock().await;
+                purge_expired(&mut all, std::time::Instant::now());
+                if !can_start(&all) {
+                    drop(all);
+                    handle.close().await;
+                    return ok(json!({"ok": false, "error": "too many active sessions"}));
+                }
+                all.insert(
                     id.clone(),
                     Session {
                         rx,
                         handle: Some(handle),
                         created: std::time::Instant::now(),
                         app_key: app_key.to_string(),
+                        share_key: input.share_key.clone(),
+                        frames: 0,
                     },
                 );
                 ok(json!({"ok": true, "sessionId": id}))
@@ -240,63 +341,78 @@ pub async fn debug_poll(core: &Core, body: &[u8], token: &str) -> R {
     };
     #[cfg(feature = "debug-session")]
     {
-        // 作用域取会话创建时记录的 appKey；客户端 appKey 只在会话不存在时兜底。
-        let (app_key, alive) = {
+        // 作用域取会话创建时记录的 app/share 作用域；客户端字段只在会话不存在时兜底。
+        let (app_key, share_key, alive) = {
             let mut all = sessions().lock().await;
-            if all
-                .get(&input.session_id)
-                .is_none_or(|session| session.created.elapsed().as_secs() > 60)
-            {
-                all.remove(&input.session_id);
-                (input.app_key.clone(), false)
-            } else {
-                let app_key = all
-                    .get(&input.session_id)
-                    .map(|session| session.app_key.clone())
-                    .unwrap_or_else(|| input.app_key.clone());
-                (app_key, true)
+            purge_expired(&mut all, std::time::Instant::now());
+            match all.get(&input.session_id) {
+                Some(session) => (
+                    session.app_key.clone(),
+                    session.share_key.clone(),
+                    true,
+                ),
+                None => (input.app_key.clone(), input.share_key.clone(), false),
             }
         };
-        if !guard(core, token, &app_key) {
-            return unauthorized();
+        if let Err(res) = session_auth_ok(core, token, &app_key, &share_key, &input.share_key) {
+            return res;
         }
         if !alive {
             return ok(json!({"ok": false, "error": "session not found or expired"}));
         }
-        let mut all = sessions().lock().await;
-        let Some(session) = all.get_mut(&input.session_id) else {
-            return ok(json!({"ok": false, "error": "session not found or expired"}));
-        };
-        let mut messages = Vec::new();
-        while messages.len() < 100 {
-            let Ok(text) = session.rx.try_recv() else {
-                break;
+        let (mut messages, handle, reached) = {
+            let mut all = sessions().lock().await;
+            let Some(session) = all.get_mut(&input.session_id) else {
+                return ok(json!({"ok": false, "error": "session not found or expired"}));
             };
-            let Ok(value) = serde_json::from_str::<Value>(&text) else {
-                messages.push(json!({"type": "frame", "body": text, "encoding": "text"}));
-                continue;
-            };
-            match value["type"].as_str().unwrap_or("") {
-                "frame" => {
-                    let time = value["ts"].as_u64().map(|n| n.to_string()).unwrap_or_default();
-                    messages.push(json!({
-                        "time": time,
-                        "type": "frame",
-                        "body": value["data"].as_str().unwrap_or(""),
-                        "encoding": normalize_encoding(value["encoding"].as_str().unwrap_or("utf8")),
-                    }));
+            // 活跃会话不断续期：TTL 只回收没人轮询的会话。
+            session.created = std::time::Instant::now();
+            let budget = FRAME_CAP.saturating_sub(session.frames);
+            let mut messages = Vec::new();
+            while messages.len() < 100 && messages.len() < budget {
+                let Ok(text) = session.rx.try_recv() else {
+                    break;
+                };
+                let Ok(value) = serde_json::from_str::<Value>(&text) else {
+                    messages.push(json!({"type": "frame", "body": text, "encoding": "text"}));
+                    continue;
+                };
+                match value["type"].as_str().unwrap_or("") {
+                    "frame" => {
+                        let time = value["ts"].as_u64().map(|n| n.to_string()).unwrap_or_default();
+                        messages.push(json!({
+                            "time": time,
+                            "type": "frame",
+                            "body": value["data"].as_str().unwrap_or(""),
+                            "encoding": normalize_encoding(value["encoding"].as_str().unwrap_or("utf8")),
+                        }));
+                    }
+                    "error" => messages.push(json!({"type": "error", "body": value["error"]})),
+                    "close" => messages.push(json!({"type": "close", "body": value["reason"]})),
+                    _ => {}
                 }
-                "error" => messages.push(json!({"type": "error", "body": value["error"]})),
-                "close" => messages.push(json!({"type": "close", "body": value["reason"]})),
-                _ => {}
             }
+            session.frames += messages.len();
+            let reached = session.frames >= FRAME_CAP;
+            let handle = if reached {
+                all.remove(&input.session_id).and_then(|mut session| session.handle.take())
+            } else {
+                None
+            };
+            (messages, handle, reached)
+        };
+        if let Some(mut handle) = handle {
+            handle.close().await;
+        }
+        if reached {
+            messages.push(json!({"type": "error", "body": "max_frames reached"}));
         }
         ok(json!({"ok": true, "messages": messages}))
     }
     #[cfg(not(feature = "debug-session"))]
     {
-        if !guard(core, token, &input.app_key) {
-            return unauthorized();
+        if let Err(res) = super::access(core, token, &input.app_key, &input.share_key) {
+            return res;
         }
         ok(
             json!({"ok": false, "error": "streaming debug is not compiled in (enable feature `debug-session`)"}),
@@ -310,15 +426,15 @@ pub async fn debug_stop(core: &Core, body: &[u8], token: &str) -> R {
     };
     #[cfg(feature = "debug-session")]
     {
-        // 同 poll：已有会话按创建者的 appKey 鉴权，避免跨应用停别人的会话。
-        let app_key = sessions()
+        // 同 poll：已有会话按创建者的 app/share 作用域鉴权，避免跨应用停别人的会话。
+        let (app_key, share_key) = sessions()
             .lock()
             .await
             .get(&input.session_id)
-            .map(|session| session.app_key.clone())
-            .unwrap_or_else(|| input.app_key.clone());
-        if !guard(core, token, &app_key) {
-            return unauthorized();
+            .map(|session| (session.app_key.clone(), session.share_key.clone()))
+            .unwrap_or_else(|| (input.app_key.clone(), input.share_key.clone()));
+        if let Err(res) = session_auth_ok(core, token, &app_key, &share_key, &input.share_key) {
+            return res;
         }
         let session = sessions().lock().await.remove(&input.session_id);
         if let Some(mut session) = session {
@@ -330,8 +446,8 @@ pub async fn debug_stop(core: &Core, body: &[u8], token: &str) -> R {
     }
     #[cfg(not(feature = "debug-session"))]
     {
-        if !guard(core, token, &input.app_key) {
-            return unauthorized();
+        if let Err(res) = super::access(core, token, &input.app_key, &input.share_key) {
+            return res;
         }
         ok(
             json!({"ok": false, "error": "streaming debug is not compiled in (enable feature `debug-session`)"}),
@@ -435,8 +551,16 @@ mod session_scope_tests {
     }
 
     async fn insert_session(id: &str, app_key: &str) {
-        let (tx, rx) = tokio::sync::mpsc::channel(1);
-        drop(tx);
+        insert_session_with(id, app_key, "", 1).await;
+    }
+
+    async fn insert_session_with(
+        id: &str,
+        app_key: &str,
+        share_key: &str,
+        capacity: usize,
+    ) -> tokio::sync::mpsc::Sender<String> {
+        let (tx, rx) = tokio::sync::mpsc::channel(capacity);
         sessions().lock().await.insert(
             id.to_string(),
             Session {
@@ -444,8 +568,11 @@ mod session_scope_tests {
                 handle: None,
                 created: std::time::Instant::now(),
                 app_key: app_key.to_string(),
+                share_key: share_key.to_string(),
+                frames: 0,
             },
         );
+        tx
     }
 
     // I1: poll/stop 必须按会话创建时的 appKey 鉴权，客户端 appKey 不作数。
@@ -473,5 +600,103 @@ mod session_scope_tests {
         let res = debug_stop(&core, body.as_bytes(), &token_a).await;
         assert_eq!(res.status, 200);
         assert!(!sessions().lock().await.contains_key(id));
+    }
+
+    fn dummy_session(created: std::time::Instant) -> Session {
+        let (_tx, rx) = tokio::sync::mpsc::channel(1);
+        Session {
+            rx,
+            handle: None,
+            created,
+            app_key: String::new(),
+            share_key: String::new(),
+            frames: 0,
+        }
+    }
+
+    // M1: 启动/轮询时清掉过期会话，并把并发会话数硬顶在 MAX_SESSIONS。
+    #[test]
+    fn purges_expired_sessions_and_caps_total() {
+        let now = std::time::Instant::now();
+        let mut all = std::collections::HashMap::new();
+        all.insert(
+            "old".to_string(),
+            dummy_session(now - SESSION_TTL - std::time::Duration::from_secs(1)),
+        );
+        all.insert("fresh".to_string(), dummy_session(now));
+        purge_expired(&mut all, now);
+        assert!(!all.contains_key("old"), "expired session must be purged");
+        assert!(all.contains_key("fresh"));
+        all.clear();
+
+        for index in 0..MAX_SESSIONS {
+            all.insert(format!("s{index}"), dummy_session(now));
+        }
+        assert!(!can_start(&all), "cap is {MAX_SESSIONS}");
+        all.remove("s0");
+        assert!(can_start(&all));
+    }
+
+    // M1: 每会话最多 1000 条；到达后会话关闭并回报错误。
+    #[tokio::test]
+    async fn poll_caps_frames_and_drops_session() {
+        let core = Core::build(ApidocConfig::default());
+        let id = "test-frame-cap";
+        let tx = insert_session_with(id, "", "", 1500).await;
+        for _ in 0..1500 {
+            tx.send(r#"{"type":"frame","data":"x"}"#.to_string())
+                .await
+                .unwrap();
+        }
+        drop(tx);
+        let body = json!({"sessionId": id}).to_string();
+        let mut frames = 0;
+        let mut capped = false;
+        for _ in 0..12 {
+            let res = debug_poll(&core, body.as_bytes(), "").await;
+            assert_eq!(res.status, 200);
+            let value: Value = serde_json::from_slice(&res.body).unwrap();
+            if value["data"]["ok"] == false {
+                break;
+            }
+            for message in value["data"]["messages"].as_array().unwrap() {
+                if message["type"] == "frame" {
+                    frames += 1;
+                }
+                if message["body"] == "max_frames reached" {
+                    capped = true;
+                }
+            }
+        }
+        assert_eq!(frames, FRAME_CAP, "delivered frames must stop at the cap");
+        assert!(capped, "cap must be reported to the client");
+        assert!(!sessions().lock().await.contains_key(id));
+    }
+
+    // M1: 1 MiB 上限只拒绝超出，不误伤恰好 1 MiB。
+    #[test]
+    fn rejects_messages_over_one_mib() {
+        let input = |len: usize| UiDebugInput {
+            payload: Some("x".repeat(len)),
+            ..Default::default()
+        };
+        assert!(!payload_too_large(&input(MAX_MESSAGE_BYTES)));
+        assert!(payload_too_large(&input(MAX_MESSAGE_BYTES + 1)));
+        assert!(!payload_too_large(&UiDebugInput::default()));
+    }
+
+    // 分享会话不能靠客户端谎报 appKey：shareKey 必须与会话创建时一致。
+    #[tokio::test]
+    async fn share_session_requires_matching_share_key() {
+        let core = Core::build(ApidocConfig::default());
+        let id = "test-share-session";
+        insert_session_with(id, "", "no-such-share-uic1-test", 1).await;
+        let mismatch = json!({"sessionId": id}).to_string();
+        let res = debug_poll(&core, mismatch.as_bytes(), "").await;
+        assert_eq!(res.status, 401, "missing shareKey must be rejected");
+        let missing = json!({"sessionId": id, "shareKey": "no-such-share-uic1-test"}).to_string();
+        let res = debug_poll(&core, missing.as_bytes(), "").await;
+        assert_eq!(res.status, 404, "unknown share record must be rejected");
+        sessions().lock().await.remove(id);
     }
 }

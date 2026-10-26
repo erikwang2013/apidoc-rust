@@ -4,6 +4,7 @@
 //! it does not change `api.json`, the native UI, or any executor semantics.
 
 mod debug;
+mod share;
 
 use std::collections::{BTreeMap, HashMap};
 
@@ -22,12 +23,16 @@ const CONTRACT: &str = "1.0";
 struct ScopeBody {
     #[serde(rename = "appKey", default)]
     app_key: String,
+    #[serde(rename = "shareKey", default)]
+    share_key: String,
 }
 
 #[derive(Deserialize)]
 struct DetailBody {
     #[serde(rename = "appKey", default)]
     app_key: String,
+    #[serde(rename = "shareKey", default)]
+    share_key: String,
     #[serde(default)]
     path: String,
 }
@@ -36,6 +41,8 @@ struct DetailBody {
 struct DocDetailBody {
     #[serde(rename = "appKey", default)]
     app_key: String,
+    #[serde(rename = "shareKey", default)]
+    share_key: String,
     #[serde(default)]
     path: String,
 }
@@ -85,6 +92,45 @@ fn guard(core: &Core, token: &str, app_key: &str) -> bool {
         q.insert("appKey".to_string(), app_key.to_string());
     }
     core.guard(&q)
+}
+
+fn share_error(e: share::Error) -> R {
+    match e {
+        share::Error::NotFound => error(404, 404, "share not found"),
+        share::Error::Invalid(message) => error(400, 400, message),
+        share::Error::Store => error(500, 500, "share store error"),
+    }
+}
+
+/// Resolve a shareKey into its record. `Ok(None)` = no shareKey, normal auth
+/// applies. A password-protected share requires its own token; a public share
+/// needs none (the shareKey itself is the capability).
+fn share_scope(core: &Core, token: &str, share_key: &str) -> Result<Option<share::Record>, R> {
+    if share_key.is_empty() {
+        return Ok(None);
+    }
+    let record = share::find(share_key).map_err(share_error)?;
+    let default = crate_auth::AuthConfig::default();
+    let cfg = core.auth_config().unwrap_or(&default);
+    if !record.password_hash.is_empty() && !share::check_token(&record, token, cfg) {
+        return Err(unauthorized());
+    }
+    Ok(Some(record))
+}
+
+/// Share scope when `shareKey` is present, otherwise the ordinary app/global
+/// guard. A share token never passes the guard and vice versa.
+fn access(
+    core: &Core,
+    token: &str,
+    app_key: &str,
+    share_key: &str,
+) -> Result<Option<share::Record>, R> {
+    let record = share_scope(core, token, share_key)?;
+    if record.is_none() && !guard(core, token, app_key) {
+        return Err(unauthorized());
+    }
+    Ok(record)
 }
 
 /// 每应用对外 host：`APIDOC_PUBLIC_HOSTS` 为 JSON 对象 `{appKey: host}`，
@@ -241,14 +287,14 @@ fn capabilities_data(core: &Core) -> Value {
                 "relay": relay_protocols(),
                 "modes": ["browser-http", "browser-websocket", "browser-sse", "relay-unary", "relay-stream"],
             },
-            "share": {"link": true, "records": false, "actions": false},
-            "cache": {"manage": false, "mode": "build"},
+            "share": {"link": true, "records": true, "actions": true},
+            "cache": {"manage": true, "mode": "build"},
             "generator": {"forms": false, "templates": true, "sideEffects": false},
-            "exports": [],
+            "exports": ["md", "pdf", "openapi", "postman", "asyncapi", "typescript"],
             "auth": {
                 "global": global_auth,
                 "app": app_auth,
-                "shareToken": false,
+                "shareToken": true,
             },
         },
     })
@@ -260,45 +306,91 @@ pub fn capabilities(core: &Core) -> R {
 
 pub fn config(core: &Core, q: &HashMap<String, String>, token: &str) -> R {
     let app_key = q.get("appKey").map(String::as_str).unwrap_or("");
-    if !guard(core, token, app_key) {
-        return unauthorized();
-    }
+    let share_key = q.get("shareKey").map(String::as_str).unwrap_or("");
+    let share = match access(core, token, app_key, share_key) {
+        Ok(share) => share,
+        Err(res) => return res,
+    };
     let hosts = public_hosts();
     let fallback = public_host();
     let apps = flatten_apps(core)
         .iter()
+        .filter(|leaf| share.as_ref().is_none_or(|s| s.app_allowed(&leaf.key)))
         .map(|leaf| app_leaf_json(leaf, &hosts, &fallback))
         .collect::<Vec<_>>();
     ok(json!({
         "title": core.doc().config.title,
         "desc": core.doc().config.description.clone().unwrap_or_default(),
         "apps": apps,
-        "cache": {"enable": false},
+        "cache": {"enable": true},
         "params": {"header": [], "query": [], "body": []},
         "responses": {"success": [], "error": []},
         "generator": [],
-        "code_template": [],
-        "share": {"enable": false},
-        "export_config": {"enable": false},
+        "code_template": code_templates(core),
+        "share": {"enable": true},
+        "export_config": {"enable": true},
         "capabilities": capabilities_data(core),
     }))
+}
+
+/// `config.codegen` 模板即声明式代码模板：`template` 是模板名，渲染时回查同一份配置。
+fn code_templates(core: &Core) -> Vec<Value> {
+    core.doc()
+        .config
+        .codegen
+        .iter()
+        .map(|t| {
+            json!({
+                "title": t.name,
+                "template": t.name,
+                "select_mode": "api",
+                "multiple": true,
+                "form": {"items": []},
+                "language": language_for(&t.name),
+            })
+        })
+        .collect()
+}
+
+fn language_for(name: &str) -> &'static str {
+    match name.rsplit('.').next().unwrap_or("") {
+        "ts" | "tsx" => "typescript",
+        "js" | "jsx" => "javascript",
+        "rs" => "rust",
+        "go" => "go",
+        "java" => "java",
+        "php" => "php",
+        "py" => "python",
+        "sql" => "sql",
+        "json" => "json",
+        "yaml" | "yml" => "yaml",
+        _ => "text",
+    }
 }
 
 pub fn menus(core: &Core, body: &[u8], token: &str) -> R {
     let Some(scope) = body_json::<ScopeBody>(body) else {
         return error(400, 400, "invalid body");
     };
-    if !guard(core, token, &scope.app_key) {
-        return unauthorized();
-    }
-    let apps = flatten_apps(core);
+    let share = match access(core, token, &scope.app_key, &scope.share_key) {
+        Ok(share) => share,
+        Err(res) => return res,
+    };
+    let apps: Vec<AppLeaf<'_>> = flatten_apps(core)
+        .into_iter()
+        .filter(|leaf| share.as_ref().is_none_or(|s| s.app_allowed(&leaf.key)))
+        .collect();
     let Some(leaf) = pick_app(&apps, &scope.app_key) else {
         return error(404, 404, "app not found");
     };
     let hosts = public_hosts();
     let fallback = public_host();
     let mut groups: BTreeMap<String, Vec<&DocEndpoint>> = BTreeMap::new();
-    for ep in leaf.endpoints {
+    for ep in leaf.endpoints.iter().filter(|ep| {
+        share
+            .as_ref()
+            .is_none_or(|s| s.api_allowed(&leaf.key, &endpoint_id(ep)))
+    }) {
         let group = if ep.group.is_empty() {
             "default"
         } else {
@@ -365,8 +457,15 @@ pub fn detail(core: &Core, body: &[u8], token: &str) -> R {
     if !input.app_key.is_empty() && input.app_key != app_key {
         return error(404, 404, "action not found");
     }
-    if !guard(core, token, app_key) {
-        return unauthorized();
+    let share = match access(core, token, app_key, &input.share_key) {
+        Ok(share) => share,
+        Err(res) => return res,
+    };
+    if share
+        .as_ref()
+        .is_some_and(|s| !s.api_allowed(app_key, &input.path))
+    {
+        return error(404, 404, "action not found");
     }
     ok(detail_data(core, ep, app_key))
 }
@@ -611,22 +710,32 @@ fn definitions(ep: &DocEndpoint) -> Vec<Value> {
 
 pub fn doc_menus(core: &Core, q: &HashMap<String, String>, token: &str) -> R {
     let app_key = q.get("appKey").map(String::as_str).unwrap_or("");
-    if !guard(core, token, app_key) {
-        return unauthorized();
+    let share_key = q.get("shareKey").map(String::as_str).unwrap_or("");
+    let share = match access(core, token, app_key, share_key) {
+        Ok(share) => share,
+        Err(res) => return res,
+    };
+    if share
+        .as_ref()
+        .is_some_and(|s| !app_key.is_empty() && !s.app_allowed(app_key))
+    {
+        return error(404, 404, "app not found");
     }
     let apps = flatten_apps(core);
-    let leaves: Vec<&AppLeaf<'_>> = if app_key.is_empty() {
-        apps.iter().collect()
-    } else {
-        apps.iter().filter(|leaf| leaf.key == app_key).collect()
-    };
+    let leaves: Vec<&AppLeaf<'_>> = apps
+        .iter()
+        .filter(|leaf| app_key.is_empty() || leaf.key == app_key)
+        .filter(|leaf| share.as_ref().is_none_or(|s| s.app_allowed(&leaf.key)))
+        .collect();
     let mut out = Vec::new();
     for leaf in leaves {
         let mut groups: BTreeMap<String, Vec<&DocEndpoint>> = BTreeMap::new();
-        for ep in leaf.endpoints {
-            if ep.md.is_empty() {
-                continue;
-            }
+        for ep in leaf.endpoints.iter().filter(|ep| {
+            !ep.md.is_empty()
+                && share
+                    .as_ref()
+                    .is_none_or(|s| s.api_allowed(&leaf.key, &endpoint_id(ep)))
+        }) {
             let group = if ep.group.is_empty() {
                 "default"
             } else {
@@ -671,25 +780,49 @@ pub fn doc_detail(core: &Core, body: &[u8], token: &str) -> R {
     if ep.md.is_empty() {
         return error(404, 404, "doc not found");
     }
-    if !guard(core, token, app_key) {
-        return unauthorized();
+    let share = match access(core, token, app_key, &input.share_key) {
+        Ok(share) => share,
+        Err(res) => return res,
+    };
+    if share
+        .as_ref()
+        .is_some_and(|s| !s.api_allowed(app_key, &input.path))
+    {
+        return error(404, 404, "doc not found");
     }
     ok(json!({"content": ep.md}))
 }
 
+#[derive(Deserialize)]
+struct VerifyBody {
+    #[serde(default)]
+    password: String,
+    #[serde(rename = "appKey")]
+    app_key: Option<String>,
+    #[serde(rename = "shareKey")]
+    share_key: Option<String>,
+}
+
 pub fn verify_auth(core: &Core, body: &[u8]) -> R {
-    // Phase 1 does not implement share scopes: answer 501 instead of ignoring
-    // the field and minting a normal credential (which would over-grant).
-    let share_key = serde_json::from_slice::<Value>(body)
-        .ok()
-        .and_then(|v| v.get("shareKey").and_then(Value::as_str).map(str::to_string))
-        .unwrap_or_default();
-    if !share_key.is_empty() {
-        return error(501, 501, "shareKey is not supported in Phase 1");
-    }
-    let Some(req) = crate_auth::parse_login(body) else {
+    let Some(req) = body_json::<VerifyBody>(body) else {
         return error(400, 400, "invalid body");
     };
+    // 分享登录：密码比对分享记录哈希，令牌用分享 secret 签名（作用域天然隔离）。
+    if let Some(share_key) = req.share_key.as_deref().filter(|k| !k.is_empty()) {
+        let record = match share::find(share_key) {
+            Ok(record) => record,
+            Err(e) => return share_error(e),
+        };
+        if !record.password_ok(&req.password) {
+            return error(401, 401, "password error");
+        }
+        let default = crate_auth::AuthConfig::default();
+        let cfg = core.auth_config().unwrap_or(&default);
+        return ok(json!({"token": share::issue_token(&record, cfg)}));
+    }
+    if req.password.is_empty() {
+        return error(400, 400, "invalid body");
+    }
     let cfg = core.auth_config();
     if cfg.is_none()
         && core
@@ -710,6 +843,285 @@ pub fn verify_auth(core: &Core, body: &[u8]) -> R {
             error(401, 401, "password error")
         }
     }
+}
+
+// ---------- 分享记录 CRUD ----------
+
+#[derive(Deserialize)]
+struct ShareAddBody {
+    #[serde(default)]
+    key: String,
+    #[serde(default)]
+    name: String,
+    #[serde(rename = "type", default = "share::default_kind")]
+    kind: String,
+    #[serde(rename = "appKeys", default)]
+    app_keys: Vec<String>,
+    #[serde(rename = "apiKeys", default)]
+    api_keys: Vec<String>,
+    #[serde(default)]
+    password: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct ShareKeyBody {
+    #[serde(default)]
+    key: String,
+}
+
+#[derive(Deserialize)]
+struct ShareListBody {
+    #[serde(rename = "pageIndex", default = "one")]
+    page_index: u64,
+}
+
+fn one() -> u64 {
+    1
+}
+
+#[derive(Deserialize)]
+struct ShareActionBody {
+    #[serde(default)]
+    key: String,
+}
+
+pub fn add_api_share(core: &Core, body: &[u8], token: &str) -> R {
+    if !guard(core, token, "") {
+        return unauthorized();
+    }
+    let Some(input) = body_json::<ShareAddBody>(body) else {
+        return error(400, 400, "invalid body");
+    };
+    let result = share::add(&share::NewShare {
+        key: input.key,
+        name: input.name,
+        kind: input.kind,
+        app_keys: input.app_keys,
+        api_keys: input.api_keys,
+        password: input.password,
+    });
+    match result {
+        Ok(()) => ok(json!(true)),
+        Err(e) => share_error(e),
+    }
+}
+
+pub fn get_api_share_list(core: &Core, body: &[u8], token: &str) -> R {
+    if !guard(core, token, "") {
+        return unauthorized();
+    }
+    let input = body_json::<ShareListBody>(body).unwrap_or(ShareListBody { page_index: 1 });
+    match share::list(input.page_index) {
+        Ok((records, total)) => ok(json!({
+            "total": total,
+            "data": records.iter().map(share::record_json).collect::<Vec<_>>(),
+        })),
+        Err(e) => share_error(e),
+    }
+}
+
+pub fn get_api_share_detail(core: &Core, body: &[u8], token: &str) -> R {
+    if !guard(core, token, "") {
+        return unauthorized();
+    }
+    let Some(input) = body_json::<ShareKeyBody>(body) else {
+        return error(400, 400, "invalid body");
+    };
+    match share::find(&input.key) {
+        Ok(record) => ok(share::record_json(&record)),
+        Err(e) => share_error(e),
+    }
+}
+
+pub fn delete_api_share(core: &Core, body: &[u8], token: &str) -> R {
+    if !guard(core, token, "") {
+        return unauthorized();
+    }
+    let Some(input) = body_json::<ShareKeyBody>(body) else {
+        return error(400, 400, "invalid body");
+    };
+    match share::delete(&input.key) {
+        Ok(()) => ok(json!(true)),
+        Err(e) => share_error(e),
+    }
+}
+
+/// 分享 action 由服务端配置声明；Rust 无 action 配置，故恒返回 false
+/// （能力里的 `actions:true` 表示端点与协议已支持，不代表有内置 action）。
+pub fn handle_api_share_action(core: &Core, body: &[u8], token: &str) -> R {
+    if !guard(core, token, "") {
+        return unauthorized();
+    }
+    let Some(input) = body_json::<ShareActionBody>(body) else {
+        return error(400, 400, "invalid body");
+    };
+    match share::find(&input.key) {
+        Ok(_) => ok(json!(false)),
+        Err(e) => share_error(e),
+    }
+}
+
+// ---------- 缓存（构建期物化） ----------
+
+pub fn cache_manage(core: &Core, token: &str) -> R {
+    if !guard(core, token, "") {
+        return unauthorized();
+    }
+    ok(json!({"ok": true, "mode": "build", "message": "build-time materialized"}))
+}
+
+// ---------- 声明式代码模板 ----------
+
+#[derive(Deserialize)]
+struct CodeTemplateBody {
+    #[serde(rename = "appKey", default)]
+    app_key: String,
+    #[serde(default)]
+    template: Value,
+    #[serde(default)]
+    selected: Vec<String>,
+    #[serde(default)]
+    form: Value,
+}
+
+pub fn render_code_template(core: &Core, body: &[u8], token: &str) -> R {
+    let Some(input) = body_json::<CodeTemplateBody>(body) else {
+        return error(400, 400, "invalid body");
+    };
+    if !guard(core, token, &input.app_key) {
+        return unauthorized();
+    }
+    // UI 传整个 ConfigCodeTemplateItem；夹具传模板名字符串。两种都接受。
+    let name = match &input.template {
+        Value::String(name) => name.clone(),
+        Value::Object(map) => map
+            .get("template")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string(),
+        _ => String::new(),
+    };
+    if name.is_empty() {
+        return error(400, 400, "invalid body");
+    }
+    let Some(template) = crate::codegen::find(&name, &core.doc().config.codegen) else {
+        return error(404, 404, "template not found");
+    };
+    // form 不参与渲染：声明式模板没有副作用，也不执行宿主代码。
+    let _ = &input.form;
+    let code = if input.selected.is_empty() {
+        crate::codegen::render(template, core.doc())
+    } else {
+        let endpoints: Vec<&DocEndpoint> = core
+            .doc()
+            .endpoints
+            .iter()
+            .filter(|ep| input.selected.iter().any(|id| id == &endpoint_id(ep)))
+            .collect();
+        crate::codegen::render_selected(template, core.doc(), &endpoints)
+    };
+    ok(json!({"code": code}))
+}
+
+// ---------- exportAllData ----------
+
+#[derive(Deserialize)]
+struct ExportAllBody {
+    #[serde(default)]
+    key: String,
+    #[serde(rename = "appKey", default)]
+    app_key: String,
+    #[serde(rename = "shareKey", default)]
+    share_key: String,
+}
+
+pub fn export_all_data(core: &Core, body: &[u8], token: &str) -> R {
+    let Some(input) = body_json::<ExportAllBody>(body) else {
+        return error(400, 400, "invalid body");
+    };
+    // `key` 是属主接口（UI 分享管理页），要求全局鉴权，但导出范围按分享记录裁剪；
+    // `shareKey` 走分享 token，供分享页直接批量导出。
+    let share = if !input.key.is_empty() {
+        if !guard(core, token, "") {
+            return unauthorized();
+        }
+        match share::find(&input.key) {
+            Ok(record) => Some(record),
+            Err(e) => return share_error(e),
+        }
+    } else {
+        match access(core, token, &input.app_key, &input.share_key) {
+            Ok(share) => share,
+            Err(res) => return res,
+        }
+    };
+
+    let doc = core.doc();
+    let synthetic;
+    let apps: &[AppDoc] = if doc.apps.is_empty() {
+        synthetic = AppDoc {
+            key: "default".to_string(),
+            title: doc.config.title.clone(),
+            items: Vec::new(),
+            endpoints: doc.endpoints.clone(),
+        };
+        std::slice::from_ref(&synthetic)
+    } else {
+        &doc.apps
+    };
+    if !input.app_key.is_empty() && !apps.iter().any(|app| app_matches(app, &input.app_key)) {
+        return error(404, 404, "app not found");
+    }
+    let nodes = export_nodes(core, apps, share.as_ref(), &input.app_key);
+    ok(json!({"apiData": nodes}))
+}
+
+pub(crate) fn app_matches(app: &AppDoc, key: &str) -> bool {
+    app.key == key || app.items.iter().any(|child| app_matches(child, key))
+}
+
+fn export_nodes(
+    core: &Core,
+    apps: &[AppDoc],
+    share: Option<&share::Record>,
+    only: &str,
+) -> Vec<Value> {
+    apps.iter()
+        .filter(|app| only.is_empty() || app_matches(app, only))
+        .filter_map(|app| {
+            let children = export_nodes(core, &app.items, share, only);
+            if !app.items.is_empty() {
+                // 容器节点不带 appKey：UI 递归进入子应用；与 PHP 的目录语义一致。
+                if share.is_some() && children.is_empty() {
+                    return None;
+                }
+                return Some(json!({
+                    "key": app.key,
+                    "title": app.title,
+                    "menuKey": app.key,
+                    "children": children,
+                }));
+            }
+            let endpoints: Vec<Value> = app
+                .endpoints
+                .iter()
+                .filter(|ep| {
+                    share.is_none_or(|s| s.api_allowed(&app.key, &endpoint_id(ep)))
+                })
+                .map(|ep| detail_data(core, ep, &app.key))
+                .collect();
+            if share.is_some() && endpoints.is_empty() {
+                return None;
+            }
+            Some(json!({
+                "key": app.key,
+                "title": app.title,
+                "appKey": app.key,
+                "menuKey": app.key,
+                "children": endpoints,
+            }))
+        })
+        .collect()
 }
 
 pub use debug::{debug_poll, debug_send, debug_start, debug_stop};

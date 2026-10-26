@@ -55,7 +55,7 @@ fn is_default_expire(e: &u64) -> bool {
 
 /// 恒定时间字节比较（MAC 校验与密码比对共用）。长度不等直接 false：
 /// 两侧长度或为固定 32 字节摘要、或长度本身不是秘密。
-fn ct_eq(a: &[u8], b: &[u8]) -> bool {
+pub(crate) fn ct_eq(a: &[u8], b: &[u8]) -> bool {
     if a.len() != b.len() {
         return false;
     }

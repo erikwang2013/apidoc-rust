@@ -85,7 +85,22 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
         .route("/ui/v1/debugSend", web::post().to(ui_debug_send))
         .route("/ui/v1/debugStart", web::post().to(ui_debug_start))
         .route("/ui/v1/debugPoll", web::post().to(ui_debug_poll))
-        .route("/ui/v1/debugStop", web::post().to(ui_debug_stop));
+        .route("/ui/v1/debugStop", web::post().to(ui_debug_stop))
+        .route("/ui/v1/addApiShare", web::post().to(ui_add_api_share))
+        .route("/ui/v1/getApiShareList", web::post().to(ui_get_api_share_list))
+        .route(
+            "/ui/v1/getApiShareDetail",
+            web::post().to(ui_get_api_share_detail),
+        )
+        .route("/ui/v1/deleteApiShare", web::post().to(ui_delete_api_share))
+        .route(
+            "/ui/v1/handleApiShareAction",
+            web::post().to(ui_handle_api_share_action),
+        )
+        .route("/ui/v1/cache/clear", web::post().to(ui_cache_clear))
+        .route("/ui/v1/cache/warm", web::post().to(ui_cache_warm))
+        .route("/ui/v1/renderCodeTemplate", web::post().to(ui_render_code_template))
+        .route("/ui/v1/exportAllData", web::post().to(ui_export_all_data));
     #[cfg(feature = "debug-session")]
     let scope = scope.route("/debug/stream", web::get().to(debug_stream));
     scope
@@ -180,6 +195,70 @@ async fn ui_debug_stop(
     body: web::Bytes,
 ) -> HttpResponse {
     response(crate::uiapi::debug_stop(&core, &body, &bearer(&req)).await)
+}
+
+async fn ui_add_api_share(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::add_api_share(&core, &body, &bearer(&req)))
+}
+
+async fn ui_get_api_share_list(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::get_api_share_list(&core, &body, &bearer(&req)))
+}
+
+async fn ui_get_api_share_detail(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::get_api_share_detail(&core, &body, &bearer(&req)))
+}
+
+async fn ui_delete_api_share(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::delete_api_share(&core, &body, &bearer(&req)))
+}
+
+async fn ui_handle_api_share_action(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::handle_api_share_action(&core, &body, &bearer(&req)))
+}
+
+async fn ui_cache_clear(core: web::Data<Arc<Core>>, req: HttpRequest) -> HttpResponse {
+    response(crate::uiapi::cache_manage(&core, &bearer(&req)))
+}
+
+async fn ui_cache_warm(core: web::Data<Arc<Core>>, req: HttpRequest) -> HttpResponse {
+    response(crate::uiapi::cache_manage(&core, &bearer(&req)))
+}
+
+async fn ui_render_code_template(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::render_code_template(&core, &body, &bearer(&req)))
+}
+
+async fn ui_export_all_data(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::export_all_data(&core, &body, &bearer(&req)))
 }
 
 // 各 handler 一行转发 core：判定与渲染在 route_core（两框架共享同一实现）。
