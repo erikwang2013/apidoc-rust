@@ -204,6 +204,45 @@ mod axum_ui {
 
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    /// Phase 5.3 包级 e2e：UIC1_UI_PACKAGE 指向真实 dist/uic1-ui 时运行，否则跳过。
+    #[tokio::test]
+    async fn packaged_ui_is_served_when_configured() {
+        let Some(pkg) = std::env::var_os("UIC1_UI_PACKAGE") else {
+            eprintln!("skipped: UIC1_UI_PACKAGE is not set");
+            return;
+        };
+        let app = apidoc::axum::apidoc_routes(vue_config(PathBuf::from(pkg)));
+
+        let (status, ct, body) = get(&app, "/apidoc/").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(ct.as_deref(), Some("text/html; charset=utf-8"));
+        let index = String::from_utf8(body).unwrap();
+        assert!(index.contains("<div id=\"app\">"), "{index}");
+
+        let (status, ct, body) = get(&app, "/apidoc/config.js").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(ct.as_deref(), Some("text/javascript; charset=utf-8"));
+        assert!(String::from_utf8_lossy(&body).contains("apidocFeConfig"));
+
+        // index.html 里引用的第一个 Vite 资源，文件名带内容哈希。
+        let asset = index
+            .split("assets/")
+            .nth(1)
+            .and_then(|rest| rest.split(['"', '\'']).next())
+            .filter(|name| name.contains('-'))
+            .expect("index.html references a hashed asset");
+        let (status, ct, body) = get(&app, &format!("/apidoc/assets/{asset}")).await;
+        assert_eq!(status, StatusCode::OK, "{asset}");
+        assert!(!body.is_empty(), "{asset}");
+        assert_ne!(ct.as_deref(), Some("text/html; charset=utf-8"), "{asset}");
+
+        let (status, ct, body) = get(&app, "/apidoc/manifest.json").await;
+        assert_eq!(status, StatusCode::OK);
+        assert_eq!(ct.as_deref(), Some("application/json"));
+        let manifest: serde_json::Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(manifest["name"], "uic1-ui");
+    }
 }
 
 #[cfg(feature = "actix")]
