@@ -170,14 +170,37 @@ impl Core {
         }
     }
 
+    pub(crate) fn doc(&self) -> &ApiDoc {
+        &self.doc
+    }
+
+    pub(crate) fn app_configs(&self) -> &[AppConfig] {
+        &self.apps
+    }
+
+    pub(crate) fn auth_config(&self) -> Option<&AuthConfig> {
+        self.auth_cfg.as_ref()
+    }
+
+    pub(crate) fn debug_config(&self) -> Option<&DebugConfig> {
+        self.debug_cfg.as_ref()
+    }
+
     /// 数据路由守卫，auth 未启用恒放行。
-    fn guard(&self, q: &HashMap<String, String>) -> bool {
+    pub(crate) fn guard(&self, q: &HashMap<String, String>) -> bool {
         auth::auth_guard_ok(
             q.get("token").map(String::as_str).unwrap_or(""),
             q.get("appKey").map(String::as_str),
             self.auth_cfg.as_ref(),
             &self.apps,
         )
+    }
+
+    /// 全局密码守卫：忽略请求里的 appKey，只认全局令牌。
+    /// 原生 `/apidoc/debug`（及长连接入口）必须保持"全局密码独占"——
+    /// 应用密码持有者不得调用服务端执行器（UIC-1 之外的安全不变量）。
+    pub(crate) fn guard_global(&self, token: &str) -> bool {
+        auth::auth_guard_ok(token, None, self.auth_cfg.as_ref(), &self.apps)
     }
 
     /// 守卫失败：401 + DENIED_BODY（body 是 JSON，Content-Type 同 actix 现状）。
@@ -239,7 +262,8 @@ impl Core {
     /// POST /apidoc/debug：服务端协议执行器（P0 仅 HTTP 族）。
     /// 未启用/未编译 403，body 非法 400，上游失败 502。
     pub async fn debug(&self, q: &HashMap<String, String>, body: &[u8]) -> R {
-        if !self.guard(q) {
+        // 全局密码独占：应用密码令牌不能开这个 SSRF 入口。
+        if !self.guard_global(q.get("token").map(String::as_str).unwrap_or("")) {
             return Self::denied();
         }
         let Some(cfg) = self.debug_cfg.as_ref().filter(|c| c.enable_server_side) else {
@@ -322,7 +346,7 @@ impl Core {
     /// 长连接会话入口的配置：守卫 + 服务端调试开关。失败时直接返回响应。
     #[cfg(feature = "debug-session")]
     pub fn stream_config(&self, q: &HashMap<String, String>) -> Result<DebugConfig, R> {
-        if !self.guard(q) {
+        if !self.guard_global(q.get("token").map(String::as_str).unwrap_or("")) {
             return Err(Self::denied());
         }
         self.debug_cfg
@@ -416,5 +440,43 @@ impl Core {
             Some(body) => R::new(200, "text/plain; charset=utf-8", body.clone()),
             None => R::empty(404),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::auth::auth_token;
+
+    fn core() -> Core {
+        Core::build(ApidocConfig {
+            auth: Some(AuthConfig {
+                enable: true,
+                password: "global-pw".into(),
+                secret_key: "s".into(),
+                expire: 3600,
+            }),
+            apps: vec![AppConfig {
+                key: "A".into(),
+                title: "A".into(),
+                items: Vec::new(),
+                password: Some("app-pw".into()),
+            }],
+            ..Default::default()
+        })
+    }
+
+    // C2: 原生 debug 链路只认全局令牌，应用密码令牌必须被拒。
+    #[test]
+    fn guard_global_rejects_app_token_accepts_global_token() {
+        let core = core();
+        let cfg = core.auth_config().expect("auth configured");
+        let app_token = auth_token("app-pw", cfg);
+        let global_token = auth_token("global-pw", cfg);
+
+        assert!(!core.guard_global(&app_token), "app token must not pass global guard");
+        assert!(core.guard_global(&global_token), "global token must pass global guard");
+        // 同一枚 app token 在应用作用域守卫里仍有效（证明拒绝来自全局绑定而非坏令牌）
+        assert!(auth::auth_guard_ok(&app_token, Some("A"), core.auth_config(), core.app_configs()));
     }
 }

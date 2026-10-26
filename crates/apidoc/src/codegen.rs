@@ -107,10 +107,20 @@ pub fn find<'a>(name: &'a str, custom: &'a [crate::CodegenTemplate]) -> Option<&
 /// 渲染模板。确定性：同一 (template, doc) 恒得同一输出（纯字符串拼接，
 /// 预算计数与遍历顺序确定，不依赖时间/线程）。
 pub fn render(template: &str, doc: &ApiDoc) -> String {
+    render_with(template, doc, None)
+}
+
+/// 只渲染 `selected` 里的端点（UIC-1 代码模板的勾选语义；`{{#each endpoints}}`
+/// 之外的变量照常取文档级值）。
+pub fn render_selected(template: &str, doc: &ApiDoc, selected: &[&DocEndpoint]) -> String {
+    render_with(template, doc, Some(selected))
+}
+
+fn render_with(template: &str, doc: &ApiDoc, selected: Option<&[&DocEndpoint]>) -> String {
     let mut out = String::with_capacity(template.len());
     let mut stack = Vec::new();
     let mut used = 0usize;
-    render_into(template, doc, &mut stack, &mut out, &mut used);
+    render_into(template, doc, selected, &mut stack, &mut out, &mut used);
     out
 }
 
@@ -135,6 +145,7 @@ enum Item<'a> {
 fn render_into<'a>(
     t: &str,
     doc: &'a ApiDoc,
+    selected: Option<&[&'a DocEndpoint]>,
     stack: &mut Vec<Frame<'a>>,
     out: &mut String,
     used: &mut usize,
@@ -160,7 +171,7 @@ fn render_into<'a>(
                 out.push_str(&t[p..]);
                 return;
             };
-            let items = each_items(name, stack, doc);
+            let items = each_items(name, stack, doc, selected);
             let mark = out.len();
             // 超嵌套上限，或剩余预算不够展开整块：直接整块原样保留（零展开）
             let mut cut = stack.len() >= MAX_DEPTH || items.len() > MAX_EXPANSIONS - *used;
@@ -174,7 +185,7 @@ fn render_into<'a>(
                     }
                     *used += 1; // 一次 item 迭代计 1
                     stack.push(frame);
-                    render_into(&t[end..body_end], doc, stack, out, used);
+                    render_into(&t[end..body_end], doc, selected, stack, out, used);
                     stack.pop();
                 }
             }
@@ -235,9 +246,17 @@ fn match_each(t: &str, from: usize) -> Option<(usize, usize)> {
 
 /// 解析列表名 → 迭代项（带末项标记）。
 /// `fields` 取作用域链上最近一张表的字段；未知名字或列表不可得 → 空，渲染为空串。
-fn each_items<'a>(name: &str, stack: &[Frame<'a>], doc: &'a ApiDoc) -> Vec<Frame<'a>> {
+fn each_items<'a>(
+    name: &str,
+    stack: &[Frame<'a>],
+    doc: &'a ApiDoc,
+    selected: Option<&[&'a DocEndpoint]>,
+) -> Vec<Frame<'a>> {
     let items: Vec<Item<'a>> = match name {
-        "endpoints" => doc.endpoints.iter().map(Item::Endpoint).collect(),
+        "endpoints" => match selected {
+            Some(endpoints) => endpoints.iter().copied().map(Item::Endpoint).collect(),
+            None => doc.endpoints.iter().map(Item::Endpoint).collect(),
+        },
         "tables" => doc.config.tables.iter().map(Item::Table).collect(),
         "fields" => stack
             .iter()

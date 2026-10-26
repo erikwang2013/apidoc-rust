@@ -405,3 +405,18 @@ fn sql_default_clause_quotes_strings_and_honours_numbers_and_null() {
     assert!(out.contains("`d` int DEFAULT NULL"), "NULL 不应加引号:\n{out}");
     assert!(out.contains("`e` float DEFAULT -1.5"), "负数默认值不应加引号:\n{out}");
 }
+
+#[test]
+fn render_selected_filters_endpoints_and_keeps_doc_values() {
+    let doc = full_doc();
+    let selected = [&doc.endpoints[1]];
+    let out = apidoc::codegen::render_selected(
+        "{{title}}:{{#each endpoints}}{{title}} {{method}} {{url}};{{/each}}",
+        &doc,
+        &selected,
+    );
+    assert!(out.starts_with("示例 API:"), "顶层变量照常渲染: {out}");
+    assert!(out.contains("新建用户 POST /api/user;"), "{out}");
+    assert!(!out.contains("用户列表"), "未勾选端点不得渲染: {out}");
+    assert_eq!(out.matches(';').count(), 1);
+}

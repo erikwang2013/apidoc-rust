@@ -4,7 +4,8 @@
 //! 服务端调试路由默认关闭；开启需 DebugConfig + 全局鉴权 + feature `debug-http`。
 
 use actix_cors::Cors;
-use actix_web::{web, HttpResponse, Scope};
+use actix_web::http::header;
+use actix_web::{web, HttpRequest, HttpResponse, Scope};
 use crate::route_core::{self, Core, R};
 use crate::ApidocConfig;
 use std::collections::{BTreeMap, HashMap};
@@ -68,9 +69,196 @@ pub fn apidoc_routes(config: ApidocConfig) -> Scope {
                 .route(web::get().to(webhook_events))
                 .route(web::post().to(webhook_capture)),
         );
+    let scope = scope
+        // UIC-1: shared contract consumed by apidoc-ui.
+        .route("/ui/v1/capabilities", web::get().to(ui_capabilities))
+        .route("/ui/v1/config", web::get().to(ui_config))
+        .route("/ui/v1/menus", web::post().to(ui_menus))
+        .route("/ui/v1/detail", web::post().to(ui_detail))
+        .service(
+            web::resource("/ui/v1/docMenus")
+                .route(web::get().to(ui_doc_menus_get))
+                .route(web::post().to(ui_doc_menus_post)),
+        )
+        .route("/ui/v1/docDetail", web::post().to(ui_doc_detail))
+        .route("/ui/v1/verifyAuth", web::post().to(ui_verify_auth))
+        .route("/ui/v1/debugSend", web::post().to(ui_debug_send))
+        .route("/ui/v1/debugStart", web::post().to(ui_debug_start))
+        .route("/ui/v1/debugPoll", web::post().to(ui_debug_poll))
+        .route("/ui/v1/debugStop", web::post().to(ui_debug_stop))
+        .route("/ui/v1/addApiShare", web::post().to(ui_add_api_share))
+        .route("/ui/v1/getApiShareList", web::post().to(ui_get_api_share_list))
+        .route(
+            "/ui/v1/getApiShareDetail",
+            web::post().to(ui_get_api_share_detail),
+        )
+        .route("/ui/v1/deleteApiShare", web::post().to(ui_delete_api_share))
+        .route(
+            "/ui/v1/handleApiShareAction",
+            web::post().to(ui_handle_api_share_action),
+        )
+        .route("/ui/v1/cache/clear", web::post().to(ui_cache_clear))
+        .route("/ui/v1/cache/warm", web::post().to(ui_cache_warm))
+        .route("/ui/v1/renderCodeTemplate", web::post().to(ui_render_code_template))
+        .route("/ui/v1/exportAllData", web::post().to(ui_export_all_data));
     #[cfg(feature = "debug-session")]
     let scope = scope.route("/debug/stream", web::get().to(debug_stream));
     scope
+}
+
+fn bearer(req: &HttpRequest) -> String {
+    req.headers()
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.strip_prefix("Bearer "))
+        .map(str::trim)
+        .unwrap_or("")
+        .to_string()
+}
+
+async fn ui_capabilities(core: web::Data<Arc<Core>>) -> HttpResponse {
+    response(crate::uiapi::capabilities(&core))
+}
+
+async fn ui_config(
+    core: web::Data<Arc<Core>>,
+    q: web::Query<HashMap<String, String>>,
+    req: HttpRequest,
+) -> HttpResponse {
+    response(crate::uiapi::config(&core, &q, &bearer(&req)))
+}
+
+async fn ui_menus(core: web::Data<Arc<Core>>, req: HttpRequest, body: web::Bytes) -> HttpResponse {
+    response(crate::uiapi::menus(&core, &body, &bearer(&req)))
+}
+
+async fn ui_detail(core: web::Data<Arc<Core>>, req: HttpRequest, body: web::Bytes) -> HttpResponse {
+    response(crate::uiapi::detail(&core, &body, &bearer(&req)))
+}
+
+async fn ui_doc_menus_get(
+    core: web::Data<Arc<Core>>,
+    q: web::Query<HashMap<String, String>>,
+    req: HttpRequest,
+) -> HttpResponse {
+    response(crate::uiapi::doc_menus(&core, &q, &bearer(&req)))
+}
+
+async fn ui_doc_menus_post(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    let q = serde_json::from_slice::<HashMap<String, String>>(&body).unwrap_or_default();
+    response(crate::uiapi::doc_menus(&core, &q, &bearer(&req)))
+}
+
+async fn ui_doc_detail(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::doc_detail(&core, &body, &bearer(&req)))
+}
+
+async fn ui_verify_auth(core: web::Data<Arc<Core>>, body: web::Bytes) -> HttpResponse {
+    response(crate::uiapi::verify_auth(&core, &body))
+}
+
+async fn ui_debug_send(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::debug_send(&core, &body, &bearer(&req)).await)
+}
+
+async fn ui_debug_start(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::debug_start(&core, &body, &bearer(&req)).await)
+}
+
+async fn ui_debug_poll(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::debug_poll(&core, &body, &bearer(&req)).await)
+}
+
+async fn ui_debug_stop(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::debug_stop(&core, &body, &bearer(&req)).await)
+}
+
+async fn ui_add_api_share(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::add_api_share(&core, &body, &bearer(&req)))
+}
+
+async fn ui_get_api_share_list(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::get_api_share_list(&core, &body, &bearer(&req)))
+}
+
+async fn ui_get_api_share_detail(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::get_api_share_detail(&core, &body, &bearer(&req)))
+}
+
+async fn ui_delete_api_share(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::delete_api_share(&core, &body, &bearer(&req)))
+}
+
+async fn ui_handle_api_share_action(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::handle_api_share_action(&core, &body, &bearer(&req)))
+}
+
+async fn ui_cache_clear(core: web::Data<Arc<Core>>, req: HttpRequest) -> HttpResponse {
+    response(crate::uiapi::cache_manage(&core, &bearer(&req)))
+}
+
+async fn ui_cache_warm(core: web::Data<Arc<Core>>, req: HttpRequest) -> HttpResponse {
+    response(crate::uiapi::cache_manage(&core, &bearer(&req)))
+}
+
+async fn ui_render_code_template(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::render_code_template(&core, &body, &bearer(&req)))
+}
+
+async fn ui_export_all_data(
+    core: web::Data<Arc<Core>>,
+    req: HttpRequest,
+    body: web::Bytes,
+) -> HttpResponse {
+    response(crate::uiapi::export_all_data(&core, &body, &bearer(&req)))
 }
 
 // 各 handler 一行转发 core：判定与渲染在 route_core（两框架共享同一实现）。
