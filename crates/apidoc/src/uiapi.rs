@@ -287,7 +287,8 @@ fn capabilities_data(core: &Core) -> Value {
                 "relay": relay_protocols(),
                 "modes": ["browser-http", "browser-websocket", "browser-sse", "relay-unary", "relay-stream"],
             },
-            "share": {"link": true, "records": true, "actions": true},
+            // Rust has no declarative share-action config yet; records/links only.
+            "share": {"link": true, "records": true, "actions": false},
             "cache": {"manage": true, "mode": "build"},
             "generator": {"forms": false, "templates": true, "sideEffects": false},
             "exports": ["md", "pdf", "openapi", "postman", "asyncapi", "typescript"],
@@ -946,8 +947,7 @@ pub fn delete_api_share(core: &Core, body: &[u8], token: &str) -> R {
     }
 }
 
-/// 分享 action 由服务端配置声明；Rust 无 action 配置，故恒返回 false
-/// （能力里的 `actions:true` 表示端点与协议已支持，不代表有内置 action）。
+/// 分享 action 由服务端配置声明；Rust 无 action 配置，故恒返回 false。
 pub fn handle_api_share_action(core: &Core, body: &[u8], token: &str) -> R {
     if !guard(core, token, "") {
         return unauthorized();

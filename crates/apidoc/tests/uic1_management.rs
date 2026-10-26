@@ -130,7 +130,7 @@ async fn phase2_management_end_to_end() {
     assert_eq!(status, StatusCode::OK, "{caps}");
     let features = &caps["data"]["features"];
     assert_eq!(features["share"]["records"], true);
-    assert_eq!(features["share"]["actions"], true);
+    assert_eq!(features["share"]["actions"], false, "no declarative actions");
     assert_eq!(features["share"]["link"], true);
     assert_eq!(features["cache"]["manage"], true);
     assert_eq!(features["cache"]["mode"], "build");
