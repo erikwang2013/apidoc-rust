@@ -23,7 +23,7 @@
 
 ## 📖مقدمة المشروع
 
-Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق واجهات API تلقائيًا عبر تحليل **ماكروات Rust الإجرائية (proc-macro)**، وهي متوافقة مع axum وactix-web وغيرها من أطر العمل الشائعة. وإلى جانب التوليد التلقائي للوثائق، تتضمن أيضًا التصحيح أونلاين للواجهات وبيانات Mock للتصحيح وتوليد أكواد Json/TypeScript ومولّد الواجهات ومولّد الأكواد، بما يغطي دورة تطوير الواجهات وتصحيحها وتسليمها كاملة، سعيًا إلى رفع كفاءة تطوير API.
+Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق واجهات API تلقائيًا عبر تحليل **ماكروات Rust الإجرائية (proc-macro)**، وهي متوافقة مع axum وactix-web وغيرها من أطر العمل الشائعة. وإلى جانب التوليد التلقائي للوثائق، تتضمن أيضًا التصحيح أونلاين للواجهات وبيانات Mock للتصحيح وتوليد أكواد Json/TypeScript ومولّد الواجهات ومولّد الأكواد، بما يغطي دورة تطوير الواجهات وتصحيحها وتسليمها كاملة، سعيًا إلى رفع كفاءة تطوير API. وابتداءً من 2.2.0 توفّر أيضًا **عقد الخادم UIC-1** الذي تستهلكه نسخة Vue من apidoc-ui مباشرةً؛ وتبقى واجهة المستخدم الأصلية المضمّنة محفوظة، ويمكن الاختيار بينهما عبر الإعدادات.
 
 توجّه apidoc-rust في التنفيذ:
 
@@ -34,21 +34,23 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 ### ✨وصف المشروع
 
 - **جاهز للاستخدام فورًا**: بلا إعدادات معقّدة؛ بعد التثبيت اكتب التعليقات التوضيحية وفق الوثائق ليُولَّد توثيق API تلقائيًا.
-- **كتابة سهلة**: يدعم التعريفات العامة (definitions) ومراجع `ref` للحقول، وبضعة تعليقات توضيحية تكفي لتعريف الحقول كاملًا.
+- **كتابة سهلة**: مراجع الحقول `ref` / `table` وتسعة صيغ تعريفات خارجية (OpenAPI، AsyncAPI، GraphQL، Proto، WSDL، EDMX، JSON Schema، JSON-RPC، XML-RPC) مدعومة عبر `#[apidoc::definition]`، وبضعة تعليقات توضيحية تكفي لتعريف الحقول كاملًا.
 - **تصحيح أونلاين**: صحّح الواجهات مباشرةً من صفحة الوثائق، مع دعم تمرير المعاملات العامة وبيانات Mock وأحداث التصحيح.
+- **تصحيح متعدد البروتوكولات**: 45 تعليقًا توضيحيًا للبروتوكولات (RPC والمراسلة والصناعة والوسائط وإنترنت الأشياء وغيرها) عبر قناتي الاتصال المباشر من المتصفح والترحيل من جهة الخادم؛ وتُنشئ التعليقات توثيق البروتوكول ولوحة التصحيح معًا.
+- **عقد UIC-1**: يوفّر `/apidoc/ui/v1/*` نقاط capabilities / config / menus / detail / docs / debug / share / cache / generator / export، بحيث تخدم نسخة Vue واحدة من apidoc-ui منصات PHP وGo وRust. تُفعَّل واجهة Vue الثابتة عبر `ui` / `ui_path` (حزم الإصدار تستخدم Vue افتراضيًا، ويحتفظ إعداد المكتبة الافتراضي بواجهة المستخدم الأصلية المضمّنة).
 - **تطبيقات/إصدارات متعددة**: يمكن تهيئة المشروع بتطبيق واحد أو تطبيقات وإصدارات متعددة؛ وتُعرض الواجهات مجمّعة حسب التطبيق/الإصدار مع إمكانية التبديل بينها.
 - **المجموعات/Tag**: تدعم الواجهات تجميعًا متعدد المستويات ووسم Tag.
 - **وثائق Markdown**: يمكن لتعليقة `md` تركيب ملف Markdown كصفحة وثائق.
 - **توليد Json/TypeScript**: يُولَّد لكل واجهة مثال طلب/استجابة Json وتعريفات أنواع TypeScript جاهزة للاستخدام مباشرة في الواجهة الأمامية.
 - **مولّد الأكواد**: بإعداد + قالب يُولَّد كود الأعمال وملفات Api للواجهة الأمامية.
 - **مشاركة الواجهات**: يمكن توليد رابط مشاركة لتطبيق/واجهة محددة، وتصدير `swagger.json`.
-- **وصول آمن**: يدعم كلمة مرور عامة وكلمات مرور مستقلة لكل تطبيق/إصدار؛ وتُبنى الوثائق وقت البناء، وتبقى الاستجابات المحلية دون 10ms p99.
+- **وصول آمن**: كلمة مرور عامة وكلمات مرور مستقلة لكل تطبيق/إصدار؛ تصحيح الخادم معطّل افتراضيًا ويفرض حارس SSRF وحدود الحجم/الإطارات/المهلة؛ وملفات التعريفات والبروتوكولات الصناعية لها حدود صارمة؛ وتُبنى الوثائق وقت البناء، وتبقى الاستجابات المحلية دون 10ms p99.
 
 ## المميزات
 
 ### تم تنفيذه (M1–M3)
 
-- **وثائق عبر التعليقات التوضيحية**: سبعة ماكروات سمات `title` / `desc` / `method` / `url` / `param` / `query` / `returned` تُعلَّق واجهةً تلو الأخرى، مع دعم التداخل في المعاملات: `required` / `default` / `desc` / `mock` / `children`
+- **وثائق عبر التعليقات التوضيحية**: سبعة ماكروات سمات أساسية `title` / `desc` / `method` / `url` / `param` / `query` / `returned` إضافةً إلى `tag` / `group` / `header` / `table` و45 تعليقًا توضيحيًا للبروتوكولات؛ وتدعم المعاملات التداخل `required` / `default` / `desc` / `mock` / `children` / `field`
 - **التحقق في زمن الترجمة**: يجب أن يبدأ url بـ `/`، وmethod ضمن قائمة بيضاء، وparam name إلزامي... أي تعليق توضيحي غير صالح يُبلَغ عنه في زمن الترجمة (مع span دقيق)
 - **الجمع التلقائي**: تسجيل ثابت عبر `distributed_slice` من linkme دون الحاجة إلى قائمة واجهات يدوية؛ `DocRegistry::collect()` يدمج القطع حسب id ويستعيد ترتيب التعريف حسب seq، مع جمع تلقائي عبر crates متعددة
 - **إخراج api.json**: تسلسل serde لنموذج بيانات موحد (config + endpoints)، بحقول يتشاركها النموذج والمصدِّرات
@@ -60,13 +62,13 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 - **تصحيح أونلاين**: لوحة «تصحيح أونلاين» مدمجة في صفحة الوثائق — Base URL يُعبَّأ مسبقًا بـ `location.origin` للاتصال المباشر بالخدمة عبر النطاقات، نموذج المعاملات يُعبَّأ مسبقًا ببيانات mock، استبدال مواضع المسار `{name}` / `:name`، دمج معاملات GET/HEAD في query، وتجميع بقية الـ methods في JSON body، تحرير رؤوس الطلب + header مخصص، عرض الاستجابة (الحالة / الزمن / pretty JSON)، مع تنبيه أصفر عند فشل CORS
 - **محرك Mock** (`crates/apidoc/src/mock.rs`، يعتمد على crate fake، 15 قاعدة: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). أولوية القواعد: `mock="fake:xxx"` تمر عبر جدول قواعد fake (الأسماء غير المعروفة تعود إلى قيمة افتراضية) ← بقية قيم mock غير الفارغة تُخرج كما هي (مثل `mock="1"`، `mock="erik"`) ← بدون mock يُولَّد تلقائيًا حسب `ty` (int←`"1"`، float←`"0.5"`، bool←`"true"`، object←`"{}"`، string←`"string"`)؛ children يتداخل بشكل متكرر، وarray ثابت على عنصرين
 - **واجهة mock**: محول axum يضيف `GET /apidoc/mock?url=&method=`، بمطابقة دقيقة لـ url + method، ويعيد 404 عند عدم التطابق؛ لوحة التصحيح تخفي افتراضيًا نقاط النهاية `not_debug`، ولا تظهرها إلا بعد تحديد «إظهار واجهات not_debug»
-- **اتصال CORS مباشر**: التصحيح أونلاين يربط المتصفح مباشرة بالواجهة الهدف، و`cors_layer` من المحول يتولى السماح (الوكيل العكسي من جهة الخادم يُترك لـ v2)
+- **اتصال CORS مباشر**: التصحيح أونلاين يربط المتصفح مباشرةً بالواجهة الهدف، ويسمح به `cors_layer` من المحول؛ ويوفّر الترحيل من جهة الخادم منفّذات P2–P5
 
 ### تم تنفيذه (M5)
 
-- **التصدير بأربع صيغ** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0)، النواة توفر `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
-- **مسار التصدير**: المحول يضيف `GET /apidoc/export?format=md|ts|swagger`، والصيغة غير المعروفة تعيد 400؛ وContent-Type تكون `text/markdown` / `application/typescript` / `application/json` على التوالي
-- **markdown**: فهرس مجمّع + جدول معاملات + كتلة استجابة؛ **typescript**: توليد أنواع `{Name}Params` / `{Name}Result` ضمن نطاق group، والواجهات غير المجمّعة تقع في `defaultGroup` (`default` كلمة محجوزة في TS)؛ **swagger**: `info.version` مأخوذ من إصدار حزمة Cargo
+- **التصدير بأربع صيغ** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0) / AsyncAPI 2.6 (P6)؛ وتوفّر النواة `export::markdown::render` / `export::typescript::render` / `export::swagger::render` / `export::asyncapi::render`
+- **مسار التصدير**: يضيف المحول `GET /apidoc/export?format=md|ts|swagger|asyncapi`، والصيغة غير المعروفة تعيد 400؛ وContent-Type على التوالي `text/markdown` / `application/typescript` / `application/json`
+- **markdown**: فهرس مجمّع + جداول معاملات + كتل استجابة؛ **typescript**: توليد أنواع `{Name}Params` / `{Name}Result` ضمن نطاق group، والواجهات غير المجمّعة تقع في `defaultGroup` (`default` كلمة محجوزة في TS)؛ **swagger**: يفضّل `info.version` قيمة `ApidocConfig.version` ويرجع إلى إصدار حزمة Cargo (حاليًا 2.2.0)
 - **محول actix-web** (`crates/apidoc/src/actix.rs`): وظائف متطابقة 1:1 مع محول axum — `apidoc_routes(ApidocConfig) -> Scope` يركّب /apidoc و/apidoc/api.json و/apidoc/mock و/apidoc/export، و`cors_layer(CorsConfig)` يسمح بالطلبات عبر النطاقات
 - **مشاركة الواجهة**: واجهة الوثائق (`src/ui.html`) نُقلت للأعلى إلى النواة، وتُصدَّر باسم `pub const UI_HTML`، والمحولان يشيران إلى النسخة نفسها (آمن عند نشر الحزمة)
 
@@ -84,6 +86,14 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 - **مولّد الأكواد**: `GET /apidoc/generate?template=<name>` → نص بعد المعالجة (قالب غير معروف 404)؛ قوالب مدمجة: `api.ts` (ملف Api للواجهة الأمامية)، `handler.rs` (هيكل واجهة Rust)، `schema.sql` (يولّد عبارات CREATE TABLE وفق `tables`)؛ وقالب بالاسم نفسه في `ApidocConfig.codegen` يطغى على المدمج. صيغة القوالب اثنتان فقط: `{{变量}}` (يبقى كما هو إن لم يُعرَّف) و`{{#each 列表}}…{{/each}}` (قابل للتداخل، مثل `tables` × `fields`)
 - **أحداث التصحيح**: أُضيف إلى لوحة التصحيح أونلاين قسم قابل للطي «نصوص ما قبل الطلب / ما بعد الطلب» (يُحفظ في localStorage)——النص القبلي يُنفَّذ قبل الطلب عبر `new Function('ctx', code)` ويمكنه تعديل `ctx.url/method/headers/body` أو إرجاع كائن يُدمج دمجًا سطحيًا؛ والنص البعدي يُنفَّذ بعد الاستجابة ويقرأ `status/ms/text/url/method/ep`، وإذا أرجع نصًا استُبدل به النص المعروض للاستجابة؛ وخطأ السكريبت يظهر في منطقة النتائج فقط دون قطع الطلب
 
+### تم تنفيذه (v2.2 · UIC-1)
+
+- **عقد الخادم UIC-1 (Contract 1.0)**: يوفّر `/apidoc/ui/v1/*` capabilities / config / menus / detail / docMenus / docDetail / verifyAuth / جلسات التصحيح / سجلات المشاركة / التخزين المؤقت / قوالب الأكواد / التصدير الكامل. ويُبلّغ `capabilities` عمّا جُمِّع فعليًا في هذا البناء فقط، لتتمكن الواجهة من إخفاء المداخل غير المتاحة. ويعلن Rust `share.actions=false` و`cache.mode=build` والمولّد `forms=false` / `templates=true`، والترحيل الأحادي فقط (`relay-unary`).
+- **تسع صيغ تعريفات خارجية**: يحلّل `#[apidoc::definition(file = "...", operation = "...")]` صيغ OpenAPI وAsyncAPI وGraphQL وProto وWSDL وEDMX وJSON Schema وJSON-RPC وXML-RPC إلى حمولة موحّدة `{format, source, operation, meta, messages, validation}`؛ ويعيد `/apidoc/ui/v1/detail` حقل `definitions` مع تشخيص لكل عنصر (`path` / `line` / `column` / `severity` / `message`). لا تدخل التعريفات في api.json أبدًا، فتبقى الواجهة الأصلية والمخرجات القديمة دون تغيير.
+- **واجهة Vue الثابتة**: يخدم `ui: UiMode::Vue` + `ui_path` نسخة apidoc-ui من `dist/uic1-ui/`؛ و`ApidocConfig::release(title, ui_path)` هو مدخل حزم الإصدار (ويبقى الإعداد الافتراضي للمكتبة هو الواجهة الأصلية المضمّنة). يشمل SPA fallback و`config.js` / `assets/*` والحماية من الهروب خارج المسار والروابط الرمزية، وفشل الإقلاع fail-closed عند غياب `ui_path` أو `index.html`.
+- **الإبلاغ الكامل بقدرات الترحيل**: يسرد `capabilities.debug.relay` المنفّذات المجمّعة في هذا البناء فقط؛ ويجمع `debug-all` جميع معرّفات البروتوكولات الثلاثين، بحيث لا تعرض الواجهة منفّذًا يفشل بـ «not compiled».
+- **إصلاحات البروتوكولات الصناعية وحدود الموارد**: يحلّل DNP3 رؤوس الكائنات بعد IIN ويحدّ كل استجابة عند 10,000 نقطة؛ ويحدّ IEC 60870-5-104 كل استجابة عند 10,000 سطر؛ ويرسل BACnet/IP طلب ReadProperty صالحًا؛ وقد أُصلح تجاوز u16 في عدد نقاط DNP3.
+
 ## توثيق وتصحيح متعدد البروتوكولات (P1–P6)
 
 ![بنية تصحيح متعدد البروتوكولات في apidoc-rust](../images/multiprotocol-en.svg)
@@ -92,7 +102,28 @@ Apidoc مكتبة إضافات (plugin) بلغة Rust تولّد وثائق وا
 - **تصحيح مباشر من المتصفح** (دون اعتماد على Rust): SOAP، GraphQL (مع subscriptions)، JSON-RPC، XML-RPC، OData، MCP، A2A، Webhooks، WebSocket (نص/ثنائي)، SSE، Socket.IO، STOMP (مع الثنائي)، WebRTC/DataChannel، HLS.
 - **منفذات على الخادم** (feature-gated): HTTP/2، HTTP/3، gRPC، Thrift، Dubbo/Hessian2، ISO 8583، TCP/UDP/Raw/Unix، MQTT، AMQP، Kafka، XMPP، STOMP/TCP، CoAP، LwM2M، Modbus، DNP3، IEC 104، BACnet/IP، OPC UA، RTP/RTCP/RTSP/SIP/RTMP. ويُفعّلها `debug-all` جميعًا.
 - **P6**: التقاط Webhooks، تصدير AsyncAPI 2.6، استيراد `.proto`/`.thrift` عبر CLI `apidoc-idl`، سجل Dubbo Nacos، أمثلة mock من الأحداث.
-- **الأمان**: تصحيح الخادم معطّل افتراضيًا ويتطلب مصادقة عامة؛ يتحقق حارس SSRF من كل IP ويثبّت الاتصال، ويُرفض كل من إعادة التوجيه/الوكيل وبيانات السحابة الوصفية؛ وتُحدّ أحجام الاستجابة والإطارات والمهلة؛ والبروتوكولات بلا TLS مثبّت تفشل مغلقة.
+- **قدرات الترحيل في UIC-1**: يعرض `GET /apidoc/ui/v1/capabilities` ضمن `features.debug.relay` المنفّذات المجمّعة في هذا البناء فقط. ويدعم Rust الترحيل الأحادي فقط (`modes` يحتوي `relay-unary` وليس `relay-stream`)؛ ويبلّغ بناء `debug-all` بجميع معرّفات البروتوكولات الثلاثين:
+
+| feature | معرّفات بروتوكولات الترحيل |
+|---|---|
+| `debug-http` | `http` `http2` |
+| `debug-session` | `websocket` |
+| `debug-grpc` | `grpc` |
+| `debug-thrift` | `thrift` |
+| `debug-dubbo` | `dubbo` `hessian` |
+| `debug-iso8583` | `iso8583` |
+| `debug-mqtt` | `mqtt` |
+| `debug-amqp` | `amqp` |
+| `debug-kafka` | `kafka` |
+| `debug-xmpp` | `xmpp` |
+| `debug-sockets` | `stomp` `tcp` `udp` `raw` `unix` |
+| `debug-coap` | `coap` `lwm2m` |
+| `debug-industrial` | `modbus` `dnp3` `iec104` `bacnet` `opcua` |
+| `debug-media` | `rtp` `rtcp` `rtsp` `sip` `rtmp` |
+| `debug-http3` | `http3` |
+
+باستثناء `websocket`، لم تُربط منفّذات البث بجلسات الترحيل بعد؛ وتجمع Kafka / AMQP / XMPP وما شابه استجابة أحادية. ولا يجمع `debug-all` سوى الميزات أعلاه.
+- **الأمان**: تصحيح الخادم معطّل افتراضيًا ويتطلب مصادقة عامة؛ يتحقق حارس SSRF من كل IP ويثبّت الاتصال؛ ويُرفض كل من إعادة التوجيه/الوكيل وبيانات السحابة الوصفية؛ وتُحدّ أحجام الاستجابة والإطارات والمهلة؛ وتُحدّ استجابات DNP3 عند 10,000 نقطة وIEC 104 عند 10,000 سطر (خطأ صارم عند التجاوز)، حتى لا تضخّم الإطارات الصغيرة المخرجات المحلَّلة؛ والبروتوكولات بلا TLS مثبّت تفشل مغلقة.
 - **الأداء**: تُبنى الوثائق والتصديرات وcodegen وأجسام mock وقت البناء؛ وتبقى مسارات apidoc المحلية دون 10ms p99 (`tests/latency.rs`).
 
 ## البنية
@@ -114,22 +145,27 @@ apidoc-rust/
 ├── Cargo.toml                 # إعداد workspace (resolver 2)
 ├── VERSION                    # إصدار المشروع (v2.2.0)
 ├── crates/
-│   ├── apidoc/                # النواة في زمن التشغيل (مستقلة عن الإطار)
-│   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json + UI_HTML
-│   │   ├── src/auth.rs        # M6a مصادقة كلمة المرور (إصدار/تحقق token بـ HMAC + حارس المسارات + تراجع أُسّي)
-│   │   ├── src/export/        # تصدير M5: markdown / typescript / swagger
-│   │   ├── src/ui.html        # واجهة الوثائق المشتركة (تصدّرها النواة، ويشير إليها المحولان)
-│   │   ├── tests/             # اختبارات التكامل (توسيع الماكرو / التجميع / التسلسل / عبر crates)
-│   │   └── examples/demo.rs   # مثال: تعليقات توضيحية + إخراج api.json
-│   ├── apidoc-macros/         # proc-macro: أكثر من 65 ماكرو سمة (بما فيها 45 اسمًا مستعارًا للبروتوكولات)
+│   ├── apidoc/                # نواة التشغيل (مستقلة عن إطار العمل)
+│   │   ├── src/lib.rs         # نموذج البيانات + تجميع DocRegistry + api.json + UI_HTML + UiMode
+│   │   ├── src/auth.rs        # مصادقة كلمة المرور M6a (إصدار/التحقق من رمز HMAC + الحارس + backoff)
+│   │   ├── src/uiapi.rs       # عقد UIC-1: capabilities / menus / detail / docs / مسارات الإدارة
+│   │   ├── src/protocol_defs/ # تسع صيغ تعريفات خارجية (OpenAPI/AsyncAPI/GraphQL/proto/…)
+│   │   ├── src/export/        # التصدير: markdown / typescript / swagger / asyncapi + codegen
+│   │   ├── src/debug/         # منفّذات خادم خاضعة لـ feature (http / grpc / sockets / mqtt / industrial / media / …)
+│   │   ├── src/axum.rs        # محول axum (docs/debug/stream/webhook/UIC-1/واجهة ثابتة + CORS)
+│   │   ├── src/actix.rs       # محول actix-web (feature `actix`، 1:1 مع axum)
+│   │   ├── src/ui.html        # الواجهة الأصلية المضمّنة؛ نسخة Vue الثابتة تُخدم عبر ui/ui_path
+│   │   ├── tests/             # اختبارات تكامل (الماكروات/التجميع/التسلسل/UIC-1/التعريفات/الكمون)
+│   │   └── examples/demo.rs   # مثال: التعليقات التوضيحية + إخراج api.json
+│   ├── apidoc-macros/         # proc-macro: 24 تعليقًا توضيحيًا أساسيًا + 45 اسمًا مستعارًا للبروتوكولات
 │   │   └── src/lib.rs         # تعريفات الماكرو + تحليل المعاملات + التحقق في زمن الترجمة
-
-│   ├── apidoc-test-fixtures/  # نماذج اختبار التسجيل عبر crates
-
+│   ├── apidoc-idl/            # CLI مستقل `.proto` / `.thrift` → تعليق apidoc
+│   └── apidoc-test-fixtures/  # تجهيزات اختبار التسجيل بين crates
+├── contract/                  # UIC-1 Contract 1.0: المخطط + تجهيزات مشتركة بين الخوادم
 ├── .github/
-│   └── workflows/release.yml  # سير عمل النشر (يقرأ VERSION، وإنشاء tag+release تدريجي)
+│   └── workflows/release.yml  # سير عمل الإصدار (يقرأ VERSION وينشئ tag+release تدريجيًا)
 └── docs/
-    ├── images/                # مخططات البنية / الوظائف / دورة الحياة (SVG)
+    ├── images/                # أصول البنية/المميزات/دورة الحياة/تعدد البروتوكولات/المعاينة الاجتماعية
     └── i18n/                  # وثائق متعددة اللغات (12 لغة)
 ```
 
@@ -428,6 +464,58 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 خطأ السكريبت يظهر في منطقة نتائج التصحيح فقط ولا يقطع الطلب (فشل النص القبلي يعني إرسال الطلب كالمعتاد، وفشل النص البعدي يعني عرض الاستجابة الأصلية كالمعتاد).
 
+### 13. واجهة المستخدم: الأصلية / نسخة Vue الثابتة (UIC-1 Phase 5)
+
+افتراضيًا يقدّم `/apidoc` الواجهة الأصلية المضمّنة (`UiMode::Native`)، لذا لا تحتاج عمليات النشر الحالية إلى أي تغيير. تستهلك نسخة Vue عقد UIC-1 في القسم 14 وتُشارك مع PHP وGo (apidoc-ui `npm run package:ui`):
+
+```rust
+use apidoc::{ApidocConfig, UiMode};
+
+let cfg = ApidocConfig {
+    title: "واجهة API الخاصة بي".into(),
+    ui: UiMode::Vue,
+    ui_path: Some("/srv/apidoc".into()), // محتويات dist/uic1-ui/: index.html + config.js + assets/
+    ..Default::default()
+};
+```
+
+- حزم الإصدار تستخدم Vue افتراضيًا: `ApidocConfig::release("واجهة API الخاصة بي", "/srv/apidoc")` مكافئة للإعداد الصريح أعلاه؛ **ويبقى الإعداد الافتراضي للمكتبة `native`**.
+- في وضع Vue يعيد `GET /apidoc` تحويل 307 إلى `/apidoc/` (يستخدم البناء عناوين نسبية `./assets/...`)، وتُقرأ `/apidoc/` و`config.js` و`assets/*` من `ui_path`، وتُرجع المسارات غير المعروفة بلا امتداد إلى `index.html` (SPA fallback).
+- تحتفظ مسارات API بالأولوية: `/apidoc/api.json` و`/apidoc/export` و`/apidoc/ui/v1/*` والمصادقة والتصحيح وwebhook تُطابق قبل الملفات الثابتة؛ وتعيد المسارات الفرعية غير المعروفة لـ API الرمز 404 بدلًا من غلاف SPA.
+- الأمان: تبقى المسارات محصورة داخل `ui_path`؛ وتعيد `..` وتجاوزات الترميز والهروب عبر الروابط الرمزية 404، ولا تُسرد المجلدات أبدًا، ويُفشل غياب `ui_path` / `index.html` عند بدء التشغيل (fail closed). و`ui` / `ui_path` للخادم فقط ولا تُسلسل في api.json.
+- التراجع: أعِد `ui: UiMode::Native` وأعد التشغيل؛ تبقى الواجهة الأصلية وجميع المسارات القديمة كما هي.
+
+### 14. عقد UIC-1 · تعريفات البروتوكولات الخارجية
+
+`/apidoc/ui/v1/*` هو العقد المستقر الذي تستهلكه apidoc-ui (Contract 1.0)؛ والاستجابات الناجحة تكون `{code:0,message:"ok",data}`:
+
+| المسار | الغرض |
+|---|---|
+| `GET /apidoc/ui/v1/capabilities` | قدرات الخادم: contract / backend / version / features (بما فيها قائمة بروتوكولات الترحيل المجمّعة) |
+| `GET /apidoc/ui/v1/config` | إعداد تهيئة الواجهة (العنوان، شجرة التطبيقات، مفاتيح المصادقة، …) |
+| `POST /apidoc/ui/v1/menus` · `detail` | فهرس الواجهات وتفاصيلها، بما في ذلك `definitions` و`validation` |
+| `GET/POST /apidoc/ui/v1/docMenus` · `POST docDetail` | فهرس وثائق Markdown ونصها |
+| `POST /apidoc/ui/v1/verifyAuth` | التحقق من رموز المصادقة العامة / التطبيق / المشاركة |
+| `POST /apidoc/ui/v1/debugSend` · `debugStart` · `debugPoll` · `debugStop` | التصحيح المباشر من المتصفح وعبر ترحيل الخادم |
+| `POST /apidoc/ui/v1/addApiShare` · `getApiShareList` · `getApiShareDetail` · `deleteApiShare` · `handleApiShareAction` | CRUD لسجلات المشاركة (Rust `share.actions=false`؛ بلا إجراءات تصريحية) |
+| `POST /apidoc/ui/v1/cache/clear` · `cache/warm` | إدارة التخزين المؤقت (Rust `cache.mode=build`) |
+| `POST /apidoc/ui/v1/renderCodeTemplate` · `exportAllData` | معالجة قوالب الأكواد وتصدير البيانات الكامل (تُنشئ الواجهة md / pdf / openapi / postman / asyncapi / typescript) |
+
+أرفق تعريفًا خارجيًا بمعالج عبر `#[apidoc::definition]`:
+
+```rust
+#[apidoc::title("جلب المستخدم")]
+#[apidoc::url("/api/user/info")]
+#[apidoc::method("GET")]
+#[apidoc::definition(file = "api/openapi.yaml", operation = "getUser")]
+fn get_user_info() -> String { unimplemented!() }
+```
+
+- **تسع صيغ**: OpenAPI وAsyncAPI وGraphQL وProto وWSDL وEDMX وJSON Schema وJSON-RPC وXML-RPC. عند حذف `format` يُكتشف من الامتداد/المحتوى، أو يمكن تحديده صراحةً.
+- **معاملات اختيارية**: `operation` (اختيار عملية)، `message` / `direction` (اختيار رسالة)، `sample` / `sample_file` / `sample_encoding` (عينة تحقق) و`strict` (افتراضيًا `true`: البنى غير المدعومة أخطاء).
+- **الإخراج**: حمولة موحّدة `{format, source, operation, meta, messages, validation}`؛ وتحمل التشخيصات `path / line / column / severity / message`. تظهر التعريفات في تفاصيل UIC-1 فقط ولا تظهر أبدًا في api.json.
+- **الحدود**: المسارات نسبية إلى `CARGO_MANIFEST_DIR` للـ crate المعلن، ويجب أن يبقى realpath للرابط الرمزي داخل جذر الـ crate؛ ويُحدّ كل ملف عند 2 MiB / 50,000 سطر، بحد أقصى 64 استيرادًا وعمق استيراد 32.
+
 ## خطة التطوير
 
 | المرحلة | المحتوى | الحالة |
@@ -441,6 +529,9 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 | M6a | مصادقة كلمة المرور (token موقّع بـ HMAC-SHA256 + قناع كلمة المرور، كلمة مرور التطبيق لها الأولوية) | ✅ مكتمل |
 | M6b | تطبيقات وإصدارات متعددة (شجرة إعداد apps + تعليقة app + منتقي الواجهة) | ✅ مكتمل |
 | v2 | مراجع حقول جداول البيانات + تخزين الوثائق مؤقتًا + روابط المشاركة + مولّد الأكواد + أحداث التصحيح | ✅ مكتمل |
+| UIC-1 Phase 0–2 | Contract 1.0: capabilities / menus / detail / docs / debug / share / cache / generator / export، متوافقة دلاليًا عبر جميع الخوادم | ✅ مكتمل |
+| UIC-1 Phase 3–4 | الإبلاغ الكامل بقدرات الترحيل + ربط تسعة محلّلات تعريفات خارجية بتفاصيل UIC | ✅ مكتمل |
+| UIC-1 Phase 5 | واجهة Vue الثابتة (`ui` / `ui_path`؛ حزم الإصدار تستخدم Vue افتراضيًا مع الاحتفاظ بالواجهة الأصلية) | ✅ مكتمل |
 
 ## وثائق متعددة اللغات
 

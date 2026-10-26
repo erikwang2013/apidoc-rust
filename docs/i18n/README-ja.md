@@ -23,7 +23,7 @@ Rust の手続きマクロ（proc-macro）による API ドキュメント生成
 
 ## 📖プロジェクト紹介
 
-Apidoc は **Rust の手続きマクロ（proc-macro）** を解析して API インターフェースドキュメントを自動生成する Rust プラグインライブラリで、axum、actix-web などの主要フレームワークに対応しています。ドキュメントの自動生成に加えて、オンラインインターフェースデバッグ、Mock デバッグデータ、Json/TypeScript コード生成、インターフェースジェネレータ、コードジェネレータなどの機能を統合し、インターフェースの開発・デバッグ・納品までの全工程をカバーして、API 開発効率の向上を目指しています。
+Apidoc は **Rust の手続きマクロ（proc-macro）** を解析して API インターフェースドキュメントを自動生成する Rust プラグインライブラリで、axum、actix-web などの主要フレームワークに対応しています。ドキュメントの自動生成に加えて、オンラインインターフェースデバッグ、Mock デバッグデータ、Json/TypeScript コード生成、インターフェースジェネレータ、コードジェネレータなどの機能を統合し、インターフェースの開発・デバッグ・納品までの全工程をカバーして、API 開発効率の向上を目指しています。 2.2.0 からは **UIC-1 バックエンド契約**も提供し、apidoc-ui の Vue ビルドが直接利用します。組み込み native UI は維持され、設定でどちらかを選択できます。
 
 apidoc-rust の実装方針：
 
@@ -34,21 +34,23 @@ apidoc-rust の実装方針：
 ### ✨プロジェクト説明
 
 - **すぐに使える**：面倒な設定は不要で、インストール後にドキュメントどおりに注釈を書くだけで API ドキュメントが自動生成されます。
-- **手軽な記述**：共通定義（definitions）とフィールドの `ref` 参照に対応し、数行の注釈で完全なフィールド定義を完成できます。
+- **簡単な記述**: `ref` / `table` フィールド参照と 9 種類の外部定義フォーマット（OpenAPI、AsyncAPI、GraphQL、Proto、WSDL、EDMX、JSON Schema、JSON-RPC、XML-RPC）を `#[apidoc::definition]` でサポート。数個のアノテーションでフィールド定義を完結できます。
 - **オンラインデバッグ**：ドキュメントページ上でインターフェースを直接デバッグでき、グローバルパラメータの引き継ぎ、Mock データ、デバッグイベントに対応します。
+- **マルチプロトコルデバッグ**: 45 のプロトコルアノテーション（RPC、メッセージング、産業、メディア、IoT など）をブラウザ直結とサーバーリレーの両チャネルで提供。アノテーションはプロトコルドキュメントとデバッグパネルの両方を生成します。
+- **UIC-1 契約**: `/apidoc/ui/v1/*` が capabilities / config / menus / detail / docs / debug / share / cache / generator / export を提供し、apidoc-ui の 1 つの Vue ビルドで PHP・Go・Rust を支えます。静的 Vue UI は `ui` / `ui_path` で有効化します（リリースパッケージは既定で Vue、ライブラリ既定では組み込み native UI を維持）。
 - **複数アプリ・複数バージョン**：単一アプリ、複数アプリ、複数バージョンのプロジェクトをいずれも設定でき、インターフェースはアプリ/バージョンごとにグループ化して表示・切り替えできます。
 - **グループ・Tag**：インターフェースは多段階グループと Tag マーキングに対応します。
 - **Markdown ドキュメント**：`md` 注釈で Markdown をドキュメントページとしてマウントできます。
 - **Json・TypeScript 生成**：各インターフェースの Json リクエスト/レスポンス例と TypeScript 型定義を自動生成し、フロントエンドでそのまま利用できます。
 - **コードジェネレータ**：設定 + テンプレートで業務コードとフロントエンドの Api ファイルを生成できます。
 - **インターフェース共有**：指定したアプリ/インターフェースの共有リンクを生成し、`swagger.json` をエクスポートできます。
-- **安全なアクセス**：グローバルパスワードとアプリ/バージョンごとの独立パスワード認可に対応；ドキュメントはビルド時に生成され、ローカル応答は p99 10ms 未満です。
+- **安全なアクセス**: グローバルパスワードとアプリ/バージョン別の独立パスワード。サーバー側デバッグは既定で無効で、SSRF ガードとサイズ/フレーム/タイムアウト上限を適用。定義ファイルと産業プロトコルには厳格な上限があり、ドキュメントはビルド時に生成、ローカル応答は 10ms p99 未満です。
 
 ## 特徴
 
 ### 実装済み（M1–M3）
 
-- **注釈式ドキュメント**：`title` / `desc` / `method` / `url` / `param` / `query` / `returned` の 7 つの属性マクロで項目ごとに注釈します。パラメータは `required` / `default` / `desc` / `mock` / `children` のネストに対応
+- **アノテーションによるドキュメント**: 7 つの基本属性マクロ `title` / `desc` / `method` / `url` / `param` / `query` / `returned` に加え、`tag` / `group` / `header` / `table` と 45 のプロトコルアノテーション。パラメータは `required` / `default` / `desc` / `mock` / `children` / `field` のネストに対応
 - **コンパイル期検証**：url は `/` で始まる必要があり、method はホワイトリスト、param の name は必須など、不正な注釈はコンパイル期にエラーになります（span 単位で正確）
 - **自動収集**：linkme の `distributed_slice` による静的登録で、手動のインターフェース一覧は不要。`DocRegistry::collect()` が id でマージし、seq で宣言順を復元、crate をまたいで自動収集します
 - **api.json 出力**：serde で統一ドキュメントデータモデル（config + endpoints）をシリアライズし、フィールド名はモデルとエクスポータで同一の定義を共用します
@@ -60,13 +62,13 @@ apidoc-rust の実装方針：
 - **オンラインデバッグ**：ドキュメントページに組み込みの「オンラインデバッグ」パネル——Base URL は `location.origin` で事前入力されクロスオリジンで対象サービスに直結、パラメータフォームは mock で事前入力、`{name}` / `:name` のルートプレースホルダー置換、GET/HEAD パラメータは query に統合、その他の method は JSON body に組み立て、リクエストヘッダー編集 + カスタム header、レスポンス表示（ステータス / 所要時間 / pretty JSON）、CORS 失敗時は黄色の警告
 - **Mock エンジン**（`crates/apidoc/src/mock.rs`、fake crate 依存、15 ルール：name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date）。ルール優先度：`mock="fake:xxx"` は fake ルール表を通る（不明な名前はデフォルト値にフォールバック）→ その他の非空 mock はそのまま出力（例：`mock="1"`、`mock="erik"`）→ mock なしは `ty` に応じて自動生成（int→`"1"`、float→`"0.5"`、bool→`"true"`、object→`"{}"`、string→`"string"`）；children は再帰的にネスト、array は固定 2 項目
 - **mock インターフェース**：axum アダプタに `GET /apidoc/mock?url=&method=` を追加、url + method を完全一致で照合し、不一致は 404；デバッグパネルはデフォルトで `not_debug` エンドポイントを非表示にし、「not_debug インターフェースを表示」にチェックすると表示
-- **CORS 直結**：オンラインデバッグはブラウザから対象インターフェースに直接接続し、アダプタの `cors_layer` が許可します（サーバー側リバースプロキシは v2 に持ち越し）
+- **CORS 直接接続**: オンラインデバッグはブラウザから対象 API へ直接接続し、アダプタの `cors_layer` が許可します。サーバー側リレーは P2–P5 の実行者が提供します
 
 ### 実装済み（M5）
 
-- **4 形式エクスポート**（`crates/apidoc/src/export/`）：markdown / typescript / swagger（OpenAPI 3.0.0）、コア crate が `export::markdown::render` / `export::typescript::render` / `export::swagger::render` を提供
-- **エクスポートルート**：アダプタに `GET /apidoc/export?format=md|ts|swagger` を追加、未知の format は 400 を返す；Content-Type はそれぞれ `text/markdown` / `application/typescript` / `application/json`
-- **markdown**：グループ別ディレクトリ + パラメータ表 + レスポンスブロック；**typescript**：group ごとに名前空間で `{Name}Params` / `{Name}Result` 型を生成、未グループのインターフェースは `defaultGroup` に入る（`default` は TS の予約語）；**swagger**：`info.version` は Cargo パッケージバージョンを取得
+- **4 形式のエクスポート** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0) / AsyncAPI 2.6 (P6)。コア crate は `export::markdown::render` / `export::typescript::render` / `export::swagger::render` / `export::asyncapi::render` を提供
+- **エクスポートルート**: アダプタに `GET /apidoc/export?format=md|ts|swagger|asyncapi` を追加、不明な形式は 400。Content-Type はそれぞれ `text/markdown` / `application/typescript` / `application/json`
+- **markdown**: グループ別インデックス + パラメータ表 + レスポンスブロック。**typescript**: group namespace ごとに `{Name}Params` / `{Name}Result` 型を生成し、未グループのインターフェースは `defaultGroup` に入ります（`default` は TS の予約語）。**swagger**: `info.version` は `ApidocConfig.version` を優先し、なければ Cargo パッケージ版（現在 2.2.0）にフォールバック
 - **actix-web アダプタ**（`crates/apidoc/src/actix.rs`）：axum アダプタと機能 1:1——`apidoc_routes(ApidocConfig) -> Scope` で /apidoc、/apidoc/api.json、/apidoc/mock、/apidoc/export をマウント、`cors_layer(CorsConfig)` がクロスオリジンを許可
 - **UI 共有**：ドキュメント UI（`src/ui.html`）をコア crate に移動し、`pub const UI_HTML` としてエクスポート、両アダプタは同一のものを参照（リリースパッケージングでも安全）
 
@@ -84,6 +86,14 @@ apidoc-rust の実装方針：
 - **コードジェネレータ**：`GET /apidoc/generate?template=<name>` → レンダリング済みテキスト（未知のテンプレートは 404）；内蔵 `api.ts`（フロントエンド Api ファイル）、`handler.rs`（Rust インターフェースの雛形）、`schema.sql`（`tables` から CREATE TABLE 文を生成）；`ApidocConfig.codegen` の同名テンプレートが内蔵を上書きします。テンプレート構文は 2 種類のみ：`{{変数}}`（未定義ならそのまま保持）と `{{#each リスト}}…{{/each}}`（ネスト可、例：`tables` × `fields`）
 - **デバッグイベント**：オンラインデバッグパネルに折りたたみ式の「前処理スクリプト / 後処理スクリプト」（localStorage に永続化）を追加 — 前処理スクリプトは `new Function('ctx', code)` によりリクエスト前に実行され、`ctx.url/method/headers/body` を変更したり、オブジェクトを返して浅くマージできます；後処理スクリプトはレスポンス後に実行され `status/ms/text/url/method/ep` を読み取れ、文字列を返すと表示中のレスポンステキストを置き換えます；スクリプトのエラーは結果エリアに提示されるだけで、リクエストは中断されません
 
+### 実装済み (v2.2 · UIC-1)
+
+- **UIC-1 バックエンド契約 (Contract 1.0)**: `/apidoc/ui/v1/*` が capabilities / config / menus / detail / docMenus / docDetail / verifyAuth / デバッグセッション / 共有レコード / キャッシュ / コードテンプレート / 全量エクスポートを提供。`capabilities` はこのビルドで実際にコンパイルされたものだけを報告し、UI が利用不可の項目を隠せます。Rust は `share.actions=false`、`cache.mode=build`、ジェネレータ `forms=false` / `templates=true`、単項リレーのみ (`relay-unary`) を宣言します。
+- **9 種類の外部定義フォーマット**: `#[apidoc::definition(file = "...", operation = "...")]` が OpenAPI、AsyncAPI、GraphQL、Proto、WSDL、EDMX、JSON Schema、JSON-RPC、XML-RPC を統一 payload `{format, source, operation, meta, messages, validation}` に解析します。`/apidoc/ui/v1/detail` は項目ごとの診断 (`path` / `line` / `column` / `severity` / `message`) 付きで `definitions` を返します。定義は api.json に入らないため、native UI と従来の出力は変わりません。
+- **静的 Vue UI**: `ui: UiMode::Vue` + `ui_path` で apidoc-ui の `dist/uic1-ui/` ビルドを配信します。`ApidocConfig::release(title, ui_path)` がリリースパッケージの入口です（ライブラリ既定は組み込み native UI のまま）。SPA fallback、`config.js` / `assets/*`、パス脱出とシンボリックリンク対策、`ui_path` や `index.html` がない場合の fail-closed 起動を含みます。
+- **リレー機能の完全報告**: `capabilities.debug.relay` はこのビルドでコンパイルされた実行者だけを列挙します。`debug-all` では 30 個のプロトコル ID を集約するため、UI が「not compiled」で失敗する実行者を提示することはありません。
+- **産業プロトコルの修正とリソース上限**: DNP3 は IIN の後にオブジェクトヘッダを解析し、各応答を 10,000 ポイントに制限。IEC 60870-5-104 は各応答を 10,000 行に制限。BACnet/IP は有効な ReadProperty 要求を送信。DNP3 ポイント数の u16 オーバーフローを修正しました。
+
 ## マルチプロトコルのドキュメントとデバッグ（P1–P6）
 
 ![apidoc-rust マルチプロトコルデバッグ構成](../images/multiprotocol-en.svg)
@@ -92,7 +102,28 @@ apidoc-rust の実装方針：
 - **ブラウザ直結デバッグ**（Rust 依存なし）: SOAP、GraphQL（subscription 含む）、JSON-RPC、XML-RPC、OData、MCP、A2A、Webhooks、WebSocket（テキスト/バイナリ）、SSE、Socket.IO、STOMP（バイナリ含む）、WebRTC/DataChannel、HLS。
 - **サーバー側エグゼキュータ**（feature-gated）: HTTP/2、HTTP/3、gRPC、Thrift、Dubbo/Hessian2、ISO 8583、TCP/UDP/Raw/Unix、MQTT、AMQP、Kafka、XMPP、STOMP/TCP、CoAP、LwM2M、Modbus、DNP3、IEC 104、BACnet/IP、OPC UA、RTP/RTCP/RTSP/SIP/RTMP。`debug-all` で一括有効化。
 - **P6**: Webhook キャプチャ、AsyncAPI 2.6 エクスポート、`apidoc-idl` CLI による `.proto`/`.thrift` インポート、Dubbo Nacos レジストリ、イベントからの mock 例。
-- **セキュリティ**: サーバー側デバッグは既定で無効、有効化にはグローバル認証が必須。SSRF ガードは解決後の各 IP を検証して接続を固定し、リダイレクト/プロキシとクラウドメタデータを拒否。サイズ/フレーム/タイムアウトは上限付き。ピン留め TLS のないプロトコルは fail closed。
+- **UIC-1 リレー機能**: `GET /apidoc/ui/v1/capabilities` の `features.debug.relay` はこのビルドでコンパイルされた実行者だけを報告します。Rust は単項のみ (`modes` に `relay-unary` を含み、`relay-stream` を含まない)。`debug-all` ビルドは 30 個すべてのプロトコル ID を報告します:
+
+| feature | リレーのプロトコル ID |
+|---|---|
+| `debug-http` | `http` `http2` |
+| `debug-session` | `websocket` |
+| `debug-grpc` | `grpc` |
+| `debug-thrift` | `thrift` |
+| `debug-dubbo` | `dubbo` `hessian` |
+| `debug-iso8583` | `iso8583` |
+| `debug-mqtt` | `mqtt` |
+| `debug-amqp` | `amqp` |
+| `debug-kafka` | `kafka` |
+| `debug-xmpp` | `xmpp` |
+| `debug-sockets` | `stomp` `tcp` `udp` `raw` `unix` |
+| `debug-coap` | `coap` `lwm2m` |
+| `debug-industrial` | `modbus` `dnp3` `iec104` `bacnet` `opcua` |
+| `debug-media` | `rtp` `rtcp` `rtsp` `sip` `rtmp` |
+| `debug-http3` | `http3` |
+
+`websocket` を除き、ストリーミング実行者はまだリレーセッションに接続されていません。Kafka / AMQP / XMPP などは単項応答を収集します。`debug-all` は上記の機能を集約するだけです。
+- **セキュリティ**: サーバー側デバッグは既定で無効かつグローバル認証が必要。SSRF ガードが各 IP を解決・検証して接続をピン留めし、リダイレクト/プロキシとクラウドメタデータを拒否。応答サイズ/フレーム/タイムアウトを制限。DNP3 応答は 10,000 ポイント、IEC 104 は 10,000 行に制限（超過は厳格なエラー）し、小さなフレームで解析出力が膨らまないようにします。TLS ピン留めのないプロトコルは fail-closed です。
 - **性能**: ドキュメント、エクスポート、codegen、mock ボディはビルド時に生成。apidoc のローカルルートは p99 10ms 未満（`tests/latency.rs`）。
 
 ## アーキテクチャ
@@ -111,26 +142,31 @@ apidoc-rust の実装方針：
 
 ```
 apidoc-rust/
-├── Cargo.toml                 # workspace 設定（resolver 2）
-├── VERSION                    # プロジェクトバージョン（v2.2.0）
+├── Cargo.toml                 # workspace 設定 (resolver 2)
+├── VERSION                    # プロジェクト版 (v2.2.0)
 ├── crates/
-│   ├── apidoc/                # ランタイムコア（フレームワーク非依存）
-│   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML
-│   │   ├── src/auth.rs        # M6a パスワード認証（HMAC token の発行/検証 + ルートガード + バックオフ）
-│   │   ├── src/export/        # M5 エクスポート：markdown / typescript / swagger
-│   │   ├── src/ui.html        # 共有ドキュメント UI（コア crate がエクスポート、両アダプタが参照）
-│   │   ├── tests/             # 統合テスト（マクロ展開/集約/シリアライズ/クロス crate）
-│   │   └── examples/demo.rs   # サンプル：注釈 + api.json 出力
-│   ├── apidoc-macros/         # proc-macro：65+ 属性マクロ（45 プロトコル別名を含む）
-│   │   └── src/lib.rs         # マクロ定義 + パラメータ解析 + コンパイル期検証
-
-│   ├── apidoc-test-fixtures/  # クロス crate 登録テストフィクスチャ
-
+│   ├── apidoc/                # ランタイムコア (フレームワーク非依存)
+│   │   ├── src/lib.rs         # データモデル + DocRegistry 集約 + api.json + UI_HTML + UiMode
+│   │   ├── src/auth.rs        # M6a パスワード認証 (HMAC トークン発行/検証 + ガード + backoff)
+│   │   ├── src/uiapi.rs       # UIC-1 契約: capabilities / menus / detail / docs / 管理ルート
+│   │   ├── src/protocol_defs/ # 9 種類の外部定義フォーマット (OpenAPI/AsyncAPI/GraphQL/proto/…)
+│   │   ├── src/export/        # エクスポート: markdown / typescript / swagger / asyncapi + codegen
+│   │   ├── src/debug/         # feature-gated サーバー実行者 (http / grpc / sockets / mqtt / industrial / media / …)
+│   │   ├── src/axum.rs        # axum アダプタ (docs/debug/stream/webhook/UIC-1/静的 UI + CORS)
+│   │   ├── src/actix.rs       # actix-web アダプタ (feature `actix`、axum と 1:1)
+│   │   ├── src/ui.html        # 組み込み native UI。静的 Vue ビルドは ui/ui_path から配信
+│   │   ├── tests/             # 統合テスト (マクロ/集約/シリアライズ/UIC-1/定義/レイテンシ)
+│   │   └── examples/demo.rs   # 例: アノテーション + api.json 出力
+│   ├── apidoc-macros/         # proc-macro: 24 基本アノテーション + 45 プロトコル別名
+│   │   └── src/lib.rs         # マクロ定義 + 引数解析 + コンパイル時検証
+│   ├── apidoc-idl/            # 独立 CLI `.proto` / `.thrift` → apidoc アノテーション
+│   └── apidoc-test-fixtures/  # crate 間登録テスト用フィクスチャ
+├── contract/                  # UIC-1 Contract 1.0: スキーマ + バックエンド間フィクスチャ
 ├── .github/
-│   └── workflows/release.yml  # リリースワークフロー（VERSION を読み、tag+release を増分作成）
+│   └── workflows/release.yml  # リリースワークフロー (VERSION を読み、段階的に tag+release を作成)
 └── docs/
-    ├── images/                # アーキテクチャ/機能/ライフサイクル図（SVG）
-    └── i18n/                  # 多言語ドキュメント（12 言語）
+    ├── images/                # アーキテクチャ/機能/ライフサイクル/マルチプロトコル/ソーシャルプレビュー素材
+    └── i18n/                  # 多言語ドキュメント (12 言語)
 ```
 
 ## 使い方
@@ -428,6 +464,58 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 スクリプトのエラーはデバッグ結果エリアに提示されるだけで、リクエストは中断されません（前処理が失敗してもリクエストは通常どおり送信され、後処理が失敗しても元のレスポンスがそのまま表示されます）。
 
+### 13. UI: native / 静的 Vue ビルド (UIC-1 Phase 5)
+
+既定では `/apidoc` は組み込み native UI (`UiMode::Native`) を配信するため、既存のデプロイに変更は不要です。Vue ビルドは第 14 節の UIC-1 契約を利用し、PHP と Go で共有されます (apidoc-ui `npm run package:ui`):
+
+```rust
+use apidoc::{ApidocConfig, UiMode};
+
+let cfg = ApidocConfig {
+    title: "My API".into(),
+    ui: UiMode::Vue,
+    ui_path: Some("/srv/apidoc".into()), // dist/uic1-ui/ の内容: index.html + config.js + assets/
+    ..Default::default()
+};
+```
+
+- リリースパッケージは既定で Vue: `ApidocConfig::release("My API", "/srv/apidoc")` は上記の明示設定と等価です。**ライブラリ既定は `native` のまま**です。
+- Vue モードでは `GET /apidoc` が 307 で `/apidoc/` へリダイレクトし（ビルドは相対 URL `./assets/...` を使用）、`/apidoc/`、`config.js`、`assets/*` は `ui_path` から読み込まれ、拡張子のない不明なパスは `index.html` にフォールバックします (SPA fallback)。
+- API ルートは優先されます: `/apidoc/api.json`、`/apidoc/export`、`/apidoc/ui/v1/*`、auth、debug、webhook は静的ファイルより先にマッチします。不明な API サブパスは SPA シェルではなく 404 を返します。
+- セキュリティ: パスは `ui_path` 内に限定され、`..`、エンコーディング回避、シンボリックリンク脱出は 404 を返します。ディレクトリ一覧は決して行わず、`ui_path` / `index.html` がない場合は起動時に失敗します (fail closed)。`ui` / `ui_path` はサーバー専用で、api.json にシリアライズされることはありません。
+- ロールバック: `ui: UiMode::Native` に戻して再起動します。native UI とすべての旧ルートはそのままです。
+
+### 14. UIC-1 契約 · 外部プロトコル定義
+
+`/apidoc/ui/v1/*` は apidoc-ui が利用する安定契約 (Contract 1.0) です。成功応答は `{code:0,message:"ok",data}` です:
+
+| ルート | 用途 |
+|---|---|
+| `GET /apidoc/ui/v1/capabilities` | バックエンド機能: contract / backend / version / features（コンパイル済みリレープロトコル一覧を含む） |
+| `GET /apidoc/ui/v1/config` | UI 起動設定（タイトル、アプリツリー、auth スイッチなど） |
+| `POST /apidoc/ui/v1/menus` · `detail` | エンドポイント一覧と詳細（`definitions` と `validation` を含む） |
+| `GET/POST /apidoc/ui/v1/docMenus` · `POST docDetail` | Markdown ドキュメント一覧と本文 |
+| `POST /apidoc/ui/v1/verifyAuth` | グローバル / アプリ / 共有トークンの検証 |
+| `POST /apidoc/ui/v1/debugSend` · `debugStart` · `debugPoll` · `debugStop` | ブラウザ直結およびサーバーリレー経由のデバッグ |
+| `POST /apidoc/ui/v1/addApiShare` · `getApiShareList` · `getApiShareDetail` · `deleteApiShare` · `handleApiShareAction` | 共有レコードの CRUD（Rust `share.actions=false`、宣言的アクションなし） |
+| `POST /apidoc/ui/v1/cache/clear` · `cache/warm` | キャッシュ管理（Rust `cache.mode=build`） |
+| `POST /apidoc/ui/v1/renderCodeTemplate` · `exportAllData` | コードテンプレートのレンダリングと全量エクスポート（UI が md / pdf / openapi / postman / asyncapi / typescript を生成） |
+
+`#[apidoc::definition]` で外部定義をハンドラに紐付けます:
+
+```rust
+#[apidoc::title("ユーザー取得")]
+#[apidoc::url("/api/user/info")]
+#[apidoc::method("GET")]
+#[apidoc::definition(file = "api/openapi.yaml", operation = "getUser")]
+fn get_user_info() -> String { unimplemented!() }
+```
+
+- **9 種類の形式**: OpenAPI、AsyncAPI、GraphQL、Proto、WSDL、EDMX、JSON Schema、JSON-RPC、XML-RPC。`format` を省略すると拡張子/内容から検出され、明示指定も可能です。
+- **任意引数**: `operation`（操作の選択）、`message` / `direction`（メッセージの選択）、`sample` / `sample_file` / `sample_encoding`（検証サンプル）、`strict`（既定 `true`: 未対応構文はエラー）。
+- **出力**: 統一 payload `{format, source, operation, meta, messages, validation}`。診断は `path / line / column / severity / message` を持ちます。定義は UIC-1 の detail にのみ現れ、api.json には決して入りません。
+- **制限**: パスは宣言元 crate の `CARGO_MANIFEST_DIR` からの相対で、シンボリックリンクの realpath は crate ルート内に留まる必要があります。各ファイルは 2 MiB / 50,000 行、最大 64 インポート、インポート深さ 32 に制限されます。
+
 ## 開発ロードマップ
 
 | フェーズ | 内容 | ステータス |
@@ -441,6 +529,9 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 | M6a | パスワード認証（HMAC-SHA256 署名付き token + パスワードマスク、アプリのパスワード優先） | ✅ 完了 |
 | M6b | 複数アプリ・複数バージョン（apps 設定ツリー + app アノテーション + UI セレクタ） | ✅ 完了 |
 | v2 | データテーブルフィールド参照 + ドキュメントキャッシュ + 共有リンク + コードジェネレータ + デバッグイベント | ✅ 完了 |
+| UIC-1 Phase 0–2 | Contract 1.0: capabilities / menus / detail / docs / debug / share / cache / generator / export、全バックエンドで意味的に整合 | ✅ 完了 |
+| UIC-1 Phase 3–4 | リレー機能の完全報告 + UIC detail に接続された 9 種類の外部定義パーサ | ✅ 完了 |
+| UIC-1 Phase 5 | 静的 Vue UI (`ui` / `ui_path`、リリースパッケージは既定 Vue、native UI 維持) | ✅ 完了 |
 
 ## 多言語ドキュメント
 

@@ -23,7 +23,7 @@
 
 ## 📖প্রকল্প পরিচিতি
 
-Apidoc হল একটি রাস্ট প্লাগইন লাইব্রেরি, যা **রাস্ট প্রসেস-ম্যাক্রো (proc-macro)** পার্স করে API ইন্টারফেস ডকুমেন্টেশন স্বয়ংক্রিয়ভাবে তৈরি করে এবং axum, actix-web-এর মতো প্রধান ফ্রেমওয়ার্কের সাথে সামঞ্জস্যপূর্ণ। ডকুমেন্টেশন স্বয়ংক্রিয়ভাবে তৈরির পাশাপাশি এতে অনলাইন ইন্টারফেস ডিবাগিং, Mock ডিবাগ ডেটা, Json/TypeScript কোড জেনারেশন, ইন্টারফেস জেনারেটর, কোড জেনারেটর ইত্যাদি সুবিধাও সংযুক্ত, যা ইন্টারফেস ডেভেলপমেন্ট, ডিবাগিং ও ডেলিভারির সম্পূর্ণ প্রক্রিয়া কভার করে এবং API ডেভেলপমেন্টের দক্ষতা বাড়ানোর লক্ষ্যে কাজ করে।
+Apidoc হল একটি রাস্ট প্লাগইন লাইব্রেরি, যা **রাস্ট প্রসেস-ম্যাক্রো (proc-macro)** পার্স করে API ইন্টারফেস ডকুমেন্টেশন স্বয়ংক্রিয়ভাবে তৈরি করে এবং axum, actix-web-এর মতো প্রধান ফ্রেমওয়ার্কের সাথে সামঞ্জস্যপূর্ণ। ডকুমেন্টেশন স্বয়ংক্রিয়ভাবে তৈরির পাশাপাশি এতে অনলাইন ইন্টারফেস ডিবাগিং, Mock ডিবাগ ডেটা, Json/TypeScript কোড জেনারেশন, ইন্টারফেস জেনারেটর, কোড জেনারেটর ইত্যাদি সুবিধাও সংযুক্ত, যা ইন্টারফেস ডেভেলপমেন্ট, ডিবাগিং ও ডেলিভারির সম্পূর্ণ প্রক্রিয়া কভার করে এবং API ডেভেলপমেন্টের দক্ষতা বাড়ানোর লক্ষ্যে কাজ করে। 2.2.0 থেকে এটি **UIC-1 ব্যাকএন্ড চুক্তিও** প্রকাশ করে, যা apidoc-ui-এর Vue বিল্ড সরাসরি ব্যবহার করে; এমবেডেড native UI সংরক্ষিত থাকে এবং কনফিগারেশন দিয়ে দুটির মধ্যে বাছাই করা যায়।
 
 apidoc-rust-এর বাস্তবায়ন দৃষ্টিভঙ্গি:
 
@@ -34,21 +34,23 @@ apidoc-rust-এর বাস্তবায়ন দৃষ্টিভঙ্গ
 ### ✨প্রকল্প বিবরণ
 
 - **আউট-অব-দ্য-বক্স**: জটিল কনফিগারেশনের প্রয়োজন নেই; ইনস্টল করার পর ডকুমেন্টেশন অনুযায়ী অ্যানোটেশন লিখলেই API ডকুমেন্টেশন স্বয়ংক্রিয়ভাবে তৈরি হয়।
-- **সহজ লেখা**: সাধারণ সংজ্ঞা (definitions) এবং ফিল্ডের `ref` রেফারেন্স সমর্থন করে; কয়েকটি অ্যানোটেশনেই সম্পূর্ণ ফিল্ড সংজ্ঞা তৈরি হয়ে যায়।
+- **সহজ লেখা**: `ref` / `table` ফিল্ড রেফারেন্স এবং নয়টি বাহ্যিক ডেফিনিশন ফরম্যাট (OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC, XML-RPC) `#[apidoc::definition]` দিয়ে সমর্থিত; কয়েকটি অ্যানোটেশনেই সম্পূর্ণ ফিল্ড ডেফিনিশন হয়ে যায়।
 - **অনলাইন ডিবাগিং**: ডকুমেন্ট পেজেই সরাসরি ইন্টারফেস ডিবাগ করা যায়; গ্লোবাল প্যারামিটার পাস, Mock ডেটা ও ডিবাগ ইভেন্ট সমর্থিত।
+- **মাল্টি-প্রোটোকল ডিবাগিং**: ৪৫টি প্রোটোকল অ্যানোটেশন (RPC, মেসেজিং, শিল্প, মিডিয়া, IoT ইত্যাদি) ব্রাউজার-সরাসরি এবং সার্ভার-রিলে উভয় চ্যানেলে; অ্যানোটেশন একসাথে প্রোটোকল ডকুমেন্টেশন ও ডিবাগ প্যানেল তৈরি করে।
+- **UIC-1 চুক্তি**: `/apidoc/ui/v1/*` capabilities / config / menus / detail / docs / debug / share / cache / generator / export প্রকাশ করে, ফলে apidoc-ui-এর একটি Vue বিল্ডই PHP, Go ও Rust-কে সেবা দেয়। স্থির Vue UI `ui` / `ui_path` দিয়ে চালু হয় (রিলিজ প্যাকেজে ডিফল্ট Vue, লাইব্রেরি ডিফল্টে এমবেডেড native UI থাকে)।
 - **মাল্টি-অ্যাপ/মাল্টি-ভার্সন**: সিঙ্গেল অ্যাপ, মাল্টি-অ্যাপ ও মাল্টি-ভার্সন প্রকল্প—সবই কনফিগার করা যায়; ইন্টারফেস অ্যাপ/ভার্সন অনুযায়ী গ্রুপ আকারে দেখানো ও পরিবর্তন করা যায়।
 - **গ্রুপ/Tag**: ইন্টারফেসে বহু-স্তরের গ্রুপিং ও Tag চিহ্নিতকরণ সমর্থিত।
 - **Markdown ডকুমেন্টেশন**: `md` অ্যানোটেশনের মাধ্যমে Markdown-কে ডকুমেন্ট পেজ হিসেবে মাউন্ট করা যায়।
 - **Json/TypeScript জেনারেশন**: প্রতিটি ইন্টারফেসের জন্য Json রিকোয়েস্ট/রেসপন্স উদাহরণ ও TypeScript টাইপ ডেফিনিশন স্বয়ংক্রিয়ভাবে তৈরি হয়, যা সরাসরি ফ্রন্টএন্ডে ব্যবহার করা যায়।
 - **কোড জেনারেটর**: কনফিগারেশন + টেমপ্লেট দিয়েই বিজনেস কোড ও ফ্রন্টএন্ড Api ফাইল তৈরি করা যায়।
 - **ইন্টারফেস শেয়ার**: নির্দিষ্ট অ্যাপ/ইন্টারফেসের শেয়ার লিংক তৈরি করা যায় এবং `swagger.json` এক্সপোর্ট করা যায়।
-- **নিরাপদ অ্যাক্সেস**: গ্লোবাল পাসওয়ার্ড এবং অ্যাপ/ভার্সনভিত্তিক স্বতন্ত্র পাসওয়ার্ড অনুমোদন সমর্থিত; ডকুমেন্ট বিল্ড সময়ে তৈরি হয় এবং লোকাল উত্তর p99 ১০ms-এর নিচে থাকে।
+- **নিরাপদ অ্যাক্সেস**: গ্লোবাল পাসওয়ার্ড ও অ্যাপ/ভার্সনভিত্তিক আলাদা পাসওয়ার্ড; সার্ভার-সাইড ডিবাগিং ডিফল্টে বন্ধ এবং SSRF গার্ড এবং আকার/ফ্রেম/টাইমআউট সীমা প্রয়োগ করে; ডেফিনিশন ফাইল ও শিল্প প্রোটোকলের কঠোর সীমা আছে; ডকুমেন্টেশন বিল্ড-সময়ে তৈরি হয়, লোকাল রেসপন্স 10ms p99-এর নিচে থাকে।
 
 ## বৈশিষ্ট্য
 
 ### বাস্তবায়িত (M1–M3)
 
-- **অ্যানোটেশন-ভিত্তিক ডকুমেন্টেশন**: `title` / `desc` / `method` / `url` / `param` / `query` / `returned` সাতটি অ্যাট্রিবিউট ম্যাক্রো, একেকটি করে অ্যানোটেশন, প্যারামিটারগুলো `required` / `default` / `desc` / `mock` / `children` নেস্টিং সমর্থন করে
+- **অ্যানোটেশন দিয়ে ডকুমেন্টেশন**: সাতটি মূল অ্যাট্রিবিউট ম্যাক্রো — `title` / `desc` / `method` / `url` / `param` / `query` / `returned` — এর সাথে `tag` / `group` / `header` / `table` এবং ৪৫টি প্রোটোকল অ্যানোটেশন; প্যারামিটার `required` / `default` / `desc` / `mock` / `children` / `field` নেস্টিং সমর্থন করে
 - **কম্পাইল-টাইম ভ্যালিডেশন**: url অবশ্যই `/` দিয়ে শুরু হতে হবে, method হোয়াইটলিস্ট, param name বাধ্যতামূলক ইত্যাদি — অবৈধ অ্যানোটেশনে কম্পাইল-টাইম এরর (span সঠিক)
 - **স্বয়ংক্রিয় সংগ্রহ**: linkme `distributed_slice` স্ট্যাটিক রেজিস্ট্রেশন, ম্যানুয়াল ইন্টারফেস তালিকার দরকার নেই; `DocRegistry::collect()` id অনুযায়ী মার্জ করে, seq অনুযায়ী ডিক্লারেশন ক্রম পুনরুদ্ধার করে, ক্রস-crate স্বয়ংক্রিয় সংগ্রহ
 - **api.json আউটপুট**: serde সিরিয়ালাইজেশনের মাধ্যমে ইউনিফাইড ডকুমেন্ট ডেটা মডেল (config + endpoints), ফিল্ডের নাম মডেল ও এক্সপোর্টারগুলোর মধ্যে অভিন্ন
@@ -60,13 +62,13 @@ apidoc-rust-এর বাস্তবায়ন দৃষ্টিভঙ্গ
 - **অনলাইন ডিবাগিং**: ডকুমেন্ট পেজে বিল্ট-ইন «অনলাইন ডিবাগিং» প্যানেল — Base URL প্রি-ফিল হয় `location.origin` দিয়ে ক্রস-অরিজিনে সরাসরি টার্গেট সার্ভিসে, প্যারামিটার ফর্ম mock দিয়ে প্রি-ফিল, `{name}` / `:name` রাউট প্লেসহোল্ডার রিপ্লেসমেন্ট, GET/HEAD প্যারামিটার query-তে, বাকি methods JSON body হিসেবে, রিকোয়েস্ট হেডার এডিট + কাস্টম header, রেসপন্স ডিসপ্লে (স্ট্যাটাস / সময় / pretty JSON), CORS ফেল হলে হলুদ সতর্কতা
 - **Mock ইঞ্জিন** (`crates/apidoc/src/mock.rs`, fake crate-এর উপর নির্ভরশীল, ১৫টি রুল: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date)। রুল প্রায়োরিটি: `mock="fake:xxx"` fake রুল টেবিলে যায় (অজানা নাম ডিফল্ট ভ্যালুতে ফলব্যাক) ← বাকি নন-খালি mock অপরিবর্তিত আউটপুট (যেমন `mock="1"`, `mock="erik"`) ← mock না থাকলে `ty` অনুযায়ী অটো-জেনারেশন (int←`"1"`, float←`"0.5"`, bool←`"true"`, object←`"{}"`, string←`"string"`)؛ children রিকার্সিভ নেস্টিং, array ফিক্সড ২টি আইটেম
 - **mock ইন্টারফেস**: axum অ্যাডাপ্টারে নতুন `GET /apidoc/mock?url=&method=`, url + method এক্সাক্ট ম্যাচ, ম্যাচ না হলে 404; ডিবাগ প্যানেল ডিফল্টে `not_debug` এন্ডপয়েন্ট লুকিয়ে রাখে, «not_debug ইন্টারফেস দেখান» টিক দিলে দেখায়
-- **CORS ডাইরেক্ট**: অনলাইন ডিবাগিং ব্রাউজার থেকে সরাসরি টার্গেট ইন্টারফেসে সংযোগ করে, অ্যাডাপ্টারের `cors_layer` পারমিশন দেয় (সার্ভার-সাইড রিভার্স প্রক্সি v2-তে)
+- **সরাসরি CORS সংযোগ**: অনলাইন ডিবাগিং ব্রাউজারকে সরাসরি টার্গেট এন্ডপয়েন্টে সংযুক্ত করে, যা অ্যাডাপ্টারের `cors_layer` অনুমোদন করে; সার্ভার-সাইড রিলে P2–P5 এক্সিকিউটর সরবরাহ করে
 
 ### বাস্তবায়িত (M5)
 
-- **চার ফরম্যাটে এক্সপোর্ট** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), কোর ক্রেট `export::markdown::render` / `export::typescript::render` / `export::swagger::render` সরবরাহ করে
-- **এক্সপোর্ট রাউট**: অ্যাডাপ্টারে নতুন `GET /apidoc/export?format=md|ts|swagger`, অজানা format-এ 400; Content-Type যথাক্রমে `text/markdown` / `application/typescript` / `application/json`
-- **markdown**: গ্রুপড ডিরেক্টরি + প্যারামিটার টেবিল + রেসপন্স ব্লক; **typescript**: group নেমস্পেস অনুযায়ী `{Name}Params` / `{Name}Result` টাইপ তৈরি, গ্রুপবিহীন ইন্টারফেস `defaultGroup`-এ পড়ে (`default` TS রিজার্ভড শব্দ); **swagger**: `info.version` Cargo প্যাকেজ ভার্সন থেকে নেওয়া
+- **চারটি ফরম্যাটে এক্সপোর্ট** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0) / AsyncAPI 2.6 (P6); কোর ক্রেট `export::markdown::render` / `export::typescript::render` / `export::swagger::render` / `export::asyncapi::render` সরবরাহ করে
+- **এক্সপোর্ট রুট**: অ্যাডাপ্টার `GET /apidoc/export?format=md|ts|swagger|asyncapi` যোগ করে, অজানা ফরম্যাট → 400; Content-Type যথাক্রমে `text/markdown` / `application/typescript` / `application/json`
+- **markdown**: গ্রুপ-করা সূচি + প্যারামিটার টেবিল + রেসপন্স ব্লক; **typescript**: group namespace-এ `{Name}Params` / `{Name}Result` টাইপ তৈরি করে, গ্রুপবিহীন ইন্টারফেস `defaultGroup`-এ যায় (`default` TS-এ সংরক্ষিত শব্দ); **swagger**: `info.version`-এ `ApidocConfig.version` অগ্রাধিকার পায়, না থাকলে Cargo প্যাকেজ সংস্করণ (বর্তমানে 2.2.0)
 - **actix-web অ্যাডাপ্টার** (`crates/apidoc/src/actix.rs`): axum অ্যাডাপ্টারের সাথে 1:1 ফাংশনালিটি—`apidoc_routes(ApidocConfig) -> Scope` /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export মাউন্ট করে, `cors_layer(CorsConfig)` ক্রস-অরিজিন পারমিশন দেয়
 - **UI শেয়ারিং**: ডকুমেন্ট UI (`src/ui.html`) কোর ক্রেটে স্থানান্তরিত, `pub const UI_HTML` এক্সপোর্ট হয়, দুই অ্যাডাপ্টারই একই কপি রেফার করে (রিলিজ প্যাকেজিংয়ে নিরাপদ)
 
@@ -84,6 +86,14 @@ apidoc-rust-এর বাস্তবায়ন দৃষ্টিভঙ্গ
 - **কোড জেনারেটর**: `GET /apidoc/generate?template=<name>` → রেন্ডার করা টেক্সট (অজানা টেমপ্লেট 404); বিল্ট-ইন `api.ts` (ফ্রন্টএন্ড Api ফাইল), `handler.rs` (Rust ইন্টারফেস কঙ্কাল), `schema.sql` (`tables` অনুযায়ী CREATE TABLE স্টেটমেন্ট); `ApidocConfig.codegen`-এ একই নামের টেমপ্লেট বিল্ট-ইনকে ওভাররাইড করে। টেমপ্লেট সিনট্যাক্স মাত্র দুই রকম: `{{变量}}` (অসংজ্ঞায়িত হলে অপরিবর্তিত থাকে) ও `{{#each 列表}}…{{/each}}` (নেস্ট করা যায়, যেমন `tables` × `fields`)
 - **ডিবাগ ইভেন্ট**: অনলাইন ডিবাগিং প্যানেলে নতুন ভাঁজযোগ্য «প্রি-স্ক্রিপ্ট / পোস্ট-স্ক্রিপ্ট» (localStorage-এ সংরক্ষিত)——প্রি-স্ক্রিপ্ট রিকোয়েস্ট পাঠানোর আগে `new Function('ctx', code)` দিয়ে চলে এবং `ctx.url/method/headers/body` বদলাতে পারে বা অবজেক্ট রিটার্ন করে শ্যালো-মার্জ করাতে পারে; পোস্ট-স্ক্রিপ্ট রেসপন্স আসার পর চলে এবং `status/ms/text/url/method/ep` পড়তে পারে, আর স্ট্রিং রিটার্ন করলে প্রদর্শিত রেসপন্স টেক্সট বদলে যায়; স্ক্রিপ্টের ত্রুটি শুধু ফলাফল এলাকায় দেখায়, রিকোয়েস্ট বাধাগ্রস্ত হয় না
 
+### বাস্তবায়িত (v2.2 · UIC-1)
+
+- **UIC-1 ব্যাকএন্ড চুক্তি (Contract 1.0)**: `/apidoc/ui/v1/*` capabilities / config / menus / detail / docMenus / docDetail / verifyAuth / ডিবাগ সেশন / শেয়ার রেকর্ড / ক্যাশে / কোড টেমপ্লেট / সম্পূর্ণ এক্সপোর্ট সরবরাহ করে। `capabilities` শুধু এই বিল্ডে সত্যিই কম্পাইল হওয়া বিষয় জানায়, যাতে UI অনুপলব্ধ এন্ট্রি লুকাতে পারে। Rust `share.actions=false`, `cache.mode=build`, জেনারেটর `forms=false` / `templates=true` এবং শুধু ইউনারি রিলে (`relay-unary`) ঘোষণা করে।
+- **নয়টি বাহ্যিক ডেফিনিশন ফরম্যাট**: `#[apidoc::definition(file = "...", operation = "...")]` OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC ও XML-RPC-কে একক `{format, source, operation, meta, messages, validation}` পেলোডে পার্স করে; `/apidoc/ui/v1/detail` প্রতিটি আইটেমের ডায়াগনস্টিকসহ (`path` / `line` / `column` / `severity` / `message`) `definitions` ফেরত দেয়। ডেফিনিশন কখনো api.json-এ ঢোকে না, তাই native UI ও পুরোনো আউটপুট অপরিবর্তিত থাকে।
+- **স্থির Vue UI**: `ui: UiMode::Vue` + `ui_path` apidoc-ui-এর `dist/uic1-ui/` বিল্ড সার্ভ করে; `ApidocConfig::release(title, ui_path)` রিলিজ প্যাকেজের প্রবেশবিন্দু (লাইব্রেরি ডিফল্টে এমবেডেড native UI রাখে)। SPA fallback, `config.js` / `assets/*`, পাথ-এস্কেপ ও সিমলিঙ্ক সুরক্ষা, এবং `ui_path` বা `index.html` অনুপস্থিত হলে fail-closed স্টার্টআপ অন্তর্ভুক্ত।
+- **সম্পূর্ণ রিলে সক্ষমতা রিপোর্ট**: `capabilities.debug.relay` শুধু এই বিল্ডে কম্পাইল হওয়া এক্সিকিউটর তালিকাভুক্ত করে; `debug-all` সব ৩০টি প্রোটোকল id একত্র করে, তাই UI কখনো «not compiled» ব্যর্থ এক্সিকিউটর দেখায় না।
+- **শিল্প প্রোটোকল সংশোধন ও রিসোর্স সীমা**: DNP3 IIN-এর পরে অবজেক্ট হেডার পার্স করে এবং প্রতি রেসপন্স 10,000 পয়েন্টে সীমাবদ্ধ করে; IEC 60870-5-104 প্রতি রেসপন্স 10,000 লাইনে সীমাবদ্ধ; BACnet/IP বৈধ ReadProperty অনুরোধ পাঠায়; DNP3 পয়েন্ট গণনার u16 ওভারফ্লো ঠিক করা হয়েছে।
+
 ## বহু-প্রোটোকল ডকুমেন্টেশন ও ডিবাগিং (P1–P6)
 
 ![apidoc-rust বহু-প্রোটোকল ডিবাগ আর্কিটেকচার](../images/multiprotocol-en.svg)
@@ -92,7 +102,28 @@ apidoc-rust-এর বাস্তবায়ন দৃষ্টিভঙ্গ
 - **ব্রাউজার থেকে সরাসরি ডিবাগিং** (Rust নির্ভরতা ছাড়া): SOAP, GraphQL (subscriptions সহ), JSON-RPC, XML-RPC, OData, MCP, A2A, Webhooks, WebSocket (টেক্সট/বাইনারি), SSE, Socket.IO, STOMP (বাইনারি সহ), WebRTC/DataChannel, HLS।
 - **সার্ভার-সাইড এক্সিকিউটর** (feature-gated): HTTP/2, HTTP/3, gRPC, Thrift, Dubbo/Hessian2, ISO 8583, TCP/UDP/Raw/Unix, MQTT, AMQP, Kafka, XMPP, STOMP/TCP, CoAP, LwM2M, Modbus, DNP3, IEC 104, BACnet/IP, OPC UA, RTP/RTCP/RTSP/SIP/RTMP। `debug-all` সবগুলো একসাথে চালু করে।
 - **P6**: Webhook ক্যাপচার, AsyncAPI 2.6 এক্সপোর্ট, `apidoc-idl` CLI দিয়ে `.proto`/`.thrift` ইমপোর্ট, Dubbo Nacos রেজিস্ট্রি, ইভেন্ট-ভিত্তিক mock উদাহরণ।
-- **নিরাপত্তা**: সার্ভার-সাইড ডিবাগিং ডিফল্টে বন্ধ এবং গ্লোবাল প্রমাণীকরণ আবশ্যক; SSRF গার্ড প্রতিটি IP যাচাই করে সংযোগ পিন করে; রিডাইরেক্ট/প্রক্সি ও ক্লাউড মেটাডেটা প্রত্যাখ্যাত; আকার/ফ্রেম/টাইমআউট সীমিত; পিন করা TLS ছাড়া প্রোটোকল fail closed।
+- **UIC-1 রিলে সক্ষমতা**: `GET /apidoc/ui/v1/capabilities`-এর `features.debug.relay`-তে শুধু এই বিল্ডে কম্পাইল হওয়া এক্সিকিউটর জানায়। Rust শুধু ইউনারি (`modes`-এ `relay-unary` আছে, `relay-stream` নেই); `debug-all` বিল্ড সব ৩০টি প্রোটোকল id জানায়:
+
+| feature | রিলে প্রোটোকল id |
+|---|---|
+| `debug-http` | `http` `http2` |
+| `debug-session` | `websocket` |
+| `debug-grpc` | `grpc` |
+| `debug-thrift` | `thrift` |
+| `debug-dubbo` | `dubbo` `hessian` |
+| `debug-iso8583` | `iso8583` |
+| `debug-mqtt` | `mqtt` |
+| `debug-amqp` | `amqp` |
+| `debug-kafka` | `kafka` |
+| `debug-xmpp` | `xmpp` |
+| `debug-sockets` | `stomp` `tcp` `udp` `raw` `unix` |
+| `debug-coap` | `coap` `lwm2m` |
+| `debug-industrial` | `modbus` `dnp3` `iec104` `bacnet` `opcua` |
+| `debug-media` | `rtp` `rtcp` `rtsp` `sip` `rtmp` |
+| `debug-http3` | `http3` |
+
+`websocket` ছাড়া স্ট্রিমিং এক্সিকিউটরগুলো এখনো রিলে সেশনে যুক্ত হয়নি; Kafka / AMQP / XMPP ইত্যাদি ইউনারি রেসপন্স সংগ্রহ করে। `debug-all` শুধু উপরের ফিচারগুলো একত্র করে।
+- **নিরাপত্তা**: সার্ভার-সাইড ডিবাগিং ডিফল্টে বন্ধ এবং গ্লোবাল অথেন্টিকেশন প্রয়োজন; SSRF গার্ড প্রতিটি IP রিজলভ ও যাচাই করে এবং সংযোগ পিন করে; রিডাইরেক্ট/প্রক্সি ও ক্লাউড মেটাডেটা প্রত্যাখ্যাত; রেসপন্স আকার/ফ্রেম/টাইমআউট সীমিত; DNP3 রেসপন্স 10,000 পয়েন্টে ও IEC 104 10,000 লাইনে সীমিত (অতিরিকে কঠোর ত্রুটি), যাতে ছোট ফ্রেম পার্সড আউটপুট বাড়িয়ে না দেয়; পিনড TLS ছাড়া প্রোটোকল fail-closed।
 - **কর্মক্ষমতা**: ডকুমেন্ট, এক্সপোর্ট, codegen ও mock বডি বিল্ড সময়ে তৈরি হয়; apidoc-এর লোকাল রুট p99 ১০ms-এর নিচে থাকে (`tests/latency.rs`)।
 
 ## আর্কিটেকচার
@@ -111,26 +142,31 @@ apidoc-rust-এর বাস্তবায়ন দৃষ্টিভঙ্গ
 
 ```
 apidoc-rust/
-├── Cargo.toml                 # workspace কনফিগারেশন (resolver 2)
-├── VERSION                    # প্রজেক্ট ভার্সন (v2.2.0)
+├── Cargo.toml                 # workspace কনফিগ (resolver 2)
+├── VERSION                    # প্রকল্প সংস্করণ (v2.2.0)
 ├── crates/
 │   ├── apidoc/                # রানটাইম কোর (ফ্রেমওয়ার্ক-নিরপেক্ষ)
-│   │   ├── src/lib.rs         # ডেটা মডেল + DocRegistry অ্যাগ্রিগেশন + api.json + UI_HTML
-│   │   ├── src/auth.rs        # M6a পাসওয়ার্ড অথেনটিকেশন (HMAC token ইস্যু/যাচাই + রাউট গার্ড + ব্যাকঅফ)
-│   │   ├── src/export/        # M5 এক্সপোর্ট: markdown / typescript / swagger
-│   │   ├── src/ui.html        # শেয়ারড ডকুমেন্ট UI (কোর ক্রেট এক্সপোর্ট, দুই অ্যাডাপ্টার রেফার করে)
-│   │   ├── tests/             # ইন্টিগ্রেশন টেস্ট (ম্যাক্রো এক্সপানশন/অ্যাগ্রিগেশন/সিরিয়ালাইজেশন/ক্রস-crate)
+│   │   ├── src/lib.rs         # ডেটা মডেল + DocRegistry সমষ্টি + api.json + UI_HTML + UiMode
+│   │   ├── src/auth.rs        # M6a পাসওয়ার্ড অথেন্টিকেশন (HMAC টোকেন ইস্যু/যাচাই + গার্ড + backoff)
+│   │   ├── src/uiapi.rs       # UIC-1 চুক্তি: capabilities / menus / detail / docs / ম্যানেজমেন্ট রুট
+│   │   ├── src/protocol_defs/ # নয়টি বাহ্যিক ডেফিনিশন ফরম্যাট (OpenAPI/AsyncAPI/GraphQL/proto/…)
+│   │   ├── src/export/        # এক্সপোর্ট: markdown / typescript / swagger / asyncapi + codegen
+│   │   ├── src/debug/         # feature-gated সার্ভার এক্সিকিউটর (http / grpc / sockets / mqtt / industrial / media / …)
+│   │   ├── src/axum.rs        # axum অ্যাডাপ্টার (docs/debug/stream/webhook/UIC-1/স্থির UI + CORS)
+│   │   ├── src/actix.rs       # actix-web অ্যাডাপ্টার (feature `actix`, axum-এর সাথে 1:1)
+│   │   ├── src/ui.html        # এমবেডেড native UI; স্থির Vue বিল্ড ui/ui_path দিয়ে সার্ভ হয়
+│   │   ├── tests/             # ইন্টিগ্রেশন টেস্ট (ম্যাক্রো/সমষ্টি/সিরিয়ালাইজেশন/UIC-1/ডেফিনিশন/লেটেন্সি)
 │   │   └── examples/demo.rs   # উদাহরণ: অ্যানোটেশন + api.json আউটপুট
-│   ├── apidoc-macros/         # proc-macro: ৬৫+ অ্যাট্রিবিউট ম্যাক্রো (৪৫টি প্রোটোকল উপনাম সহ)
-│   │   └── src/lib.rs         # ম্যাক্রো সংজ্ঞা + প্যারামিটার পার্সিং + কম্পাইল-টাইম ভ্যালিডেশন
-
-│   ├── apidoc-test-fixtures/  # ক্রস-crate রেজিস্ট্রেশন টেস্ট ফিক্সচার
-
+│   ├── apidoc-macros/         # proc-macro: ২৪টি মূল অ্যানোটেশন + ৪৫টি প্রোটোকল উপনাম
+│   │   └── src/lib.rs         # ম্যাক্রো সংজ্ঞা + আর্গুমেন্ট পার্সিং + কম্পাইল-সময় যাচাই
+│   ├── apidoc-idl/            # স্বতন্ত্র CLI `.proto` / `.thrift` → apidoc অ্যানোটেশন
+│   └── apidoc-test-fixtures/  # ক্রেট-মধ্যে রেজিস্ট্রেশন টেস্ট ফিক্সচার
+├── contract/                  # UIC-1 Contract 1.0: স্কিমা + ব্যাকএন্ড-মধ্যে ফিক্সচার
 ├── .github/
-│   └── workflows/release.yml  # রিলিজ ওয়ার্কফ্লো (VERSION পড়ে, ইনক্রিমেন্টাল tag+release তৈরি)
+│   └── workflows/release.yml  # রিলিজ ওয়ার্কফ্লো (VERSION পড়ে, ধাপে ধাপে tag+release তৈরি করে)
 └── docs/
-    ├── images/                # আর্কিটেকচার/কার্যকারিতা/জীবনচক্র চিত্র (SVG)
-    └── i18n/                  # বহুভাষিক ডকুমেন্টেশন (১২টি ভাষা)
+    ├── images/                # আর্কিটেকচার/ফিচার/লাইফসাইকল/মাল্টি-প্রোটোকল/সোশ্যাল প্রিভিউ সম্পদ
+    └── i18n/                  # বহুভাষিক ডকুমেন্টেশন (১২ ভাষা)
 ```
 
 ## ব্যবহার নির্দেশিকা
@@ -428,6 +464,58 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 স্ক্রিপ্টের ত্রুটি শুধু ডিবাগ ফলাফল এলাকায় দেখায়, রিকোয়েস্ট বাধাগ্রস্ত হয় না (প্রি-স্ক্রিপ্ট ব্যর্থ হলে রিকোয়েস্ট যথারীতি পাঠানো হয়, পোস্ট-স্ক্রিপ্ট ব্যর্থ হলে মূল রেসপন্স যথারীতি দেখানো হয়)।
 
+### 13. UI: native / স্থির Vue বিল্ড (UIC-1 Phase 5)
+
+ডিফল্টে `/apidoc` এমবেডেড native UI (`UiMode::Native`) সার্ভ করে, তাই বিদ্যমান ডিপ্লয়মেন্টে কোনো পরিবর্তন লাগে না। Vue বিল্ড ১৪ নম্বর বিভাগের UIC-1 চুক্তি ব্যবহার করে এবং PHP ও Go-র সাথে ভাগ করা হয় (apidoc-ui `npm run package:ui`):
+
+```rust
+use apidoc::{ApidocConfig, UiMode};
+
+let cfg = ApidocConfig {
+    title: "আমার API".into(),
+    ui: UiMode::Vue,
+    ui_path: Some("/srv/apidoc".into()), // dist/uic1-ui/ এর বিষয়বস্তু: index.html + config.js + assets/
+    ..Default::default()
+};
+```
+
+- রিলিজ প্যাকেজে ডিফল্ট Vue: `ApidocConfig::release("আমার API", "/srv/apidoc")` উপরের স্পষ্ট কনফিগের সমতুল্য; **লাইব্রেরি ডিফল্টে `native` থাকে**।
+- Vue মোডে `GET /apidoc` → 307 `/apidoc/` (বিল্ড আপেক্ষিক URL `./assets/...` ব্যবহার করে), `/apidoc/`, `config.js` ও `assets/*` `ui_path` থেকে পড়া হয়, এবং এক্সটেনশনহীন অজানা পাথ `index.html`-এ যায় (SPA fallback)।
+- API রুট অগ্রাধিকার রাখে: `/apidoc/api.json`, `/apidoc/export`, `/apidoc/ui/v1/*`, auth, debug ও webhook স্থির ফাইলের আগে মেলে; অজানা API সাবপাথ SPA শেলের বদলে 404 দেয়।
+- নিরাপত্তা: পাথ `ui_path`-এর ভিতরে সীমাবদ্ধ; `..`, এনকোডিং বাইপাস ও সিমলিঙ্ক এস্কেপ 404 দেয়, ডিরেক্টরি কখনো তালিকাভুক্ত হয় না, এবং `ui_path` / `index.html` অনুপস্থিত হলে শুরুতে ব্যর্থ হয় (fail closed)। `ui` / `ui_path` শুধু সার্ভারের এবং api.json-এ কখনো সিরিয়ালাইজ হয় না।
+- রোলব্যাক: `ui: UiMode::Native`-এ ফিরে রিস্টার্ট করুন; native UI ও সব পুরোনো রুট অপরিবর্তিত থাকে।
+
+### 14. UIC-1 চুক্তি · বাহ্যিক প্রোটোকল ডেফিনিশন
+
+`/apidoc/ui/v1/*` হলো apidoc-ui-এর ব্যবহার করা স্থির চুক্তি (Contract 1.0); সফল রেসপন্স `{code:0,message:"ok",data}`:
+
+| রুট | উদ্দেশ্য |
+|---|---|
+| `GET /apidoc/ui/v1/capabilities` | ব্যাকএন্ড সক্ষমতা: contract / backend / version / features (কম্পাইল হওয়া রিলে প্রোটোকল তালিকাসহ) |
+| `GET /apidoc/ui/v1/config` | UI বুট কনফিগ (শিরোনাম, অ্যাপ ট্রি, auth সুইচ, …) |
+| `POST /apidoc/ui/v1/menus` · `detail` | এন্ডপয়েন্ট ক্যাটালগ ও বিস্তারিত, `definitions` ও `validation` সহ |
+| `GET/POST /apidoc/ui/v1/docMenus` · `POST docDetail` | Markdown ডকুমেন্টেশন ক্যাটালগ ও বডি |
+| `POST /apidoc/ui/v1/verifyAuth` | গ্লোবাল / অ্যাপ / শেয়ার টোকেন যাচাই |
+| `POST /apidoc/ui/v1/debugSend` · `debugStart` · `debugPoll` · `debugStop` | ব্রাউজার-সরাসরি ও সার্ভার-রিলে ডিবাগিং |
+| `POST /apidoc/ui/v1/addApiShare` · `getApiShareList` · `getApiShareDetail` · `deleteApiShare` · `handleApiShareAction` | শেয়ার রেকর্ড CRUD (Rust `share.actions=false`; কোনো declarative action নেই) |
+| `POST /apidoc/ui/v1/cache/clear` · `cache/warm` | ক্যাশে ব্যবস্থাপনা (Rust `cache.mode=build`) |
+| `POST /apidoc/ui/v1/renderCodeTemplate` · `exportAllData` | কোড টেমপ্লেট রেন্ডার ও সম্পূর্ণ ডেটা এক্সপোর্ট (UI md / pdf / openapi / postman / asyncapi / typescript তৈরি করে) |
+
+`#[apidoc::definition]` দিয়ে হ্যান্ডলারে বাহ্যিক ডেফিনিশন সংযুক্ত করুন:
+
+```rust
+#[apidoc::title("ব্যবহারকারী আনুন")]
+#[apidoc::url("/api/user/info")]
+#[apidoc::method("GET")]
+#[apidoc::definition(file = "api/openapi.yaml", operation = "getUser")]
+fn get_user_info() -> String { unimplemented!() }
+```
+
+- **নয়টি ফরম্যাট**: OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC ও XML-RPC। `format` বাদ দিলে এক্সটেনশন/কনটেন্ট থেকে শনাক্ত হয়, অথবা স্পষ্টভাবে দেওয়া যায়।
+- **ঐচ্ছিক আর্গুমেন্ট**: `operation` (অপারেশন বাছাই), `message` / `direction` (মেসেজ বাছাই), `sample` / `sample_file` / `sample_encoding` (ভ্যালিডেশন নমুনা) এবং `strict` (ডিফল্ট `true`: অসমর্থিত গঠন ত্রুটি)।
+- **আউটপুট**: একক `{format, source, operation, meta, messages, validation}` পেলোড; ডায়াগনস্টিকসে `path / line / column / severity / message` থাকে। ডেফিনিশন শুধু UIC-1 detail-এ দেখা যায়, api.json-এ কখনো নয়।
+- **সীমা**: পাথ ঘোষণাকারী crate-এর `CARGO_MANIFEST_DIR`-এর সাপেক্ষে, এবং সিমলিঙ্কের realpath crate রুটের ভিতরে থাকতে হবে; প্রতি ফাইল 2 MiB / 50,000 লাইনে সীমিত, সর্বোচ্চ ৬৪টি ইমপোর্ট ও ইমপোর্ট গভীরতা ৩২।
+
 ## উন্নয়ন পরিকল্পনা
 
 | পর্যায় | বিষয়বস্তু | অবস্থা |
@@ -441,6 +529,9 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 | M6a | পাসওয়ার্ড অথেনটিকেশন (HMAC-SHA256 সাইনড token + পাসওয়ার্ড মাস্ক, অ্যাপ পাসওয়ার্ডের প্রাধান্য) | ✅ সম্পন্ন |
 | M6b | মাল্টি-অ্যাপ মাল্টি-ভার্সন (apps কনফিগ ট্রি + app অ্যানোটেশন + UI সিলেক্টর) | ✅ সম্পন্ন |
 | v2 | ডেটা টেবিল ফিল্ড রেফারেন্স + ডকুমেন্ট ক্যাশ + শেয়ার লিংক + কোড জেনারেটর + ডিবাগ ইভেন্ট | ✅ সম্পন্ন |
+| UIC-1 Phase 0–2 | Contract 1.0: capabilities / menus / detail / docs / debug / share / cache / generator / export, সব ব্যাকএন্ডে অর্থগতভাবে সামঞ্জস্যপূর্ণ | ✅ সম্পন্ন |
+| UIC-1 Phase 3–4 | সম্পূর্ণ রিলে সক্ষমতা রিপোর্ট + UIC detail-এ যুক্ত নয়টি বাহ্যিক ডেফিনিশন পার্সার | ✅ সম্পন্ন |
+| UIC-1 Phase 5 | স্থির Vue UI (`ui` / `ui_path`; রিলিজ প্যাকেজে ডিফল্ট Vue, native UI সংরক্ষিত) | ✅ সম্পন্ন |
 
 ## বহুভাষিক ডকুমেন্টেশন
 

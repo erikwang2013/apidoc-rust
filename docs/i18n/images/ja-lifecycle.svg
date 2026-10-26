@@ -10,7 +10,7 @@
   <rect width="940" height="500" fill="url(#wm)"/>
   <rect x="0" y="0" width="940" height="500" fill="none" stroke="#333" stroke-width="2"/>
 
-  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Documentation Lifecycle (M1–M6 + P1–P6)</text>
+  <text x="470" y="38" text-anchor="middle" font-size="26" font-weight="bold" fill="#222">apidoc-rust Documentation Lifecycle (M1–M6 + P1–P6 + UIC-1)</text>
 
   <!-- 1 -->
   <circle cx="85" cy="150" r="34" fill="#b58900"/>
@@ -56,9 +56,9 @@
   <circle cx="545" cy="150" r="34" fill="#27ae60"/>
   <text x="545" y="158" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">5</text>
   <text x="545" y="215" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#333">api.json</text>
-  <text x="545" y="235" text-anchor="middle" font-size="11" fill="#555">unified model + apps</text>
+  <text x="545" y="235" text-anchor="middle" font-size="11" fill="#555">+ UIC-1 contract</text>
   <text x="545" y="252" text-anchor="middle" font-size="11" fill="#555" font-family="monospace">config · endpoints</text>
-  <text x="545" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1·M6</text>
+  <text x="545" y="272" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M1·M6·UIC-1</text>
 
   <line x1="579" y1="150" x2="856" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -85,10 +85,10 @@
   <!-- 8 -->
   <circle cx="660" cy="310" r="34" fill="#16a085"/>
   <text x="660" y="318" text-anchor="middle" font-size="26" fill="#fff" font-weight="bold">8</text>
-  <text x="660" y="375" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#333">Debug panel</text>
-  <text x="660" y="395" text-anchor="middle" font-size="12" fill="#555">catalog + live debug</text>
-  <text x="660" y="412" text-anchor="middle" font-size="12" fill="#555">mock prefill</text>
-  <text x="660" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4</text>
+  <text x="660" y="375" text-anchor="middle" font-size="12.5" font-weight="bold" fill="#333">UI: native / Vue</text>
+  <text x="660" y="395" text-anchor="middle" font-size="12" fill="#555">menus · detail · docs</text>
+  <text x="660" y="412" text-anchor="middle" font-size="12" fill="#555">definitions · debug</text>
+  <text x="660" y="432" text-anchor="middle" font-size="11" fill="#888" font-weight="bold">M2·M4·UIC-1</text>
 
   <line x1="620" y1="310" x2="585" y2="310" stroke="#555" stroke-width="3" marker-end="url(#arrow)"/>
 
@@ -112,6 +112,6 @@
 
   <!-- legend -->
   <text x="470" y="455" text-anchor="middle" font-size="13" fill="#333">Milestones: M1 annotations/collection · M2 adapters &amp; UI · M4 debug/Mock/CORS · M5 exports · M6 auth/multi-app</text>
-  <text x="470" y="473" text-anchor="middle" font-size="13" fill="#333">P1–P6: protocol annotations · browser-direct · server executors · Webhook · AsyncAPI · IDL · Nacos (all done)</text>
+  <text x="470" y="473" text-anchor="middle" font-size="13" fill="#333">P1–P6 + UIC-1: annotations · browser-direct · relay · 9 definition formats · Vue UI · Webhook · AsyncAPI · IDL · Nacos</text>
   <text x="700" y="492" font-size="13" fill="#888">watermark: https://erik.xyz</text>
 </svg>

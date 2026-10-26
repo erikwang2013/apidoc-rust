@@ -23,7 +23,7 @@ Rust 프로시저 매크로(proc-macro) 기반 API 문서 생성·인터페이�
 
 ## 📖프로젝트 소개
 
-Apidoc은 **Rust 프로시저 매크로(proc-macro)** 를 파싱해 API 인터페이스 문서를 자동 생성하는 Rust 플러그인 라이브러리로, axum·actix-web 등 주요 프레임워크를 지원합니다. 문서 자동 생성 외에도 온라인 인터페이스 디버깅, Mock 디버깅 데이터, Json/TypeScript 코드 생성, 인터페이스 생성기, 코드 생성기 등의 기능을 통합해 인터페이스 개발·디버깅·납품의 전 과정을 아우르며, API 개발 효율 향상을 목표로 합니다.
+Apidoc은 **Rust 프로시저 매크로(proc-macro)** 를 파싱해 API 인터페이스 문서를 자동 생성하는 Rust 플러그인 라이브러리로, axum·actix-web 등 주요 프레임워크를 지원합니다. 문서 자동 생성 외에도 온라인 인터페이스 디버깅, Mock 디버깅 데이터, Json/TypeScript 코드 생성, 인터페이스 생성기, 코드 생성기 등의 기능을 통합해 인터페이스 개발·디버깅·납품의 전 과정을 아우르며, API 개발 효율 향상을 목표로 합니다. 2.2.0부터는 **UIC-1 백엔드 계약**도 제공하며 apidoc-ui의 Vue 빌드가 이를 직접 사용합니다. 내장 native UI는 유지되고 설정으로 둘 중 하나를 선택할 수 있습니다.
 
 apidoc-rust의 구현 방향:
 
@@ -34,21 +34,23 @@ apidoc-rust의 구현 방향:
 ### ✨프로젝트 설명
 
 - **설치 즉시 사용**: 복잡한 설정 없이 설치 후 문서에 따라 주석을 작성하면 API 문서가 자동으로 생성됩니다.
-- **간편한 작성**: 공통 정의(definitions)와 필드 `ref` 참조를 지원하며, 몇 줄의 주석만으로 완전한 필드 정의를 완성할 수 있습니다.
+- **간편한 작성**: `ref` / `table` 필드 참조와 9가지 외부 정의 형식(OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC, XML-RPC)을 `#[apidoc::definition]`으로 지원합니다. 몇 개의 어노테이션만으로 필드 정의를 완성할 수 있습니다.
 - **온라인 디버깅**: 문서 페이지에서 인터페이스를 바로 디버깅할 수 있으며, 전역 파라미터 전달, Mock 데이터, 디버깅 이벤트를 지원합니다.
+- **멀티 프로토콜 디버깅**: 45개 프로토콜 어노테이션(RPC, 메시징, 산업, 미디어, IoT 등)을 브라우저 직접 연결과 서버 릴레이 두 채널로 제공합니다. 어노테이션이 프로토콜 문서와 디버그 패널을 함께 생성합니다.
+- **UIC-1 계약**: `/apidoc/ui/v1/*`가 capabilities / config / menus / detail / docs / debug / share / cache / generator / export를 제공하므로 apidoc-ui의 Vue 빌드 하나로 PHP, Go, Rust를 지원합니다. 정적 Vue UI는 `ui` / `ui_path`로 활성화합니다(릴리스 패키지는 기본 Vue, 라이브러리 기본값은 내장 native UI 유지).
 - **다중 앱·다중 버전**: 단일 앱, 다중 앱, 다중 버전 프로젝트를 모두 설정할 수 있고, 인터페이스는 앱/버전별로 그룹화되어 표시·전환됩니다.
 - **그룹·Tag**: 인터페이스는 다단계 그룹과 Tag 표시를 지원합니다.
 - **Markdown 문서**: `md` 주석으로 Markdown을 문서 페이지로 마운트할 수 있습니다.
 - **Json·TypeScript 생성**: 각 인터페이스의 Json 요청/응답 예시와 TypeScript 타입 정의를 자동 생성해 프런트엔드에서 바로 사용할 수 있습니다.
 - **코드 생성기**: 설정 + 템플릿으로 비즈니스 코드와 프런트엔드 Api 파일을 생성합니다.
 - **인터페이스 공유**: 지정한 앱/인터페이스의 공유 링크를 생성하고 `swagger.json`을 내보낼 수 있습니다.
-- **안전한 접근**: 전역 비밀번호와 앱/버전별 독립 비밀번호 권한 부여를 지원하며, 문서는 빌드 시 생성되어 로컬 응답이 p99 10ms 미만입니다.
+- **안전한 접근**: 전역 비밀번호와 앱/버전별 독립 비밀번호. 서버 측 디버깅은 기본 비활성이며 SSRF 가드와 크기/프레임/타임아웃 한도를 적용합니다. 정의 파일과 산업 프로토콜에는 엄격한 한도가 있고, 문서는 빌드 시 생성되며 로컬 응답은 10ms p99 미만입니다.
 
 ## 기능
 
 ### 구현됨 (M1-M3)
 
-- **주석 기반 문서**: `title` / `desc` / `method` / `url` / `param` / `query` / `returned` 7개 속성 매크로로 개별 주석 작성, 파라미터는 `required` / `default` / `desc` / `mock` / `children` 중첩 지원
+- **어노테이션으로 문서화**: 7개 기본 속성 매크로 `title` / `desc` / `method` / `url` / `param` / `query` / `returned`와 `tag` / `group` / `header` / `table`, 45개 프로토콜 어노테이션. 파라미터는 `required` / `default` / `desc` / `mock` / `children` / `field` 중첩을 지원합니다
 - **컴파일 타임 검증**: url은 반드시 `/`로 시작, method 화이트리스트, param name 필수 등, 잘못된 주석은 컴파일 타임에 오류 발생(span 정밀)
 - **자동 수집**: linkme `distributed_slice` 정적 등록으로 수동 인터페이스 목록 불필요; `DocRegistry::collect()`가 id별로 병합하고 seq로 선언 순서를 복원하며, 크로스 crate 자동 수집
 - **api.json 출력**: serde 직렬화로 통일된 문서 데이터 모델(config + endpoints) 생성, 필드명은 모델과 내보내기가 동일한 정의를 공유합니다
@@ -60,13 +62,13 @@ apidoc-rust의 구현 방향:
 - **온라인 디버깅**: 문서 페이지에 내장된 「온라인 디버깅」 패널 — Base URL을 `location.origin`으로 미리 채워 크로스 오리진으로 대상 서비스에 직접 연결, 파라미터 폼에 mock 미리 채움, `{name}` / `:name` 라우트 플레이스홀더 치환, GET/HEAD 파라미터는 query로 병합, 나머지 method는 JSON body로 조립, 요청 헤더 편집 + 커스텀 헤더, 응답 표시(상태 / 소요 시간 / pretty JSON), CORS 실패 시 노란색 힌트
 - **Mock 엔진**(`crates/apidoc/src/mock.rs`, fake crate 의존, 15개 규칙: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). 규칙 우선순위: `mock="fake:xxx"`는 fake 규칙 테이블로 처리(미지정명은 기본값으로 폴백) → 그 외 비어 있지 않은 mock은 그대로 출력(예: `mock="1"`, `mock="erik"`) → mock 없으면 `ty`로 자동 생성(int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); children은 재귀 중첩, array는 고정 2항목
 - **mock 인터페이스**: axum 어댑터에 `GET /apidoc/mock?url=&method=` 추가, url + method 정확 일치, 불일치 시 404 반환; 디버깅 패널은 기본적으로 `not_debug` 엔드포인트를 숨기고, 「not_debug 인터페이스 표시」를 체크해야만 표시
-- **CORS 직접 연결**: 온라인 디버깅은 브라우저가 대상 인터페이스에 직접 연결하며, 어댑터의 `cors_layer`가 허용 처리(서버 측 리버스 프록시는 v2에 예정)
+- **CORS 직접 연결**: 온라인 디버깅은 브라우저에서 대상 API로 직접 연결하며 어댑터의 `cors_layer`가 허용합니다. 서버 측 릴레이는 P2–P5 실행기가 제공합니다
 
 ### 구현됨 (M5)
 
-- **4가지 형식 내보내기**(`crates/apidoc/src/export/`): markdown / typescript / swagger(OpenAPI 3.0.0), 코어 crate가 `export::markdown::render` / `export::typescript::render` / `export::swagger::render` 제공
-- **내보내기 라우트**: 어댑터에 `GET /apidoc/export?format=md|ts|swagger` 추가, 알 수 없는 format은 400 반환; Content-Type은 각각 `text/markdown` / `application/typescript` / `application/json`
-- **markdown**: 그룹 목차 + 파라미터 테이블 + 응답 블록; **typescript**: group별 네임스페이스로 `{Name}Params` / `{Name}Result` 타입 생성, 그룹 없는 인터페이스는 `defaultGroup`에 포함(`default`는 TS 예약어); **swagger**: `info.version`은 Cargo 패키지 버전 사용
+- **4가지 형식 내보내기** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0) / AsyncAPI 2.6 (P6). 코어 크레이트는 `export::markdown::render` / `export::typescript::render` / `export::swagger::render` / `export::asyncapi::render`를 제공합니다
+- **내보내기 라우트**: 어댑터에 `GET /apidoc/export?format=md|ts|swagger|asyncapi` 추가, 알 수 없는 형식은 400. Content-Type은 각각 `text/markdown` / `application/typescript` / `application/json`
+- **markdown**: 그룹별 인덱스 + 파라미터 표 + 응답 블록. **typescript**: group namespace별 `{Name}Params` / `{Name}Result` 타입 생성, 그룹 없는 인터페이스는 `defaultGroup`에 속합니다(`default`는 TS 예약어). **swagger**: `info.version`은 `ApidocConfig.version`을 우선하고 없으면 Cargo 패키지 버전(현재 2.2.0)으로 폴백
 - **actix-web 어댑터**(`crates/apidoc/src/actix.rs`): axum 어댑터와 기능 1:1 — `apidoc_routes(ApidocConfig) -> Scope`로 /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export 마운트, `cors_layer(CorsConfig)`로 크로스 오리진 허용
 - **UI 공유**: 문서 UI(`src/ui.html`)를 코어 crate로 이동해 `pub const UI_HTML`로 내보내며, 두 어댑터가 동일한 파일 참조(배포 패키징 안전)
 
@@ -84,6 +86,14 @@ apidoc-rust의 구현 방향:
 - **코드 생성기**: `GET /apidoc/generate?template=<name>` → 렌더링된 텍스트(알 수 없는 템플릿은 404); 내장 `api.ts`(프런트엔드 Api 파일), `handler.rs`(Rust 인터페이스 골격), `schema.sql`(`tables` 기준 CREATE TABLE 문 생성); `ApidocConfig.codegen`의 동명 템플릿이 내장을 덮어씀. 템플릿 문법은 두 가지뿐: `{{변수}}`(정의되지 않으면 그대로 유지)와 `{{#each 목록}}…{{/each}}`(중첩 가능, 예: `tables` × `fields`)
 - **디버깅 이벤트**: 온라인 디버깅 패널에 접이식 「사전 스크립트 / 사후 스크립트」(localStorage에 영속화) 추가 — 사전 스크립트는 `new Function('ctx', code)`로 요청 전에 실행되며 `ctx.url/method/headers/body`를 변경하거나 객체를 반환해 얕게 병합할 수 있고; 사후 스크립트는 응답 후 실행되어 `status/ms/text/url/method/ep`를 읽을 수 있으며 문자열을 반환하면 표시되는 응답 텍스트를 교체; 스크립트 오류는 결과 영역에만 표시되고 요청을 중단하지 않음
 
+### 구현됨 (v2.2 · UIC-1)
+
+- **UIC-1 백엔드 계약 (Contract 1.0)**: `/apidoc/ui/v1/*`가 capabilities / config / menus / detail / docMenus / docDetail / verifyAuth / 디버그 세션 / 공유 레코드 / 캐시 / 코드 템플릿 / 전체 내보내기를 제공합니다. `capabilities`는 이 빌드에서 실제 컴파일된 것만 보고하여 UI가 사용할 수 없는 항목을 숨길 수 있습니다. Rust는 `share.actions=false`, `cache.mode=build`, 생성기 `forms=false` / `templates=true`, 단항 릴레이만(`relay-unary`) 선언합니다.
+- **9가지 외부 정의 형식**: `#[apidoc::definition(file = "...", operation = "...")]`이 OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC, XML-RPC를 통일된 `{format, source, operation, meta, messages, validation}` 페이로드로 파싱합니다. `/apidoc/ui/v1/detail`은 항목별 진단(`path` / `line` / `column` / `severity` / `message`)과 함께 `definitions`를 반환합니다. 정의는 api.json에 절대 들어가지 않으므로 native UI와 기존 출력은 변하지 않습니다.
+- **정적 Vue UI**: `ui: UiMode::Vue` + `ui_path`가 apidoc-ui의 `dist/uic1-ui/` 빌드를 제공합니다. `ApidocConfig::release(title, ui_path)`는 릴리스 패키지의 진입점입니다(라이브러리 기본값은 내장 native UI 유지). SPA fallback, `config.js` / `assets/*`, 경로 이탈 및 심볼릭 링크 보호, `ui_path` 또는 `index.html` 누락 시 fail-closed 시작을 포함합니다.
+- **전체 릴레이 기능 보고**: `capabilities.debug.relay`는 이 빌드에서 컴파일된 실행기만 나열합니다. `debug-all`은 30개 프로토콜 id를 모두 집계하므로 UI가 «not compiled»로 실패하는 실행기를 제시하지 않습니다.
+- **산업 프로토콜 수정 및 리소스 한도**: DNP3는 IIN 이후 객체 헤더를 파싱하고 각 응답을 10,000포인트로 제한합니다. IEC 60870-5-104는 각 응답을 10,000행으로 제한합니다. BACnet/IP는 유효한 ReadProperty 요청을 보냅니다. DNP3 포인트 수의 u16 오버플로가 수정되었습니다.
+
 ## 멀티 프로토콜 문서화 및 디버깅(P1–P6)
 
 ![apidoc-rust 멀티 프로토콜 디버그 아키텍처](../images/multiprotocol-en.svg)
@@ -92,7 +102,28 @@ apidoc-rust의 구현 방향:
 - **브라우저 직접 디버깅**(Rust 의존성 없음): SOAP, GraphQL(subscription 포함), JSON-RPC, XML-RPC, OData, MCP, A2A, Webhooks, WebSocket(텍스트/바이너리), SSE, Socket.IO, STOMP(바이너리 포함), WebRTC/DataChannel, HLS.
 - **서버 측 실행기**(feature-gated): HTTP/2, HTTP/3, gRPC, Thrift, Dubbo/Hessian2, ISO 8583, TCP/UDP/Raw/Unix, MQTT, AMQP, Kafka, XMPP, STOMP/TCP, CoAP, LwM2M, Modbus, DNP3, IEC 104, BACnet/IP, OPC UA, RTP/RTCP/RTSP/SIP/RTMP. `debug-all`로 한 번에 활성화합니다.
 - **P6**: Webhook 캡처, AsyncAPI 2.6 내보내기, `apidoc-idl` CLI를 통한 `.proto`/`.thrift` 가져오기, Dubbo Nacos 레지스트리, 이벤트 기반 mock 예제.
-- **보안**: 서버 측 디버깅은 기본적으로 꺼져 있으며 전역 인증이 필요합니다. SSRF 가드는 확인한 각 IP를 검증하고 연결을 고정하며, 리디렉션/프록시와 클라우드 메타데이터는 거부합니다. 크기/프레임/타임아웃은 상한이 있으며, 고정 TLS가 없는 프로토콜은 fail closed입니다.
+- **UIC-1 릴레이 기능**: `GET /apidoc/ui/v1/capabilities`의 `features.debug.relay`는 이 빌드에서 컴파일된 실행기만 보고합니다. Rust는 단항만 지원합니다(`modes`에 `relay-unary` 포함, `relay-stream` 없음). `debug-all` 빌드는 30개 프로토콜 id를 모두 보고합니다:
+
+| feature | 릴레이 프로토콜 id |
+|---|---|
+| `debug-http` | `http` `http2` |
+| `debug-session` | `websocket` |
+| `debug-grpc` | `grpc` |
+| `debug-thrift` | `thrift` |
+| `debug-dubbo` | `dubbo` `hessian` |
+| `debug-iso8583` | `iso8583` |
+| `debug-mqtt` | `mqtt` |
+| `debug-amqp` | `amqp` |
+| `debug-kafka` | `kafka` |
+| `debug-xmpp` | `xmpp` |
+| `debug-sockets` | `stomp` `tcp` `udp` `raw` `unix` |
+| `debug-coap` | `coap` `lwm2m` |
+| `debug-industrial` | `modbus` `dnp3` `iec104` `bacnet` `opcua` |
+| `debug-media` | `rtp` `rtcp` `rtsp` `sip` `rtmp` |
+| `debug-http3` | `http3` |
+
+`websocket`을 제외한 스트리밍 실행기는 아직 릴레이 세션에 연결되지 않았습니다. Kafka / AMQP / XMPP 등은 단항 응답을 수집합니다. `debug-all`은 위 기능만 집계합니다.
+- **보안**: 서버 측 디버깅은 기본 비활성이며 전역 인증이 필요합니다. SSRF 가드가 각 IP를 확인·검증하고 연결을 고정합니다. 리다이렉트/프록시와 클라우드 메타데이터는 거부됩니다. 응답 크기/프레임/타임아웃이 제한됩니다. DNP3 응답은 10,000포인트, IEC 104는 10,000행으로 제한되며(초과 시 엄격한 오류) 작은 프레임이 파싱 출력을 증폭하지 못합니다. 고정 TLS가 없는 프로토콜은 fail-closed입니다.
 - **성능**: 문서, 내보내기, codegen, mock 본문은 빌드 시 생성됩니다. apidoc 로컬 라우트는 p99 10ms 미만입니다(`tests/latency.rs`).
 
 ## 아키텍처
@@ -111,26 +142,31 @@ apidoc-rust의 구현 방향:
 
 ```
 apidoc-rust/
-├── Cargo.toml                 # workspace 설정(resolver 2)
-├── VERSION                    # 프로젝트 버전(v2.2.0)
+├── Cargo.toml                 # workspace 설정 (resolver 2)
+├── VERSION                    # 프로젝트 버전 (v2.2.0)
 ├── crates/
-│   ├── apidoc/                # 런타임 코어(프레임워크 무관)
-│   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML
-│   │   ├── src/auth.rs        # M6a 비밀번호 인증(HMAC token 발급/검증 + 라우트 가드 + 백오프)
-│   │   ├── src/export/        # M5 내보내기: markdown / typescript / swagger
-│   │   ├── src/ui.html        # 공유 문서 UI(코어 crate에서 내보내며, 두 어댑터가 참조)
-│   │   ├── tests/             # 통합 테스트(매크로 확장/집계/직렬화/크로스 crate)
-│   │   └── examples/demo.rs   # 예제: 주석 + api.json 출력
-│   ├── apidoc-macros/         # proc-macro: 65+ 속성 매크로(45개 프로토콜 별칭 포함)
-│   │   └── src/lib.rs         # 매크로 정의 + 파라미터 파싱 + 컴파일 타임 검증
-
-│   ├── apidoc-test-fixtures/  # 크로스 crate 등록 테스트 픽스처
-
+│   ├── apidoc/                # 런타임 코어 (프레임워크 비종속)
+│   │   ├── src/lib.rs         # 데이터 모델 + DocRegistry 집계 + api.json + UI_HTML + UiMode
+│   │   ├── src/auth.rs        # M6a 비밀번호 인증 (HMAC 토큰 발급/검증 + 가드 + backoff)
+│   │   ├── src/uiapi.rs       # UIC-1 계약: capabilities / menus / detail / docs / 관리 라우트
+│   │   ├── src/protocol_defs/ # 9가지 외부 정의 형식 (OpenAPI/AsyncAPI/GraphQL/proto/…)
+│   │   ├── src/export/        # 내보내기: markdown / typescript / swagger / asyncapi + codegen
+│   │   ├── src/debug/         # feature-gated 서버 실행기 (http / grpc / sockets / mqtt / industrial / media / …)
+│   │   ├── src/axum.rs        # axum 어댑터 (docs/debug/stream/webhook/UIC-1/정적 UI + CORS)
+│   │   ├── src/actix.rs       # actix-web 어댑터 (feature `actix`, axum과 1:1)
+│   │   ├── src/ui.html        # 내장 native UI; 정적 Vue 빌드는 ui/ui_path로 제공
+│   │   ├── tests/             # 통합 테스트 (매크로/집계/직렬화/UIC-1/정의/지연)
+│   │   └── examples/demo.rs   # 예제: 어노테이션 + api.json 출력
+│   ├── apidoc-macros/         # proc-macro: 24개 기본 어노테이션 + 45개 프로토콜 별칭
+│   │   └── src/lib.rs         # 매크로 정의 + 인자 파싱 + 컴파일 시 검증
+│   ├── apidoc-idl/            # 독립 CLI `.proto` / `.thrift` → apidoc 어노테이션
+│   └── apidoc-test-fixtures/  # 크레이트 간 등록 테스트 픽스처
+├── contract/                  # UIC-1 Contract 1.0: 스키마 + 백엔드 간 픽스처
 ├── .github/
-│   └── workflows/release.yml  # 릴리스 워크플로(VERSION 읽기, 태그+릴리스 증분 생성)
+│   └── workflows/release.yml  # 릴리스 워크플로 (VERSION을 읽고 단계적으로 tag+release 생성)
 └── docs/
-    ├── images/                # 아키텍처/기능/수명주기 다이어그램(SVG)
-    └── i18n/                  # 다국어 문서(12개 언어)
+    ├── images/                # 아키텍처/기능/라이프사이클/멀티 프로토콜/소셜 프리뷰 자산
+    └── i18n/                  # 다국어 문서 (12개 언어)
 ```
 
 ## 사용 방법
@@ -428,6 +464,58 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 스크립트 오류는 디버깅 결과 영역에만 표시되고 요청을 중단하지 않습니다(사전 실패 시에도 요청은 정상 전송, 사후 실패 시에도 원본 응답을 그대로 표시).
 
+### 13. UI: native / 정적 Vue 빌드 (UIC-1 Phase 5)
+
+기본적으로 `/apidoc`은 내장 native UI(`UiMode::Native`)를 제공하므로 기존 배포는 변경이 필요 없습니다. Vue 빌드는 14절의 UIC-1 계약을 사용하며 PHP, Go와 공유됩니다(apidoc-ui `npm run package:ui`):
+
+```rust
+use apidoc::{ApidocConfig, UiMode};
+
+let cfg = ApidocConfig {
+    title: "내 API".into(),
+    ui: UiMode::Vue,
+    ui_path: Some("/srv/apidoc".into()), // dist/uic1-ui/ 내용: index.html + config.js + assets/
+    ..Default::default()
+};
+```
+
+- 릴리스 패키지는 기본 Vue: `ApidocConfig::release("내 API", "/srv/apidoc")`는 위 명시적 설정과 동일합니다. **라이브러리 기본값은 `native`로 유지됩니다**.
+- Vue 모드에서 `GET /apidoc`은 307로 `/apidoc/`에 리다이렉트하고(빌드는 상대 URL `./assets/...` 사용), `/apidoc/`, `config.js`, `assets/*`는 `ui_path`에서 읽으며, 확장자가 없는 알 수 없는 경로는 `index.html`로 폴백합니다(SPA fallback).
+- API 라우트가 우선합니다: `/apidoc/api.json`, `/apidoc/export`, `/apidoc/ui/v1/*`, auth, debug, webhook은 정적 파일보다 먼저 매칭됩니다. 알 수 없는 API 하위 경로는 SPA 셸 대신 404를 반환합니다.
+- 보안: 경로는 `ui_path` 내부로 제한됩니다. `..`, 인코딩 우회, 심볼릭 링크 이탈은 404를 반환하고 디렉터리는 절대 나열되지 않으며, `ui_path` / `index.html` 누락 시 시작에 실패합니다(fail closed). `ui` / `ui_path`는 서버 전용이며 api.json에 직렬화되지 않습니다.
+- 롤백: `ui: UiMode::Native`로 되돌리고 재시작하면 native UI와 모든 기존 라우트가 그대로 유지됩니다.
+
+### 14. UIC-1 계약 · 외부 프로토콜 정의
+
+`/apidoc/ui/v1/*`는 apidoc-ui가 사용하는 안정 계약(Contract 1.0)입니다. 성공 응답은 `{code:0,message:"ok",data}`입니다:
+
+| 라우트 | 목적 |
+|---|---|
+| `GET /apidoc/ui/v1/capabilities` | 백엔드 기능: contract / backend / version / features(컴파일된 릴레이 프로토콜 목록 포함) |
+| `GET /apidoc/ui/v1/config` | UI 부트 설정(제목, 앱 트리, auth 스위치 등) |
+| `POST /apidoc/ui/v1/menus` · `detail` | 엔드포인트 목록과 상세(`definitions`, `validation` 포함) |
+| `GET/POST /apidoc/ui/v1/docMenus` · `POST docDetail` | Markdown 문서 목록과 본문 |
+| `POST /apidoc/ui/v1/verifyAuth` | 전역 / 앱 / 공유 토큰 검증 |
+| `POST /apidoc/ui/v1/debugSend` · `debugStart` · `debugPoll` · `debugStop` | 브라우저 직접 및 서버 릴레이 디버깅 |
+| `POST /apidoc/ui/v1/addApiShare` · `getApiShareList` · `getApiShareDetail` · `deleteApiShare` · `handleApiShareAction` | 공유 레코드 CRUD(Rust `share.actions=false`, 선언적 액션 없음) |
+| `POST /apidoc/ui/v1/cache/clear` · `cache/warm` | 캐시 관리(Rust `cache.mode=build`) |
+| `POST /apidoc/ui/v1/renderCodeTemplate` · `exportAllData` | 코드 템플릿 렌더링과 전체 데이터 내보내기(UI가 md / pdf / openapi / postman / asyncapi / typescript 생성) |
+
+`#[apidoc::definition]`으로 핸들러에 외부 정의를 연결합니다:
+
+```rust
+#[apidoc::title("사용자 조회")]
+#[apidoc::url("/api/user/info")]
+#[apidoc::method("GET")]
+#[apidoc::definition(file = "api/openapi.yaml", operation = "getUser")]
+fn get_user_info() -> String { unimplemented!() }
+```
+
+- **9가지 형식**: OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC, XML-RPC. `format`을 생략하면 확장자/내용으로 감지하거나 명시적으로 지정할 수 있습니다.
+- **선택 인자**: `operation`(작업 선택), `message` / `direction`(메시지 선택), `sample` / `sample_file` / `sample_encoding`(검증 샘플), `strict`(기본 `true`: 미지원 구문은 오류).
+- **출력**: 통일된 `{format, source, operation, meta, messages, validation}` 페이로드. 진단에는 `path / line / column / severity / message`가 포함됩니다. 정의는 UIC-1 detail에만 나타나며 api.json에는 절대 포함되지 않습니다.
+- **한도**: 경로는 선언한 크레이트의 `CARGO_MANIFEST_DIR` 기준이며 심볼릭 링크의 realpath는 크레이트 루트 안에 있어야 합니다. 파일당 2 MiB / 50,000행, 최대 64개 임포트, 임포트 깊이 32로 제한됩니다.
+
 ## 개발 계획
 
 | 단계 | 내용 | 상태 |
@@ -441,6 +529,9 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 | M6a | 비밀번호 인증(HMAC-SHA256 서명 token + 비밀번호 마스크, 앱 비밀번호 우선) | ✅ 완료 |
 | M6b | 다중 앱·다중 버전(apps 설정 트리 + app 주석 + UI 선택기) | ✅ 완료 |
 | v2 | 데이터 테이블 필드 참조 + 문서 캐시 + 공유 링크 + 코드 생성기 + 디버깅 이벤트 | ✅ 완료 |
+| UIC-1 Phase 0–2 | Contract 1.0: capabilities / menus / detail / docs / debug / share / cache / generator / export, 모든 백엔드에서 의미적으로 정렬 | ✅ 완료 |
+| UIC-1 Phase 3–4 | 전체 릴레이 기능 보고 + UIC detail에 연결된 9가지 외부 정의 파서 | ✅ 완료 |
+| UIC-1 Phase 5 | 정적 Vue UI (`ui` / `ui_path`; 릴리스 패키지는 기본 Vue, native UI 유지) | ✅ 완료 |
 
 ## 다국어 문서
 

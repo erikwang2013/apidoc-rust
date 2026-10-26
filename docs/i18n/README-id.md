@@ -23,7 +23,7 @@ Alat pembuat dokumentasi API dan pengembangan antarmuka berbasis makro prosedura
 
 ## 📖Pengenalan Proyek
 
-Apidoc adalah pustaka plugin Rust yang secara otomatis menghasilkan dokumentasi antarmuka API dengan mengurai **makro prosedural (proc-macro) Rust**, dan kompatibel dengan kerangka kerja populer seperti axum dan actix-web. Selain pembuatan dokumentasi otomatis, Apidoc juga mengintegrasikan debugging antarmuka online, data uji Mock, pembuatan kode Json/TypeScript, generator antarmuka, generator kode, dan kemampuan lainnya, mencakup seluruh alur pengembangan, debugging, dan penyerahan antarmuka, dengan tujuan meningkatkan efisiensi pengembangan API.
+Apidoc adalah pustaka plugin Rust yang secara otomatis menghasilkan dokumentasi antarmuka API dengan mengurai **makro prosedural (proc-macro) Rust**, dan kompatibel dengan kerangka kerja populer seperti axum dan actix-web. Selain pembuatan dokumentasi otomatis, Apidoc juga mengintegrasikan debugging antarmuka online, data uji Mock, pembuatan kode Json/TypeScript, generator antarmuka, generator kode, dan kemampuan lainnya, mencakup seluruh alur pengembangan, debugging, dan penyerahan antarmuka, dengan tujuan meningkatkan efisiensi pengembangan API. Sejak 2.2.0 juga mengekspos **kontrak backend UIC-1**, yang dikonsumsi langsung oleh build Vue apidoc-ui; UI native tertanam tetap dipertahankan dan keduanya dapat dipilih lewat konfigurasi.
 
 Pendekatan implementasi apidoc-rust:
 
@@ -34,21 +34,23 @@ Pendekatan implementasi apidoc-rust:
 ### ✨Deskripsi Proyek
 
 - **Siap pakai**: tanpa konfigurasi rumit; setelah dipasang, cukup menulis anotasi sesuai dokumentasi dan dokumentasi API akan dibuat otomatis.
-- **Penulisan mudah**: mendukung definisi umum (definitions) dan referensi `ref` pada field; beberapa anotasi singkat sudah cukup untuk melengkapi definisi field secara utuh.
+- **Penulisan mudah**: referensi field `ref` / `table` dan sembilan format definisi eksternal (OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC, XML-RPC) didukung melalui `#[apidoc::definition]`; beberapa anotasi saja cukup untuk melengkapi definisi field.
 - **Debugging online**: debug antarmuka langsung dari halaman dokumentasi, mendukung parameter global, data Mock, dan peristiwa debugging.
+- **Debug multi-protokol**: 45 anotasi protokol (RPC, messaging, industrial, media, IoT, dan lainnya) dengan kanal koneksi langsung browser dan relay sisi server; anotasi menghasilkan dokumentasi protokol sekaligus panel debug.
+- **Kontrak UIC-1**: `/apidoc/ui/v1/*` menyediakan capabilities / config / menus / detail / docs / debug / share / cache / generator / export, sehingga satu build Vue apidoc-ui melayani PHP, Go, dan Rust. UI Vue statis diaktifkan lewat `ui` / `ui_path` (paket rilis memakai Vue secara default, default library tetap UI native tertanam).
 - **Multi-aplikasi/multi-versi**: proyek dengan aplikasi tunggal, multi-aplikasi, maupun multi-versi dapat dikonfigurasi; antarmuka ditampilkan dan dialihkan berdasarkan pengelompokan aplikasi/versi.
 - **Grup/Tag**: antarmuka mendukung pengelompokan bertingkat dan penandaan Tag.
 - **Dokumentasi Markdown**: anotasi `md` dapat memasang Markdown sebagai halaman dokumentasi.
 - **Pembuatan Json/TypeScript**: setiap antarmuka otomatis menghasilkan contoh permintaan/respons Json dan definisi tipe TypeScript, siap dipakai langsung di frontend.
 - **Generator kode**: konfigurasi + template cukup untuk menghasilkan kode bisnis dan file Api frontend.
 - **Berbagi antarmuka**: dapat menghasilkan tautan berbagi untuk aplikasi/antarmuka tertentu dan mengekspor `swagger.json`.
-- **Akses aman**: mendukung otorisasi kata sandi global dan kata sandi independen per aplikasi/versi; dokumen dimaterialisasi saat build dan respons lokal di bawah p99 10ms.
+- **Akses aman**: kata sandi global dan kata sandi independen per aplikasi/versi; debug sisi server nonaktif secara default serta menerapkan guard SSRF dan batas ukuran/frame/timeout; file definisi dan protokol industrial memiliki batas ketat; dokumentasi dimaterialisasi saat build, respons lokal di bawah 10ms p99.
 
 ## Fitur
 
 ### Sudah Diimplementasikan (M1–M3)
 
-- **Dokumentasi berbasis anotasi**: tujuh makro atribut `title` / `desc` / `method` / `url` / `param` / `query` / `returned`, anotasi satu per satu, parameter mendukung nesting `required` / `default` / `desc` / `mock` / `children`
+- **Dokumentasi lewat anotasi**: tujuh makro atribut utama — `title` / `desc` / `method` / `url` / `param` / `query` / `returned` — ditambah `tag` / `group` / `header` / `table` dan 45 anotasi protokol; parameter mendukung penyarangan `required` / `default` / `desc` / `mock` / `children` / `field`
 - **Validasi waktu kompilasi**: url harus diawali `/`, whitelist method, param name wajib diisi, dll.; anotasi tidak valid menghasilkan error saat kompilasi (span presisi)
 - **Pengumpulan otomatis**: registrasi statis linkme `distributed_slice`, tanpa daftar API manual; `DocRegistry::collect()` menggabungkan berdasarkan id, mengembalikan urutan deklarasi berdasarkan seq, pengumpulan otomatis antar-crate
 - **Output api.json**: serde melakukan serialisasi model data dokumentasi terpadu (config + endpoints), dengan nama field yang sama antara model dan pengekspor
@@ -60,13 +62,13 @@ Pendekatan implementasi apidoc-rust:
 - **Debugging online**: panel «Debugging Online» bawaan di halaman dokumentasi — Base URL terisi otomatis `location.origin` untuk koneksi langsung lintas-domain ke layanan target, form parameter terisi otomatis dengan mock, penggantian placeholder rute `{name}` / `:name`, parameter GET/HEAD digabung ke query, method lainnya dirangkai sebagai JSON body, edit header permintaan + header kustom, tampilan respons (status / durasi / pretty JSON), peringatan kuning saat CORS gagal
 - **Mesin Mock** (`crates/apidoc/src/mock.rs`, bergantung pada crate fake, 15 aturan: name / company / email / phone / url / ip / city / country / text / number / int / float / bool / uuid / date). Prioritas aturan: `mock="fake:xxx"` memakai tabel aturan fake (nama tidak dikenal kembali ke nilai default) ← mock non-kosong lainnya langsung dikeluarkan apa adanya (mis. `mock="1"`, `mock="erik"`) ← tanpa mock dibuat otomatis sesuai `ty` (int→`"1"`, float→`"0.5"`, bool→`"true"`, object→`"{}"`, string→`"string"`); children bersarang rekursif, array tetap 2 item
 - **Antarmuka mock**: adaptor axum menambah `GET /apidoc/mock?url=&method=`, pencocokan presisi url + method, tidak cocok mengembalikan 404; panel debugging menyembunyikan endpoint `not_debug` secara default, baru tampil setelah mencentang «Tampilkan antarmuka not_debug»
-- **Koneksi langsung CORS**: debugging online dijalankan browser langsung ke antarmuka target, `cors_layer` dari adaptor yang mengizinkan (proksi balik sisi server disisakan untuk v2)
+- **Koneksi CORS langsung**: debug online menghubungkan browser langsung ke endpoint tujuan, diizinkan oleh `cors_layer` adaptor; relay sisi server disediakan oleh eksekutor P2–P5
 
 ### Sudah Diimplementasikan (M5)
 
-- **Ekspor empat format** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0), crate inti menyediakan `export::markdown::render` / `export::typescript::render` / `export::swagger::render`
-- **Rute ekspor**: adaptor menambah `GET /apidoc/export?format=md|ts|swagger`, format tidak dikenal mengembalikan 400; Content-Type masing-masing `text/markdown` / `application/typescript` / `application/json`
-- **markdown**: direktori berkelompok + tabel parameter + blok respons; **typescript**: menghasilkan tipe `{Name}Params` / `{Name}Result` per namespace group, antarmuka tanpa group masuk ke `defaultGroup` (`default` kata cadangan TS); **swagger**: `info.version` diambil dari versi paket Cargo
+- **Ekspor empat format** (`crates/apidoc/src/export/`): markdown / typescript / swagger (OpenAPI 3.0.0) / AsyncAPI 2.6 (P6); crate inti menyediakan `export::markdown::render` / `export::typescript::render` / `export::swagger::render` / `export::asyncapi::render`
+- **Rute ekspor**: adaptor menambahkan `GET /apidoc/export?format=md|ts|swagger|asyncapi`, format tidak dikenal → 400; Content-Type: `text/markdown` / `application/typescript` / `application/json`
+- **markdown**: indeks per grup + tabel parameter + blok respons; **typescript**: menghasilkan tipe `{Name}Params` / `{Name}Result` per namespace grup, antarmuka tanpa grup masuk ke `defaultGroup` (`default` kata kunci cadangan TS); **swagger**: `info.version` mengutamakan `ApidocConfig.version` dan fallback ke versi paket Cargo (saat ini 2.2.0)
 - **Adaptor actix-web** (`crates/apidoc/src/actix.rs`): fungsionalitas 1:1 dengan adaptor axum — `apidoc_routes(ApidocConfig) -> Scope` memasang /apidoc, /apidoc/api.json, /apidoc/mock, /apidoc/export, `cors_layer(CorsConfig)` mengizinkan lintas-domain
 - **Berbagi UI**: UI dokumentasi (`src/ui.html`) dipindahkan ke atas ke crate inti, diekspor sebagai `pub const UI_HTML`, kedua adaptor merujuk salinan yang sama (aman saat packaging rilis)
 
@@ -84,6 +86,14 @@ Pendekatan implementasi apidoc-rust:
 - **Generator kode**: `GET /apidoc/generate?template=<name>` → teks hasil render (template tidak dikenal → 404); menyertakan `api.ts` (file Api frontend), `handler.rs` (kerangka antarmuka Rust), `schema.sql` (pernyataan pembuatan tabel yang dihasilkan dari `tables`); template dengan nama sama di `ApidocConfig.codegen` menimpa template bawaan. Sintaks template hanya ada dua: `{{variabel}}` (jika tidak terdefinisi dipertahankan apa adanya) dan `{{#each daftar}}…{{/each}}` (bisa bersarang, mis. `tables` × `fields`)
 - **Peristiwa debugging**: panel debugging online menambah blok «Skrip Pra» / «Skrip Pasca» yang bisa dilipat (dipersistensi ke localStorage) — skrip Pra dijalankan sebelum permintaan dengan `new Function('ctx', code)`, dapat mengubah `ctx.url/method/headers/body` atau mengembalikan objek untuk penggabungan dangkal; skrip Pasca dijalankan setelah respons dan dapat membaca `status/ms/text/url/method/ep`; jika mengembalikan string, string tersebut menggantikan teks respons yang ditampilkan; error skrip hanya diberitahukan di area hasil dan tidak menghentikan permintaan
 
+### Terimplementasi (v2.2 · UIC-1)
+
+- **Kontrak backend UIC-1 (Contract 1.0)**: `/apidoc/ui/v1/*` menyediakan capabilities / config / menus / detail / docMenus / docDetail / verifyAuth / sesi debug / catatan berbagi / cache / templat kode / ekspor penuh. `capabilities` hanya melaporkan yang benar-benar dikompilasi pada build ini, agar UI dapat menyembunyikan entri yang tidak tersedia. Rust mendeklarasikan `share.actions=false`, `cache.mode=build`, generator `forms=false` / `templates=true`, dan hanya relay uner (`relay-unary`).
+- **Sembilan format definisi eksternal**: `#[apidoc::definition(file = "...", operation = "...")]` mem-parse OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC, dan XML-RPC menjadi payload seragam `{format, source, operation, meta, messages, validation}`; `/apidoc/ui/v1/detail` mengembalikan `definitions` dengan diagnostik per item (`path` / `line` / `column` / `severity` / `message`). Definisi tidak pernah masuk api.json, sehingga UI native dan keluaran lama tidak berubah.
+- **UI Vue statis**: `ui: UiMode::Vue` + `ui_path` menyajikan build `dist/uic1-ui/` apidoc-ui; `ApidocConfig::release(title, ui_path)` adalah titik masuk paket rilis (default library tetap UI native tertanam). Mencakup fallback SPA, `config.js` / `assets/*`, proteksi escape path dan symlink, serta startup fail-closed bila `ui_path` atau `index.html` tidak ada.
+- **Laporan kapabilitas relay lengkap**: `capabilities.debug.relay` hanya mencantumkan eksekutor yang dikompilasi pada build ini; `debug-all` mengagregasi semua 30 id protokol, sehingga UI tidak pernah menawarkan eksekutor yang gagal dengan «not compiled».
+- **Perbaikan protokol industrial dan batas sumber daya**: DNP3 mem-parse header objek setelah IIN dan membatasi setiap respons pada 10.000 poin; IEC 60870-5-104 membatasi setiap respons pada 10.000 baris; BACnet/IP mengirim permintaan ReadProperty yang valid; overflow u16 pada hitungan poin DNP3 diperbaiki.
+
 ## Dokumentasi dan Debug Multi-Protokol (P1–P6)
 
 ![Arsitektur debug multi-protokol apidoc-rust](../images/multiprotocol-en.svg)
@@ -92,7 +102,28 @@ Pendekatan implementasi apidoc-rust:
 - **Debug langsung di browser** (tanpa dependensi Rust): SOAP, GraphQL (termasuk subscription), JSON-RPC, XML-RPC, OData, MCP, A2A, Webhooks, WebSocket (teks/biner), SSE, Socket.IO, STOMP (termasuk biner), WebRTC/DataChannel, HLS.
 - **Eksekutor sisi server** (feature-gated): HTTP/2, HTTP/3, gRPC, Thrift, Dubbo/Hessian2, ISO 8583, TCP/UDP/Raw/Unix, MQTT, AMQP, Kafka, XMPP, STOMP/TCP, CoAP, LwM2M, Modbus, DNP3, IEC 104, BACnet/IP, OPC UA, RTP/RTCP/RTSP/SIP/RTMP. `debug-all` mengaktifkan semuanya.
 - **P6**: capture Webhook, ekspor AsyncAPI 2.6, impor `.proto`/`.thrift` melalui CLI `apidoc-idl`, registry Dubbo Nacos, contoh mock dari event.
-- **Keamanan**: debug sisi server mati secara default dan memerlukan autentikasi global; guard SSRF me-resolve dan memvalidasi setiap IP lalu mem-pin koneksi; redirect/proxy dan metadata cloud ditolak; ukuran/frame/timeout dibatasi; protokol tanpa TLS yang di-pin gagal tertutup.
+- **Kapabilitas relay UIC-1**: `GET /apidoc/ui/v1/capabilities` melaporkan di `features.debug.relay` hanya eksekutor yang dikompilasi pada build ini. Rust hanya uner (`modes` berisi `relay-unary`, bukan `relay-stream`); build `debug-all` melaporkan semua 30 id protokol:
+
+| feature | id protokol relay |
+|---|---|
+| `debug-http` | `http` `http2` |
+| `debug-session` | `websocket` |
+| `debug-grpc` | `grpc` |
+| `debug-thrift` | `thrift` |
+| `debug-dubbo` | `dubbo` `hessian` |
+| `debug-iso8583` | `iso8583` |
+| `debug-mqtt` | `mqtt` |
+| `debug-amqp` | `amqp` |
+| `debug-kafka` | `kafka` |
+| `debug-xmpp` | `xmpp` |
+| `debug-sockets` | `stomp` `tcp` `udp` `raw` `unix` |
+| `debug-coap` | `coap` `lwm2m` |
+| `debug-industrial` | `modbus` `dnp3` `iec104` `bacnet` `opcua` |
+| `debug-media` | `rtp` `rtcp` `rtsp` `sip` `rtmp` |
+| `debug-http3` | `http3` |
+
+Selain `websocket`, eksekutor streaming belum terhubung ke sesi relay; Kafka / AMQP / XMPP dan sejenisnya mengumpulkan respons uner. `debug-all` hanya mengagregasi fitur di atas.
+- **Keamanan**: debug sisi server nonaktif secara default dan memerlukan autentikasi global; guard SSRF me-resolve dan memvalidasi setiap IP lalu mem-pin koneksi; redirect/proxy dan metadata cloud ditolak; ukuran/frame/timeout dibatasi; respons DNP3 dibatasi 10.000 poin dan IEC 104 10.000 baris (error ketat bila melebihi), agar frame kecil tidak memperbesar keluaran ter-parse; protokol tanpa TLS ter-pin gagal secara fail-closed.
 - **Performa**: dokumen, ekspor, codegen, dan body mock dimaterialisasi saat build; rute lokal apidoc tetap di bawah p99 10ms (`tests/latency.rs`).
 
 ## Arsitektur
@@ -111,26 +142,31 @@ Pendekatan implementasi apidoc-rust:
 
 ```
 apidoc-rust/
-├── Cargo.toml                 # Konfigurasi workspace (resolver 2)
-├── VERSION                    # Versi proyek (v2.2.0)
+├── Cargo.toml                 # konfigurasi workspace (resolver 2)
+├── VERSION                    # versi proyek (v2.2.0)
 ├── crates/
-│   ├── apidoc/                # Inti runtime (independen kerangka kerja)
-│   │   ├── src/lib.rs         # Model data + agregasi DocRegistry + api.json + UI_HTML
-│   │   ├── src/auth.rs        # otentikasi M6a (penerbitan/validasi token HMAC + pengawal rute + backoff)
-│   │   ├── src/export/        # Ekspor M5: markdown / typescript / swagger
-│   │   ├── src/ui.html        # UI dokumentasi bersama (diekspor crate inti, dirujuk kedua adaptor)
-│   │   ├── tests/             # Tes integrasi (ekspansi makro/agregasi/serialisasi/antar-crate)
-│   │   └── examples/demo.rs   # Contoh: anotasi + output api.json
-│   ├── apidoc-macros/         # proc-macro: 65+ makro atribut (termasuk 45 alias protokol)
-│   │   └── src/lib.rs         # Definisi makro + parsing parameter + validasi waktu kompilasi
-
-│   ├── apidoc-test-fixtures/  # Fixture pengujian registrasi antar-crate
-
+│   ├── apidoc/                # inti runtime (agnostik framework)
+│   │   ├── src/lib.rs         # model data + agregasi DocRegistry + api.json + UI_HTML + UiMode
+│   │   ├── src/auth.rs        # autentikasi kata sandi M6a (terbit/verifikasi token HMAC + guard + backoff)
+│   │   ├── src/uiapi.rs       # kontrak UIC-1: capabilities / menus / detail / docs / rute manajemen
+│   │   ├── src/protocol_defs/ # sembilan format definisi eksternal (OpenAPI/AsyncAPI/GraphQL/proto/…)
+│   │   ├── src/export/        # ekspor: markdown / typescript / swagger / asyncapi + codegen
+│   │   ├── src/debug/         # eksekutor server feature-gated (http / grpc / sockets / mqtt / industrial / media / …)
+│   │   ├── src/axum.rs        # adaptor axum (docs/debug/stream/webhook/UIC-1/UI statis + CORS)
+│   │   ├── src/actix.rs       # adaptor actix-web (feature `actix`, 1:1 dengan axum)
+│   │   ├── src/ui.html        # UI native tertanam; build Vue statis disajikan via ui/ui_path
+│   │   ├── tests/             # tes integrasi (makro/agregasi/serialisasi/UIC-1/definisi/latensi)
+│   │   └── examples/demo.rs   # contoh: anotasi + keluaran api.json
+│   ├── apidoc-macros/         # proc-macro: 24 anotasi dasar + 45 alias protokol
+│   │   └── src/lib.rs         # definisi makro + parsing argumen + validasi saat kompilasi
+│   ├── apidoc-idl/            # CLI mandiri `.proto` / `.thrift` → anotasi apidoc
+│   └── apidoc-test-fixtures/  # fixture tes registrasi antar-crate
+├── contract/                  # UIC-1 Contract 1.0: skema + fixture antar-backend
 ├── .github/
-│   └── workflows/release.yml  # Workflow rilis (membaca VERSION, membuat tag+release inkremental)
+│   └── workflows/release.yml  # alur rilis (membaca VERSION, membuat tag+release bertahap)
 └── docs/
-    ├── images/                # Diagram arsitektur/fitur/siklus hidup (SVG)
-    └── i18n/                  # Dokumentasi multibahasa (12 bahasa)
+    ├── images/                # aset arsitektur/fitur/siklus hidup/multi-protokol/pratinjau sosial
+    └── i18n/                  # dokumentasi multibahasa (12 bahasa)
 ```
 
 ## Panduan Penggunaan
@@ -428,6 +464,58 @@ return 'HTTP ' + ctx.status + ' · ' + ctx.ms + 'ms\n' + ctx.text;
 
 Error skrip hanya diberitahukan di area hasil debugging dan tidak menghentikan permintaan (jika Pra gagal, permintaan tetap dikirim; jika Pasca gagal, respons asli tetap ditampilkan).
 
+### 13. UI: native / build Vue statis (UIC-1 Phase 5)
+
+Secara default `/apidoc` menyajikan UI native tertanam (`UiMode::Native`), sehingga deployment yang ada tidak perlu berubah. Build Vue mengonsumsi kontrak UIC-1 pada bagian 14 dan dipakai bersama PHP dan Go (apidoc-ui `npm run package:ui`):
+
+```rust
+use apidoc::{ApidocConfig, UiMode};
+
+let cfg = ApidocConfig {
+    title: "API Saya".into(),
+    ui: UiMode::Vue,
+    ui_path: Some("/srv/apidoc".into()), // isi dist/uic1-ui/: index.html + config.js + assets/
+    ..Default::default()
+};
+```
+
+- Paket rilis memakai Vue secara default: `ApidocConfig::release("API Saya", "/srv/apidoc")` setara dengan konfigurasi eksplisit di atas; **default library tetap `native`**.
+- Dalam mode Vue, `GET /apidoc` mengembalikan 307 ke `/apidoc/` (build memakai URL relatif `./assets/...`), `/apidoc/`, `config.js`, dan `assets/*` dibaca dari `ui_path`, dan path tak dikenal tanpa ekstensi jatuh ke `index.html` (fallback SPA).
+- Rute API tetap berprioritas: `/apidoc/api.json`, `/apidoc/export`, `/apidoc/ui/v1/*`, auth, debug, dan webhook tetap cocok sebelum file statis; subpath API tak dikenal mengembalikan 404 alih-alih shell SPA.
+- Keamanan: path dibatasi di dalam `ui_path`; `..`, bypass encoding, dan escape symlink mengembalikan 404, direktori tidak pernah didaftar, dan `ui_path` / `index.html` yang hilang menggagalkan startup (fail closed). `ui` / `ui_path` hanya untuk server dan tidak pernah diserialisasi ke api.json.
+- Rollback: kembalikan ke `ui: UiMode::Native` dan restart; UI native serta semua rute lama tetap sama.
+
+### 14. Kontrak UIC-1 · definisi protokol eksternal
+
+`/apidoc/ui/v1/*` adalah kontrak stabil yang dikonsumsi apidoc-ui (Contract 1.0); respons sukses berbentuk `{code:0,message:"ok",data}`:
+
+| Rute | Tujuan |
+|---|---|
+| `GET /apidoc/ui/v1/capabilities` | Kapabilitas backend: contract / backend / version / features (termasuk daftar protokol relay yang dikompilasi) |
+| `GET /apidoc/ui/v1/config` | Konfigurasi boot UI (judul, pohon aplikasi, sakelar auth, …) |
+| `POST /apidoc/ui/v1/menus` · `detail` | Katalog dan detail endpoint, termasuk `definitions` dan `validation` |
+| `GET/POST /apidoc/ui/v1/docMenus` · `POST docDetail` | Katalog dan isi dokumentasi Markdown |
+| `POST /apidoc/ui/v1/verifyAuth` | Verifikasi token global / aplikasi / berbagi |
+| `POST /apidoc/ui/v1/debugSend` · `debugStart` · `debugPoll` · `debugStop` | Debug langsung browser dan relay sisi server |
+| `POST /apidoc/ui/v1/addApiShare` · `getApiShareList` · `getApiShareDetail` · `deleteApiShare` · `handleApiShareAction` | CRUD catatan berbagi (Rust `share.actions=false`; tanpa aksi deklaratif) |
+| `POST /apidoc/ui/v1/cache/clear` · `cache/warm` | Manajemen cache (Rust `cache.mode=build`) |
+| `POST /apidoc/ui/v1/renderCodeTemplate` · `exportAllData` | Render templat kode dan ekspor data penuh (UI menghasilkan md / pdf / openapi / postman / asyncapi / typescript) |
+
+Lampirkan definisi eksternal ke handler dengan `#[apidoc::definition]`:
+
+```rust
+#[apidoc::title("Ambil pengguna")]
+#[apidoc::url("/api/user/info")]
+#[apidoc::method("GET")]
+#[apidoc::definition(file = "api/openapi.yaml", operation = "getUser")]
+fn get_user_info() -> String { unimplemented!() }
+```
+
+- **Sembilan format**: OpenAPI, AsyncAPI, GraphQL, Proto, WSDL, EDMX, JSON Schema, JSON-RPC, dan XML-RPC. Bila `format` dihilangkan, dideteksi dari ekstensi/konten, atau dapat ditentukan eksplisit.
+- **Argumen opsional**: `operation` (pilih operasi), `message` / `direction` (pilih pesan), `sample` / `sample_file` / `sample_encoding` (sampel validasi), dan `strict` (default `true`: konstruksi tak didukung adalah error).
+- **Keluaran**: payload seragam `{format, source, operation, meta, messages, validation}`; diagnostik membawa `path / line / column / severity / message`. Definisi hanya muncul di detail UIC-1 dan tidak pernah di api.json.
+- **Batas**: path relatif terhadap `CARGO_MANIFEST_DIR` crate pendeklarasi, dan realpath symlink harus tetap di dalam root crate; setiap file dibatasi 2 MiB / 50.000 baris, maksimum 64 impor dan kedalaman impor 32.
+
 ## Rencana Pengembangan
 
 | Tahap | Konten | Status |
@@ -441,6 +529,9 @@ Error skrip hanya diberitahukan di area hasil debugging dan tidak menghentikan p
 | M6a | Otentikasi kata sandi (token bertanda tangan HMAC-SHA256 + masker kata sandi, kata sandi aplikasi diutamakan) | ✅ Selesai |
 | M6b | Multi-aplikasi multi-versi (pohon konfigurasi apps + anotasi app + pemilih UI) | ✅ Selesai |
 | v2 | referensi field tabel data + cache dokumentasi + tautan berbagi + generator kode + peristiwa debugging | ✅ Selesai |
+| UIC-1 Phase 0–2 | Contract 1.0: capabilities / menus / detail / docs / debug / share / cache / generator / export, selaras semantik di semua backend | ✅ Selesai |
+| UIC-1 Phase 3–4 | laporan kapabilitas relay lengkap + sembilan parser definisi eksternal terhubung ke detail UIC | ✅ Selesai |
+| UIC-1 Phase 5 | UI Vue statis (`ui` / `ui_path`; paket rilis default Vue, UI native dipertahankan) | ✅ Selesai |
 
 ## Dokumentasi Multibahasa
 
