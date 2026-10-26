@@ -15,7 +15,7 @@ use serde::Deserialize;
 use serde_json::{json, Value};
 
 use crate::route_core::{Core, R};
-use crate::{auth as crate_auth, find_app, protocol, AppDoc, DocEndpoint, DocParam};
+use crate::{auth as crate_auth, protocol, AppDoc, DocEndpoint, DocParam};
 
 const CONTRACT: &str = "1.0";
 
@@ -102,6 +102,23 @@ fn share_error(e: share::Error) -> R {
     }
 }
 
+/// 分享令牌校验：签名密钥 = 记录 secret，天然与全局/应用令牌隔离。
+fn share_token_ok(core: &Core, record: &share::Record, token: &str) -> bool {
+    let default = crate_auth::AuthConfig::default();
+    share::check_token(record, token, core.auth_config().unwrap_or(&default))
+}
+
+/// 全局凭据状态：`None` = 未启用全局鉴权（无全局凭据可校验）；
+/// `Some(ok)` = 已启用，`ok` 表示令牌是否有效。`enable` 但密码为空按失败关闭处理，
+/// 不能当成"未启用"而放行。
+fn global_admin(core: &Core, token: &str) -> Option<bool> {
+    let cfg = core.auth_config()?;
+    if !cfg.enable {
+        return None;
+    }
+    Some(!cfg.password.is_empty() && crate_auth::auth_check(token, cfg))
+}
+
 /// Resolve a shareKey into its record. `Ok(None)` = no shareKey, normal auth
 /// applies. A password-protected share requires its own token; a public share
 /// needs none (the shareKey itself is the capability).
@@ -110,9 +127,7 @@ fn share_scope(core: &Core, token: &str, share_key: &str) -> Result<Option<share
         return Ok(None);
     }
     let record = share::find(share_key).map_err(share_error)?;
-    let default = crate_auth::AuthConfig::default();
-    let cfg = core.auth_config().unwrap_or(&default);
-    if !record.password_hash.is_empty() && !share::check_token(&record, token, cfg) {
+    if !record.password_hash.is_empty() && !share_token_ok(core, &record, token) {
         return Err(unauthorized());
     }
     Ok(Some(record))
@@ -170,6 +185,13 @@ fn endpoint_id(ep: &DocEndpoint) -> String {
     URL_SAFE_NO_PAD.encode(raw.as_bytes())
 }
 
+/// 应用是否配置了非空独立密码（未配置的应用公开可读）。
+fn app_has_password(core: &Core, key: &str) -> bool {
+    crate::find_app(core.app_configs(), key)
+        .and_then(|app| app.password.as_deref())
+        .is_some_and(|password| !password.is_empty())
+}
+
 fn find_endpoint<'a>(core: &'a Core, id: &str) -> Option<&'a DocEndpoint> {
     core.doc().endpoints.iter().find(|ep| endpoint_id(ep) == id)
 }
@@ -185,9 +207,7 @@ struct AppLeaf<'a> {
 fn flatten_apps<'a>(core: &'a Core) -> Vec<AppLeaf<'a>> {
     fn walk<'a>(core: &'a Core, app: &'a AppDoc, out: &mut Vec<AppLeaf<'a>>) {
         if !app.endpoints.is_empty() || app.items.is_empty() {
-            let has_password = find_app(core.app_configs(), &app.key)
-                .and_then(|a| a.password.as_deref())
-                .is_some_and(|p| !p.is_empty());
+            let has_password = app_has_password(core, &app.key);
             out.push(AppLeaf {
                 key: app.key.clone(),
                 title: app.title.clone(),
@@ -809,6 +829,7 @@ pub fn verify_auth(core: &Core, body: &[u8]) -> R {
         return error(400, 400, "invalid body");
     };
     // 分享登录：密码比对分享记录哈希，令牌用分享 secret 签名（作用域天然隔离）。
+    // 公开分享没有密码可校验，登录一律拒绝（401，与 PHP 一致）；读接口无需令牌。
     if let Some(share_key) = req.share_key.as_deref().filter(|k| !k.is_empty()) {
         let record = match share::find(share_key) {
             Ok(record) => record,
@@ -1009,17 +1030,19 @@ pub fn render_code_template(core: &Core, body: &[u8], token: &str) -> R {
     };
     // form 不参与渲染：声明式模板没有副作用，也不执行宿主代码。
     let _ = &input.form;
-    let code = if input.selected.is_empty() {
-        crate::codegen::render(template, core.doc())
-    } else {
-        let endpoints: Vec<&DocEndpoint> = core
-            .doc()
-            .endpoints
-            .iter()
-            .filter(|ep| input.selected.iter().any(|id| id == &endpoint_id(ep)))
-            .collect();
-        crate::codegen::render_selected(template, core.doc(), &endpoints)
-    };
+    // 先按被鉴权的 appKey 裁剪，再应用客户端勾选：勾选里的其它应用端点一律忽略
+    // （与 Go 的 actionInApp 一致）；空勾选 = 该应用的全部端点，不是整份文档。
+    let endpoints: Vec<&DocEndpoint> = core
+        .doc()
+        .endpoints
+        .iter()
+        .filter(|ep| input.app_key.is_empty() || endpoint_app_key(ep) == input.app_key)
+        .filter(|ep| {
+            input.selected.is_empty()
+                || input.selected.iter().any(|id| id == &endpoint_id(ep))
+        })
+        .collect();
+    let code = crate::codegen::render_selected(template, core.doc(), &endpoints);
     ok(json!({"code": code}))
 }
 
@@ -1039,22 +1062,36 @@ pub fn export_all_data(core: &Core, body: &[u8], token: &str) -> R {
     let Some(input) = body_json::<ExportAllBody>(body) else {
         return error(400, 400, "invalid body");
     };
-    // `key` 是属主接口（UI 分享管理页），要求全局鉴权，但导出范围按分享记录裁剪；
+    let admin = global_admin(core, token);
+    // `key` 是属主接口（UI 分享管理页），导出范围按分享记录裁剪；
     // `shareKey` 走分享 token，供分享页直接批量导出。
     let share = if !input.key.is_empty() {
-        if !guard(core, token, "") {
+        let record = match share::find(&input.key) {
+            Ok(record) => record,
+            Err(e) => return share_error(e),
+        };
+        if record.password_hash.is_empty() {
+            // 公开分享记录：全局鉴权启用时只认全局令牌；未启用时无凭据可校验。
+            if admin == Some(false) {
+                return unauthorized();
+            }
+        } else if admin != Some(true) && !share_token_ok(core, &record, token) {
+            // 有密码的记录：属主（全局令牌）或该分享自己的令牌。
             return unauthorized();
         }
-        match share::find(&input.key) {
-            Ok(record) => Some(record),
-            Err(e) => return share_error(e),
-        }
+        Some(record)
     } else {
         match access(core, token, &input.app_key, &input.share_key) {
             Ok(share) => share,
             Err(res) => return res,
         }
     };
+    // 无全局凭据的裸导出（空 body）只给未设应用密码的应用：与会话内 `menus`
+    // 的 app 密码守卫一致，不能让匿名导出绕过应用密码。
+    let hide_protected = input.key.is_empty()
+        && input.share_key.is_empty()
+        && input.app_key.is_empty()
+        && admin != Some(true);
 
     let doc = core.doc();
     let synthetic;
@@ -1072,7 +1109,7 @@ pub fn export_all_data(core: &Core, body: &[u8], token: &str) -> R {
     if !input.app_key.is_empty() && !apps.iter().any(|app| app_matches(app, &input.app_key)) {
         return error(404, 404, "app not found");
     }
-    let nodes = export_nodes(core, apps, share.as_ref(), &input.app_key);
+    let nodes = export_nodes(core, apps, share.as_ref(), &input.app_key, hide_protected);
     ok(json!({"apiData": nodes}))
 }
 
@@ -1085,14 +1122,17 @@ fn export_nodes(
     apps: &[AppDoc],
     share: Option<&share::Record>,
     only: &str,
+    hide_protected: bool,
 ) -> Vec<Value> {
     apps.iter()
         .filter(|app| only.is_empty() || app_matches(app, only))
+        // 叶子应用的独立密码与会话内守卫同源；容器本身不承载端点。
+        .filter(|app| !(hide_protected && app.items.is_empty() && app_has_password(core, &app.key)))
         .filter_map(|app| {
-            let children = export_nodes(core, &app.items, share, only);
+            let children = export_nodes(core, &app.items, share, only, hide_protected);
             if !app.items.is_empty() {
                 // 容器节点不带 appKey：UI 递归进入子应用；与 PHP 的目录语义一致。
-                if share.is_some() && children.is_empty() {
+                if (share.is_some() || hide_protected) && children.is_empty() {
                     return None;
                 }
                 return Some(json!({

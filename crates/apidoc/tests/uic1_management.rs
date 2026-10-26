@@ -253,15 +253,20 @@ async fn phase2_management_end_to_end() {
 
     let team_token = login_share(&app, "team", "team-pw").await;
     let _locked_token = login_share(&app, "locked", "locked-pw").await;
-    let (status, _) = send(
-        &app,
-        "POST",
-        "/apidoc/ui/v1/verifyAuth",
-        r#"{"password":"locked-pw","shareKey":"public"}"#,
-        "",
-    )
-    .await;
-    assert_eq!(status, StatusCode::OK, "public shares accept any password");
+    // M7: 公开分享没有密码凭据，登录一律 401（与 PHP 一致）；读接口无需令牌。
+    for password in ["locked-pw", ""] {
+        let (status, body) = send(
+            &app,
+            "POST",
+            "/apidoc/ui/v1/verifyAuth",
+            &json!({"password": password, "shareKey": "public"}).to_string(),
+            "",
+        )
+        .await;
+        assert_eq!(status, StatusCode::UNAUTHORIZED, "public share login must be rejected: {body}");
+        assert_eq!(body["code"], 401);
+        assert!(body["data"].get("token").is_none() || body["data"].is_null(), "{body}");
+    }
 
     // ---- config scope ----
     let (status, _) = send(&app, "GET", "/apidoc/ui/v1/config?shareKey=team", "", "").await;

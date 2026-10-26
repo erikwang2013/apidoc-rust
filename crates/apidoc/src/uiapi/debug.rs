@@ -219,14 +219,57 @@ struct Session {
     frames: usize,
 }
 
+/// 取出所有空闲超时的会话，返回上游句柄由调用方 close。
+/// `created` 在每次 poll 刷新，所以 TTL 是"空闲"而非"总时长"。
+#[cfg(feature = "debug-session")]
+fn take_expired(
+    all: &mut std::collections::HashMap<String, Session>,
+    now: std::time::Instant,
+) -> Vec<Option<Box<dyn crate::debug::session::StreamSession>>> {
+    let mut expired = Vec::new();
+    all.retain(|_, session| {
+        let keep = now.duration_since(session.created) <= SESSION_TTL;
+        if !keep {
+            expired.push(session.handle.take());
+        }
+        keep
+    });
+    expired
+}
+
 #[cfg(feature = "debug-session")]
 fn purge_expired(
     all: &mut std::collections::HashMap<String, Session>,
     now: std::time::Instant,
 ) {
-    // shortcut: 过期会话直接 drop，不优雅 close；执行器会话在 drop 时释放上游连接。
-    // `created` 在每次 poll 刷新，所以 TTL 是"空闲"而非"总时长"。
-    all.retain(|_, session| now.duration_since(session.created) <= SESSION_TTL);
+    // shortcut: 请求驱动的回收直接 drop 句柄；后台 reaper 负责 close。
+    let _ = take_expired(all, now);
+}
+
+/// 后台回收：没有后续 debug 请求时，无人轮询的会话也要关闭上游连接（M1）。
+/// 只在首个会话创建时 spawn 一次；运行时不支持时静默跳过。
+#[cfg(feature = "debug-session")]
+fn spawn_reaper() {
+    static STARTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if STARTED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
+    let Ok(runtime) = tokio::runtime::Handle::try_current() else {
+        STARTED.store(false, std::sync::atomic::Ordering::Relaxed);
+        return;
+    };
+    runtime.spawn(async {
+        loop {
+            tokio::time::sleep(SESSION_TTL).await;
+            let expired = {
+                let mut all = sessions().lock().await;
+                take_expired(&mut all, std::time::Instant::now())
+            };
+            for mut handle in expired.into_iter().flatten() {
+                handle.close().await;
+            }
+        }
+    });
 }
 
 #[cfg(feature = "debug-session")]
@@ -275,6 +318,77 @@ fn session_id() -> String {
     URL_SAFE_NO_PAD.encode(bytes)
 }
 
+/// 先在会话表里占位，再打开上游连接：并发 debugStart 不能在"先连接后检查"
+/// 的窗口里放大上游连接数（I5）。占位期间客户端还没有 id，不会被 poll 到。
+#[cfg(feature = "debug-session")]
+async fn reserve_session(
+    rx: tokio::sync::mpsc::Receiver<String>,
+    app_key: &str,
+    share_key: &str,
+) -> Result<String, R> {
+    let mut all = sessions().lock().await;
+    let now = std::time::Instant::now();
+    purge_expired(&mut all, now);
+    if !can_start(&all) {
+        return Err(ok(json!({"ok": false, "error": "too many active sessions"})));
+    }
+    let id = session_id();
+    all.insert(
+        id.clone(),
+        Session {
+            rx,
+            handle: None,
+            created: now,
+            app_key: app_key.to_string(),
+            share_key: share_key.to_string(),
+            frames: 0,
+        },
+    );
+    spawn_reaper();
+    Ok(id)
+}
+
+/// 测试观测：`stream_dispatch` 实际被调用的次数（验证配额检查先于上游连接）。
+#[cfg(all(test, feature = "debug-session"))]
+fn dispatch_attempts() -> &'static std::sync::atomic::AtomicUsize {
+    static ATTEMPTS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    &ATTEMPTS
+}
+
+#[cfg(all(feature = "debug-http", feature = "debug-session"))]
+async fn start_stream(
+    cfg: &crate::DebugConfig,
+    request: &crate::debug::DebugRequest,
+    ep: Option<&DocEndpoint>,
+    app_key: &str,
+    share_key: &str,
+) -> R {
+    let (tx, rx) = tokio::sync::mpsc::channel::<String>(32);
+    let id = match reserve_session(rx, app_key, share_key).await {
+        Ok(id) => id,
+        Err(res) => return res,
+    };
+    #[cfg(test)]
+    dispatch_attempts().fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    match crate::debug::stream_dispatch(cfg, request, ep, tx).await {
+        Ok(mut handle) => {
+            let mut all = sessions().lock().await;
+            if let Some(session) = all.get_mut(&id) {
+                session.handle = Some(handle);
+                return ok(json!({"ok": true, "sessionId": id}));
+            }
+            drop(all);
+            // 极端情况：dispatch 超过 TTL，占位已被回收；关闭句柄，不留孤儿连接。
+            handle.close().await;
+            ok(json!({"ok": false, "error": "session expired"}))
+        }
+        Err(message) => {
+            sessions().lock().await.remove(&id);
+            ok(json!({"ok": false, "error": message}))
+        }
+    }
+}
+
 pub async fn debug_start(core: &Core, body: &[u8], token: &str) -> R {
     let Some(input) = body_json::<UiDebugBody>(body) else {
         return error(400, 400, "invalid body");
@@ -299,32 +413,7 @@ pub async fn debug_start(core: &Core, body: &[u8], token: &str) -> R {
             return ok(json!({"ok": false, "error": "server-side debug is disabled"}));
         };
         let request = build_request(ep, &input.input);
-        let (tx, rx) = tokio::sync::mpsc::channel::<String>(32);
-        match crate::debug::stream_dispatch(cfg, &request, Some(ep), tx).await {
-            Ok(mut handle) => {
-                let id = session_id();
-                let mut all = sessions().lock().await;
-                purge_expired(&mut all, std::time::Instant::now());
-                if !can_start(&all) {
-                    drop(all);
-                    handle.close().await;
-                    return ok(json!({"ok": false, "error": "too many active sessions"}));
-                }
-                all.insert(
-                    id.clone(),
-                    Session {
-                        rx,
-                        handle: Some(handle),
-                        created: std::time::Instant::now(),
-                        app_key: app_key.to_string(),
-                        share_key: input.share_key.clone(),
-                        frames: 0,
-                    },
-                );
-                ok(json!({"ok": true, "sessionId": id}))
-            }
-            Err(message) => ok(json!({"ok": false, "error": message})),
-        }
+        start_stream(cfg, &request, Some(ep), app_key, &input.share_key).await
     }
     #[cfg(not(all(feature = "debug-http", feature = "debug-session")))]
     {
@@ -550,6 +639,9 @@ mod session_scope_tests {
         })
     }
 
+    /// 会话表是进程级静态：涉及它的异步单测串行执行，避免互相占满/清空。
+    static TEST_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
     async fn insert_session(id: &str, app_key: &str) {
         insert_session_with(id, app_key, "", 1).await;
     }
@@ -578,6 +670,7 @@ mod session_scope_tests {
     // I1: poll/stop 必须按会话创建时的 appKey 鉴权，客户端 appKey 不作数。
     #[tokio::test]
     async fn poll_and_stop_bind_to_session_app_not_client_app() {
+        let _serial = TEST_LOCK.lock().await;
         let core = core();
         let cfg = AuthConfig::default();
         let token_a = auth_token("pwA", &cfg);
@@ -624,7 +717,8 @@ mod session_scope_tests {
             dummy_session(now - SESSION_TTL - std::time::Duration::from_secs(1)),
         );
         all.insert("fresh".to_string(), dummy_session(now));
-        purge_expired(&mut all, now);
+        // take_expired 把过期会话的句柄交还调用方关闭（后台 reaper 用它）。
+        assert_eq!(take_expired(&mut all, now).len(), 1);
         assert!(!all.contains_key("old"), "expired session must be purged");
         assert!(all.contains_key("fresh"));
         all.clear();
@@ -640,6 +734,7 @@ mod session_scope_tests {
     // M1: 每会话最多 1000 条；到达后会话关闭并回报错误。
     #[tokio::test]
     async fn poll_caps_frames_and_drops_session() {
+        let _serial = TEST_LOCK.lock().await;
         let core = Core::build(ApidocConfig::default());
         let id = "test-frame-cap";
         let tx = insert_session_with(id, "", "", 1500).await;
@@ -688,6 +783,7 @@ mod session_scope_tests {
     // 分享会话不能靠客户端谎报 appKey：shareKey 必须与会话创建时一致。
     #[tokio::test]
     async fn share_session_requires_matching_share_key() {
+        let _serial = TEST_LOCK.lock().await;
         let core = Core::build(ApidocConfig::default());
         let id = "test-share-session";
         insert_session_with(id, "", "no-such-share-uic1-test", 1).await;
@@ -698,5 +794,42 @@ mod session_scope_tests {
         let res = debug_poll(&core, missing.as_bytes(), "").await;
         assert_eq!(res.status, 404, "unknown share record must be rejected");
         sessions().lock().await.remove(id);
+    }
+
+    // I5: 配额已满时必须在打开上游连接之前拒绝，不能先 dispatch 再关。
+    #[tokio::test]
+    async fn cap_full_rejects_before_opening_upstream_stream() {
+        let _serial = TEST_LOCK.lock().await;
+        sessions().lock().await.clear();
+        for index in 0..MAX_SESSIONS {
+            insert_session(&format!("cap-{index}"), "A").await;
+        }
+        let cfg = crate::DebugConfig { enable_server_side: true, ..Default::default() };
+        let request = crate::debug::DebugRequest {
+            kind: "websocket".into(),
+            target: "ws://127.0.0.1:9/".into(),
+            method: None,
+            headers: Default::default(),
+            body: None,
+            opts: Default::default(),
+            endpoint: None,
+            timeout_ms: None,
+        };
+        let ep = DocEndpoint {
+            protocol: "websocket".into(),
+            url: "ws://127.0.0.1:9/".into(),
+            ..Default::default()
+        };
+        let before = dispatch_attempts().load(std::sync::atomic::Ordering::Relaxed);
+        let res = start_stream(&cfg, &request, Some(&ep), "A", "").await;
+        assert_eq!(res.status, 200);
+        let value: Value = serde_json::from_slice(&res.body).unwrap();
+        assert_eq!(value["data"]["error"], "too many active sessions", "{value}");
+        assert_eq!(
+            dispatch_attempts().load(std::sync::atomic::Ordering::Relaxed),
+            before,
+            "cap check must run before stream_dispatch"
+        );
+        sessions().lock().await.clear();
     }
 }

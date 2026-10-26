@@ -14,10 +14,13 @@ use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use hmac::{Hmac, Mac};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 
 use crate::auth;
+
+type HmacSha256 = Hmac<Sha256>;
 
 /// 列表分页大小：UI 只传 pageIndex，PHP/Go/UI 每页均为 5。
 const PAGE_SIZE: usize = 5;
@@ -35,7 +38,7 @@ pub struct Record {
     pub app_keys: Vec<String>,
     #[serde(default)]
     pub api_keys: Vec<String>,
-    /// SHA-256 hex of the share password; empty = public link share.
+    /// HMAC-SHA256 hex of the share password keyed by `secret`; empty = public link share.
     #[serde(default)]
     pub password_hash: String,
     /// HMAC credential for share tokens issued by `verifyAuth`.
@@ -83,9 +86,13 @@ impl Record {
 
     pub fn password_ok(&self, password: &str) -> bool {
         if self.password_hash.is_empty() {
-            return true; // 无密码分享：shareKey 本身就是凭据
+            return false; // 公开分享没有密码凭据：登录必须拒绝（读接口不需要令牌）
         }
-        auth::ct_eq(hash_hex(password).as_bytes(), self.password_hash.as_bytes())
+        // HMAC 以记录 secret 为密钥：即使存储泄漏，也不能拿一张无盐摘要表直接爆破。
+        auth::ct_eq(
+            hash_hex(&self.secret, password).as_bytes(),
+            self.password_hash.as_bytes(),
+        )
     }
 }
 
@@ -162,7 +169,10 @@ pub fn add(input: &NewShare) -> Result<(), Error> {
             record.app_keys = input.app_keys.clone();
             record.api_keys = input.api_keys.clone();
             if let Some(password) = password.as_deref() {
-                record.password_hash = hash_hex(password);
+                if record.secret.is_empty() {
+                    record.secret = rand_hex(32)?;
+                }
+                record.password_hash = hash_hex(&record.secret, password);
             }
             return Ok(((), true));
         }
@@ -171,14 +181,18 @@ pub fn add(input: &NewShare) -> Result<(), Error> {
         } else {
             input.key.clone()
         };
+        let secret = rand_hex(32)?;
         records.push(Record {
             key,
             name: input.name.clone(),
             kind: input.kind.clone(),
             app_keys: input.app_keys.clone(),
             api_keys: input.api_keys.clone(),
-            password_hash: password.as_deref().map(hash_hex).unwrap_or_default(),
-            secret: rand_hex(32)?,
+            password_hash: password
+                .as_deref()
+                .map(|password| hash_hex(&secret, password))
+                .unwrap_or_default(),
+            secret,
             created: now(),
         });
         Ok(((), true))
@@ -221,8 +235,11 @@ pub fn valid_key(key: &str) -> bool {
         && key.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-')
 }
 
-fn hash_hex(password: &str) -> String {
-    hex(&Sha256::digest(password.as_bytes()))
+fn hash_hex(secret: &str, password: &str) -> String {
+    let mut mac =
+        HmacSha256::new_from_slice(secret.as_bytes()).expect("HMAC accepts any key length");
+    mac.update(password.as_bytes());
+    hex(&mac.finalize().into_bytes())
 }
 
 fn hex(bytes: &[u8]) -> String {
@@ -371,18 +388,20 @@ mod tests {
     }
 
     #[test]
-    fn password_hash_is_salted_by_nothing_but_never_plaintext() {
-        let hash = hash_hex("secret");
+    fn password_hash_is_keyed_by_record_secret() {
+        let mut r = record("all");
+        let hash = hash_hex(&r.secret, "secret");
         assert_eq!(hash.len(), 64);
         assert_ne!(hash, "secret");
-        let mut r = record("all");
         r.password_hash = hash;
         assert!(r.password_ok("secret"));
         assert!(!r.password_ok("Secret"));
         assert!(!r.password_ok(""));
-        // 无密码分享：shareKey 本身即凭据
+        // 同一密码配不同 secret → 不同摘要（不再是无盐 SHA-256）。
+        assert_ne!(r.password_hash, hash_hex("other", "secret"));
+        // 无密码分享没有登录凭据。
         r.password_hash.clear();
-        assert!(r.password_ok(""));
+        assert!(!r.password_ok(""));
     }
 
     #[test]
@@ -413,7 +432,7 @@ mod tests {
     #[test]
     fn api_json_never_leaks_secrets() {
         let mut r = record("app");
-        r.password_hash = hash_hex("pw");
+        r.password_hash = hash_hex(&r.secret, "pw");
         let value = record_json(&r);
         assert_eq!(value["type"], "app");
         assert_eq!(value["appKeys"][0], "A");
