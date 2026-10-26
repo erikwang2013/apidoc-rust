@@ -264,6 +264,8 @@ fn pick_app<'a, 'b>(apps: &'a [AppLeaf<'b>], app_key: &str) -> Option<&'a AppLea
 fn executor_compiled(kind: &str) -> bool {
     match kind {
         "http" => cfg!(feature = "debug-http"),
+        // http2 共用 HTTP 执行器。
+        "http2" => cfg!(feature = "debug-http"),
         "websocket" | "ws-binary" => cfg!(feature = "debug-session"),
         "grpc" => cfg!(feature = "debug-grpc"),
         "thrift" => cfg!(feature = "debug-thrift"),
@@ -302,6 +304,12 @@ fn capabilities_data(core: &Core) -> Value {
         .app_configs()
         .iter()
         .any(|a| a.password.as_deref().is_some_and(|p| !p.is_empty()));
+    let relay = relay_protocols();
+    // relay-stream 尚无 Rust 执行器（debug_mode 只产出 relay-unary）。
+    let mut modes = vec!["browser-http", "browser-websocket", "browser-sse"];
+    if !relay.is_empty() {
+        modes.push("relay-unary");
+    }
     json!({
         "contract": CONTRACT,
         "backend": "rust",
@@ -313,8 +321,8 @@ fn capabilities_data(core: &Core) -> Value {
             "protocolDefinitions": true,
             "debug": {
                 "browser": ["http", "websocket", "sse"],
-                "relay": relay_protocols(),
-                "modes": ["browser-http", "browser-websocket", "browser-sse", "relay-unary", "relay-stream"],
+                "relay": relay,
+                "modes": modes,
             },
             // Rust has no declarative share-action config yet; records/links only.
             "share": {"link": true, "records": true, "actions": false},

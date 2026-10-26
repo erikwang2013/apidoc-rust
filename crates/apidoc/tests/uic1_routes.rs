@@ -131,6 +131,46 @@ async fn capabilities_are_public() {
     assert_eq!(body["data"]["features"]["protocolDefinitions"], true);
 }
 
+/// 默认构建（无任何 debug-* feature）不能宣传 relay 能力。
+#[cfg(not(feature = "debug-http"))]
+#[tokio::test]
+async fn capabilities_default_build_advertises_only_browser_modes() {
+    let (status, body) = send(&app(), "GET", "/apidoc/ui/v1/capabilities", "", "").await;
+    assert_eq!(status, StatusCode::OK);
+    let debug = &body["data"]["features"]["debug"];
+    assert_eq!(debug["relay"], json!([]));
+    assert_eq!(
+        debug["modes"],
+        json!(["browser-http", "browser-websocket", "browser-sse"])
+    );
+}
+
+/// debug-all 的 relay/modes 必须与契约中的 rust-full 变体逐项一致。
+#[cfg(feature = "debug-all")]
+#[tokio::test]
+async fn capabilities_match_rust_full_fixture() {
+    let (status, body) = send(&app(), "GET", "/apidoc/ui/v1/capabilities", "", "").await;
+    assert_eq!(status, StatusCode::OK);
+    let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../contract/uic-1/fixtures/capabilities.json");
+    let fixtures: Value = serde_json::from_str(
+        &std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display())),
+    )
+    .unwrap();
+    let full = fixtures
+        .as_array()
+        .expect("fixtures array")
+        .iter()
+        .find(|case| case["name"] == "rust-full")
+        .expect("rust-full fixture");
+    let got = &body["data"]["features"]["debug"];
+    let want = &full["response"]["data"]["features"]["debug"];
+    assert_eq!(got["relay"], want["relay"]);
+    assert_eq!(got["modes"], want["modes"]);
+    assert_eq!(got["relay"].as_array().map(Vec::len), Some(30));
+    assert_eq!(got["modes"].as_array().map(Vec::len), Some(4));
+}
+
 #[tokio::test]
 async fn auth_menus_and_detail() {
     let app = app();
