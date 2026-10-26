@@ -145,7 +145,11 @@ async fn collect_points(
             app.clear(); // Confirm/Unsolicited 等非读响应，跳过。
             continue;
         }
-        points.extend(parse_objects(&app[2..])?);
+        if app.len() < 4 {
+            return Err("truncated dnp3 read response (missing IIN)".into());
+        }
+        // [app control][function 0x81][IIN1][IIN2][object headers...]
+        points.extend(parse_objects(&app[4..])?);
         app.clear();
         frames += 1;
     }

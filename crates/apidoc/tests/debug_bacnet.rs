@@ -102,7 +102,7 @@ async fn who_is_collects_i_am_devices() {
 #[tokio::test]
 async fn read_property_returns_present_value() {
     let object_id = (8 << 22) | 1u32;
-    let mut expected = vec![0x81, 0x0A, 0x00, 0x10, 0x01, 0x00, 0x00, 0x00, 0x0C, 0xC4];
+    let mut expected = vec![0x81, 0x0A, 0x00, 0x11, 0x01, 0x00, 0x00, 0x00, 0x00, 0x0C, 0xC4];
     expected.extend_from_slice(&object_id.to_be_bytes());
     expected.extend_from_slice(&[0x19, 0x55]);
     let (addr, handle) = mock(expected, read_property_ack(1, 7.25)).await;

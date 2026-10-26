@@ -43,7 +43,7 @@ pub async fn execute(cfg: &DebugConfig, req: &DebugRequest) -> Result<DebugRespo
                 return Err("bacnet object_type <= 1023 and property <= 255 are required".into());
             }
             let object_id = (u32::from(object_type) << 22) | object_instance;
-            let mut apdu = vec![0x00, 0x00, 0x0C]; // Confirmed-Request, invoke 0, ReadProperty
+            let mut apdu = vec![0x00, 0x00, 0x00, 0x0C]; // Confirmed-Request, invoke 0, ReadProperty
             apdu.push(0xC4);
             apdu.extend_from_slice(&object_id.to_be_bytes());
             apdu.extend_from_slice(&[0x19, property as u8]);
